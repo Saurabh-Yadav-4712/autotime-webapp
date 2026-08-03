@@ -1,0 +1,78 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow border-0">
+            <div class="card-header bg-warning text-dark fw-bold">
+                ✏️ Edit {% if edit_type == 'course' %}Course{% elif edit_type == 'teacher' %}Teacher{% else %}Subject{% endif %}
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    
+                    {% if edit_type == 'course' %}
+                        <!-- COURSE FIELDS -->
+                        <div class="mb-3"><label class="form-label">Class ID</label><input type="text" class="form-control" name="class_id" value="{{ item.class_id }}"></div>
+                        <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="department" value="{{ item.department }}"></div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label class="form-label">Semester</label><input type="number" class="form-control" name="semester" value="{{ item.semester }}"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Division</label><input type="text" class="form-control" name="division" value="{{ item.division }}"></div>
+                        </div>
+
+                    {% elif edit_type == 'teacher' %}
+                        <!-- TEACHER FIELDS -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><label class="form-label">Teacher ID</label><input type="text" class="form-control" name="teacher_id" value="{{ item.teacher_id }}"></div>
+                            <div class="col-md-6 mb-3"><label class="form-label">Max Hrs/Week</label><input type="number" class="form-control" name="max_hours" value="{{ item.max_hours }}"></div>
+                        </div>
+                        <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" name="name" value="{{ item.name }}"></div>
+                        <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ item.email }}"></div>
+                        <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="departments" value="{{ item.departments }}"></div>
+                        <div class="mb-3">
+                            <label class="form-label">Available Days</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
+                                <div class="form-check"><input class="form-check-input" type="checkbox" name="days" value="{{ day }}" id="{{ day }}" {% if day in item.available_days %}checked{% endif %}><label for="{{ day }}">{{ day }}</label></div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    {% elif edit_type == 'subject' %}
+                        <!-- SUBJECT FIELDS (Tkinter Logic Parity) -->
+                        <div class="row">
+                            <div class="col-md-4 mb-3"><label class="form-label">Sub Code</label><input type="text" class="form-control" name="subject_code" value="{{ item.subject_code }}"></div>
+                            <div class="col-md-8 mb-3"><label class="form-label">Subject Name</label><input type="text" class="form-control" name="subject_name" value="{{ item.subject_name }}"></div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assigned Classes <small>(Current: {{ item.class_id }})</small></label>
+                            <select class="form-select" name="class_id" multiple size="3">
+                                {% for course in courses %}<option value="{{ course.class_id }}">{{ course.class_id }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assigned Teacher</label>
+                            <select class="form-select" name="teacher_id">
+                                <option value="{{ item.teacher_id }}" selected>Current: {{ item.teacher_id }}</option>
+                                {% for teacher in teachers %}<option value="{{ teacher.teacher_id }}">{{ teacher.name }} ({{ teacher.teacher_id }})</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Type (Theory/Practical)</label>
+                                <select class="form-select" name="subject_type">
+                                    <option value="Theory" {% if item.subject_type == 'Theory' %}selected{% endif %}>Theory</option>
+                                    <option value="Practical" {% if item.subject_type == 'Practical' %}selected{% endif %}>Practical</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3"><label class="form-label">Total Course Hrs</label><input type="number" class="form-control" name="total_course_hours" value="{{ item.total_course_hours }}"></div>
+                            <div class="col-md-4 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" value="{{ item.session_length }}"></div>
+                        </div>
+                    {% endif %}
+
+                    <button type="submit" class="btn btn-warning w-100 fw-bold mt-3">Update Details</button>
+                    <a href="javascript:history.back()" class="btn btn-secondary w-100 mt-2">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

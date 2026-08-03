@@ -1,0 +1,188 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold brand-font">Admin Dashboard</h2>
+    <div class="d-flex gap-2">
+        <!-- The Generate Timetable Button is now prominently at the top -->
+        <form action="/generate_timetable" method="POST" class="m-0">
+            <button type="submit" class="btn btn-warning-custom shadow-sm" 
+                    {% if c_count == 0 or t_count == 0 or s_count == 0 %}disabled{% endif %} 
+                    onclick="return confirm('This will overwrite any existing timetable. Proceed?');">
+                <span class="fw-bold">🚀 Generate / Update Timetable</span>
+            </button>
+        </form>
+        <a href="/college_settings" class="btn btn-secondary">⚙️ Settings</a>
+        <a href="/view_timetable" class="btn btn-primary-custom">📅 View Timetable</a>
+        <a href="/logout" class="btn btn-outline-danger">🚪 Logout</a>
+    </div>
+</div>
+
+<!-- Admin Welcome & Institute Code -->
+<div class="glass-card mb-4 border-0 rounded-3 text-center p-4">
+    <h3 class="fw-bold mb-2 brand-font">🏛️ {{ admin.name }}</h3>
+    <p class="fs-5 mb-1 text-muted">Your Unique Institute Code: <span class="text-primary fw-bold fs-4">{{ admin.institute_code }}</span></p>
+</div>
+
+<!-- Analytics Overview Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="glass-card border-0 p-3 h-100 d-flex align-items-center">
+            <div class="display-5 me-3">🏫</div>
+            <div>
+                <p class="text-muted mb-0 fw-bold small">TOTAL COURSES</p>
+                <h4 class="fw-bold mb-0 brand-font">{{ c_count }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-card border-0 p-3 h-100 d-flex align-items-center">
+            <div class="display-5 me-3">📚</div>
+            <div>
+                <p class="text-muted mb-0 fw-bold small">TOTAL SUBJECTS</p>
+                <h4 class="fw-bold mb-0 brand-font">{{ s_count }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-card border-0 p-3 h-100 d-flex align-items-center">
+            <div class="display-5 me-3">👨‍🏫</div>
+            <div>
+                <p class="text-muted mb-0 fw-bold small">TOTAL TEACHERS</p>
+                <h4 class="fw-bold mb-0 brand-font">{{ t_count }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="glass-card border-0 p-3 h-100 d-flex align-items-center border-start border-success border-4">
+            <div class="display-5 me-3">✅</div>
+            <div>
+                <p class="text-muted mb-0 fw-bold small">TEACHERS FREE</p>
+                <h4 class="fw-bold mb-0 text-success brand-font">{{ free_teachers }}</h4>
+                <small class="text-muted" style="font-size: 0.7rem;">(Have available hours)</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Management Action Cards -->
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="glass-card border-0 h-100 p-4 text-center">
+            <h1 class="display-4 mb-3">🏫</h1>
+            <h5 class="fw-bold brand-font">Manage Courses</h5>
+            <p class="text-muted small mb-3">Add or edit classes and departments.</p>
+            <a href="/manage_courses" class="btn btn-primary-custom w-100">Go to Courses</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card border-0 h-100 p-4 text-center">
+            <h1 class="display-4 mb-3">👨‍🏫</h1>
+            <h5 class="fw-bold brand-font">Manage Teachers</h5>
+            <p class="text-muted small mb-3">Manage faculty, hours, and availability.</p>
+            <a href="/manage_teachers" class="btn btn-success w-100">Go to Teachers</a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="glass-card border-0 h-100 p-4 text-center">
+            <h1 class="display-4 mb-3">📚</h1>
+            <h5 class="fw-bold brand-font">Manage Subjects</h5>
+            <p class="text-muted small mb-3">Assign subjects to teachers and classes.</p>
+            <a href="/manage_subjects" class="btn btn-danger w-100">Go to Subjects</a>
+        </div>
+    </div>
+</div>
+
+{% if faculty_workload %}
+<!-- Detailed Faculty Workload -->
+<div class="glass-card border-0 mt-4 p-4">
+    <h4 class="fw-bold brand-font mb-3 text-primary">👨‍🏫 Faculty Workload Analytics</h4>
+    <div class="table-responsive">
+        <table class="table table-hover table-custom text-center align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Teacher Name</th>
+                    <th>Max Hours</th>
+                    <th>Assigned Hours</th>
+                    <th>Free Hours</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fw in faculty_workload %}
+                <tr>
+                    <td class="fw-bold">{{ fw.name }}</td>
+                    <td>{{ fw.max_hours }}</td>
+                    <td>{{ fw.assigned_hours }}</td>
+                    <td class="{% if fw.free_hours > 0 %}text-success fw-bold{% else %}text-danger{% endif %}">
+                        {{ fw.free_hours }}
+                    </td>
+                    <td>
+                        {% if fw.free_hours > 0 %}
+                            <span class="badge bg-success">Available</span>
+                        {% else %}
+                            <span class="badge bg-danger">Fully Booked</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if syllabus_tracking %}
+<!-- Syllabus Tracking Analytics -->
+<div class="glass-card border-0 mt-4 p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="fw-bold brand-font text-success mb-0">📈 Syllabus Completion Tracking</h4>
+        <span class="badge bg-success fs-6">Semester Target: {{ weeks_per_semester }} Weeks</span>
+    </div>
+    <p class="text-muted small">Tracking required weeks based on Total Course Hours vs Weekly Scheduled Hours.</p>
+    <div class="table-responsive">
+        <table class="table table-hover table-custom text-center align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th>Total Course Hrs</th>
+                    <th>Scheduled Hrs/Week</th>
+                    <th>Est. Completion</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in syllabus_tracking %}
+                <tr>
+                    <td class="fw-bold text-start">{{ s.name }} <small class="text-muted">({{ s.code }})</small></td>
+                    <td>{{ s.teacher }}</td>
+                    <td class="fw-bold text-primary">{{ s.total_hrs }}</td>
+                    <td class="fw-bold">{{ s.weekly_hrs }}</td>
+                    <td>
+                        <span class="fw-bold text-success">{{ s.weeks_needed }} Weeks</span>
+                    </td>
+                    <td>
+                        {% if s.weeks_needed > weeks_per_semester %}
+                            <span class="badge bg-danger">Requires More Hours</span>
+                        {% elif s.weeks_needed == weeks_per_semester %}
+                            <span class="badge bg-success">On Track</span>
+                        {% else %}
+                            <span class="badge bg-info">Completes Early</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if generated %}
+<div class="mt-4 p-3 bg-success bg-opacity-25 rounded-3 border border-success text-center">
+    <h5 class="text-success mb-2 fw-bold">🎉 Timetable is LIVE!</h5>
+    <p class="small mb-0 text-success">Students and Teachers can view their schedules from their respective portals.</p>
+</div>
+{% endif %}
+
+{% endblock %}

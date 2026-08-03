@@ -1,0 +1,39 @@
+{% extends 'shared/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow border-0 rounded-3 mt-4">
+            <div class="card-body p-4 p-md-5">
+                <h4 class="text-center mb-4 fw-bold text-dark">Register New College</h4>
+                <p class="text-center text-muted small mb-4">System will generate a unique Institute Code for your college.</p>
+                
+                <form action="/register_institute" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">College / Institute Name</label>
+                        <input type="text" class="form-control" name="college_name" required placeholder="e.g. Kapol Vidhyanidhi College">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Admin Username</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Admin Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Admin Password</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-dark w-100">Register & Generate Code</button>
+                    
+                    <div class="text-center mt-3">
+                        <a href="/" class="text-decoration-none small text-secondary">Back to Login</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

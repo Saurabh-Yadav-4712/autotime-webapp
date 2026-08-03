@@ -1,0 +1,91 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold">📅 View Timetable</h2>
+    <div>
+        <!-- Naya Export Button -->
+        <a href="/export_timetables" class="btn btn-success me-2 fw-bold">📥 Export All to Excel</a>
+        <a href="/admin_dash" class="btn btn-outline-secondary">⬅️ Back</a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <form method="GET" action="/view_timetable" class="row align-items-end">
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Select Class to View Schedule</label>
+                <select name="class_id" class="form-select" required>
+                    <option value="" selected disabled>Choose a Class...</option>
+                    {% for course in courses %}
+                        <option value="{{ course.class_id }}" {% if selected_class == course.class_id %}selected{% endif %}>
+                            {{ course.class_id }} ({{ course.department }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 mt-3 mt-md-0">
+                <button type="submit" class="btn btn-primary w-100 fw-bold">Fetch Timetable</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if selected_class %}
+<div class="card shadow-sm border-0 border-top border-primary border-4">
+    <div class="card-header bg-white pt-3 pb-2">
+        <h4 class="fw-bold text-center text-primary mb-0">Class: {{ selected_class }}</h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 10%;">Day / Time</th>
+                        {% for slot in time_slots %}
+                            <th>{{ slot[0] }}<br>-<br>{{ slot[1] }}</th>
+                            
+                            <!-- BREAK HEADER WITH DURATION -->
+                            {% if loop.index == lunch_after %}
+                                <th class="bg-secondary text-white align-middle" style="width: 50px; font-size: 0.85em; letter-spacing: 1px;">
+                                    B<br>R<br>E<br>A<br>K<br>
+                                    <hr class="my-1 border-white">
+                                    <small>{{ break_duration }}m</small>
+                                </th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in days %}
+                    <tr>
+                        <td class="fw-bold bg-light">{{ day }}</td>
+                        {% for slot in time_slots %}
+                            {% set start_time = slot[0] %}
+                            
+                            {% if day in schedule and start_time in schedule[day] %}
+                                {% set entry = schedule[day][start_time] %}
+                                <td class="bg-primary bg-opacity-10 border-primary">
+                                    <div class="fw-bold text-dark">{{ entry.subject_name }}</div>
+                                    <div class="badge bg-secondary mt-1">{{ entry.teacher_name }}</div>
+                                </td>
+                            {% else %}
+                                <td class="text-muted bg-light">
+                                    <small>---</small>
+                                </td>
+                            {% endif %}
+                            
+                            <!-- BREAK BODY -->
+                            {% if loop.index == lunch_after %}
+                                <td class="bg-secondary bg-opacity-10 border-secondary"></td>
+                            {% endif %}
+
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

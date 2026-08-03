@@ -1,0 +1,28 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-lg border-0 rounded-4 border-top border-warning border-4">
+            <div class="card-body p-5 text-center">
+                <h1 class="display-4 mb-3">✉️</h1>
+                <h3 class="fw-bold text-warning mb-3">Verify OTP</h3>
+                <p class="text-muted small mb-4">We've sent a 6-digit OTP to <strong>{{ session.get('activation_email') }}</strong></p>
+                
+                <form method="POST" action="/verify_teacher_otp">
+                    <div class="mb-3 text-start">
+                        <label class="form-label fw-bold small text-muted">ENTER 6-DIGIT OTP</label>
+                        <input type="text" class="form-control border-warning bg-light fw-bold text-center letter-spacing-2" name="otp" maxlength="6" required>
+                    </div>
+                    <div class="mb-4 text-start">
+                        <label class="form-label fw-bold small text-muted">SET NEW PASSWORD</label>
+                        <input type="password" class="form-control bg-light border-0" name="new_password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-warning w-100 fw-bold fs-5 mb-3">Verify & Set Password</button>
+                    <a href="/activate_teacher" class="text-secondary text-decoration-none small">Resend OTP</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

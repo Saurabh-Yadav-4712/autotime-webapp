@@ -1,0 +1,44 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="row justify-content-center mt-5 mb-5">
+    <div class="col-md-5">
+        <div class="card shadow-lg border-0 rounded-4 border-top border-primary border-4">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <h1 class="display-4">🎓</h1>
+                    <h3 class="fw-bold text-primary">Student Registration</h3>
+                    <p class="text-muted small">Join your college portal to view live schedules.</p>
+                </div>
+                
+                <form method="POST" action="/register_student">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">INSTITUTE CODE</label>
+                        <input type="text" class="form-control bg-light border-0" name="inst_code" placeholder="e.g., INS-XXXX" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">FULL NAME</label>
+                        <input type="text" class="form-control bg-light border-0" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">CLASS ID (e.g., FYCS-A)</label>
+                        <input type="text" class="form-control border-primary bg-light" name="class_id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">EMAIL ADDRESS</label>
+                        <input type="email" class="form-control bg-light border-0" name="email" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted">SET PASSWORD</label>
+                        <input type="password" class="form-control bg-light border-0" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 fw-bold fs-5 mb-3">Register Account</button>
+                    <div class="text-center">
+                        <a href="/" class="text-secondary text-decoration-none small">Already have an account? Login</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

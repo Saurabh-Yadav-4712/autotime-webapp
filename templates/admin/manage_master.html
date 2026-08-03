@@ -1,0 +1,134 @@
+{% extends 'shared/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold">
+        {% if manage_type == 'course' %}🏫 Manage Courses
+        {% elif manage_type == 'teacher' %}👨‍🏫 Manage Teachers
+        {% elif manage_type == 'subject' %}📚 Manage Subjects{% endif %}
+    </h2>
+    <a href="/admin_dash" class="btn btn-outline-secondary">⬅️ Back to Dashboard</a>
+</div>
+
+<div class="row">
+    <!-- ENTRY FORM (LEFT SIDE) -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header text-white fw-bold {% if manage_type == 'course' %}bg-primary{% elif manage_type == 'teacher' %}bg-success{% else %}bg-danger{% endif %}">
+                Add New {% if manage_type == 'course' %}Course{% elif manage_type == 'teacher' %}Teacher{% else %}Subject{% endif %}
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    
+                    <!-- COURSE FORM -->
+                    {% if manage_type == 'course' %}
+                    <div class="mb-3"><label class="form-label">Class ID</label><input type="text" class="form-control" name="class_id" placeholder="e.g. FYCS-A" required></div>
+                    <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="department" placeholder="e.g. CS" required></div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label">Semester</label><input type="number" class="form-control" name="semester" required></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">Division</label><input type="text" class="form-control" name="division" required></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Add Course</button>
+
+                    <!-- TEACHER FORM -->
+                    {% elif manage_type == 'teacher' %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3"><label class="form-label">Teacher ID</label><input type="text" class="form-control" name="teacher_id" required></div>
+                        <div class="col-md-6 mb-3"><label class="form-label">Max Hrs/Week</label><input type="number" class="form-control" name="max_hours" required></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Full Name</label><input type="text" class="form-control" name="name" required></div>
+                    <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" required></div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input class="form-control" list="deptOpts" name="departments" required>
+                        <datalist id="deptOpts">{% for d in depts %}<option value="{{ d }}">{% endfor %}</datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Available Days</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for day in ['Mon','Tue','Wed','Thu','Fri','Sat'] %}
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="days" value="{{ day }}" checked><label>{{ day }}</label></div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100">Add Teacher</button>
+
+                    <!-- SUBJECT FORM -->
+                    {% elif manage_type == 'subject' %}
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label">Code</label><input type="text" class="form-control" name="subject_code" required></div>
+                        <div class="col-md-8 mb-3"><label class="form-label">Subject Name</label><input type="text" class="form-control" name="subject_name" required></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assign Class (Ctrl for multiple)</label>
+                        <select class="form-select" name="class_id" multiple size="3" required>
+                            {% for c in courses %}<option value="{{ c.class_id }}">{{ c.class_id }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assign Teacher</label>
+                        <select class="form-select" name="teacher_id" required>
+                            <option value="" selected disabled>Select Teacher...</option>
+                            {% for t in teachers %}<option value="{{ t.teacher_id }}">{{ t.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" name="subject_type">
+                                <option value="Theory">Theory</option><option value="Practical">Practical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Total Course Hrs</label><input type="number" class="form-control" name="total_course_hours" value="50" required></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" value="1" required></div>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">Add Subject</button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- DATA TABLE (RIGHT SIDE) -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                {% if manage_type == 'course' %}
+                                <th>Class ID</th><th>Dept</th><th>Sem</th><th>Div</th>
+                                {% elif manage_type == 'teacher' %}
+                                <th>ID</th><th>Name & Email</th><th>Dept</th><th>Days</th>
+                                {% elif manage_type == 'subject' %}
+                                <th>Code</th><th>Subject</th><th>Classes</th><th>Teacher</th><th>Total Hrs</th>
+                                {% endif %}
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                {% if manage_type == 'course' %}
+                                <td class="fw-bold">{{ item.class_id }}</td><td>{{ item.department }}</td><td>{{ item.semester }}</td><td>{{ item.division }}</td>
+                                {% elif manage_type == 'teacher' %}
+                                <td class="fw-bold">{{ item.teacher_id }}</td><td>{{ item.name }}<br><small>{{ item.email }}</small></td><td>{{ item.departments }}</td><td>{{ item.available_days }}</td>
+                                {% elif manage_type == 'subject' %}
+                                <td class="fw-bold">{{ item.subject_code }}</td><td>{{ item.subject_name }} <small>({{ item.subject_type }})</small></td><td>{{ item.class_id }}</td><td>{{ item.teacher_id }}</td><td>{{ item.total_course_hours }}</td>
+                                {% endif %}
+                                
+                                <td class="text-nowrap">
+                                    <a href="/edit_{{ manage_type }}/{{ item.id }}" class="btn btn-sm btn-warning">✏️</a>
+                                    <a href="/delete/{{ manage_type }}/{{ item.id }}" class="btn btn-sm btn-danger" onclick="return confirm('Confirm Delete?');">🗑️</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

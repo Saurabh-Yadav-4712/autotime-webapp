@@ -1,0 +1,55 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold">⚙️ College Settings</h2>
+    <a href="/admin_dash" class="btn btn-outline-secondary">⬅️ Back to Dashboard</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-sm border-0 border-top border-dark border-4">
+            <div class="card-body p-4">
+                <p class="text-muted mb-4">Configure your daily time slots, breaks, and college timings here. This will be used by the Timetable Engine.</p>
+                
+                <form method="POST" action="/college_settings">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Max Lectures Per Day</label>
+                            <input type="number" class="form-control" name="total_lectures" placeholder="e.g. 6" value="{{ settings.get('total_lectures', '') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">College Start Time</label>
+                            <input type="time" class="form-control" name="start_time" value="{{ settings.get('start_time', '') }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Lecture Duration (Mins)</label>
+                            <input type="number" class="form-control" name="lecture_duration" placeholder="e.g. 45" value="{{ settings.get('lecture_duration', '') }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold">Lunch Break (Mins)</label>
+                            <input type="number" class="form-control" name="break_time" placeholder="e.g. 30" value="{{ settings.get('break_time', '') }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-primary">Lunch After Lecture No.</label>
+                            <input type="number" class="form-control border-primary" name="lunch_after_lecture" placeholder="e.g. 3" value="{{ settings.get('lunch_after_lecture', '') }}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-success">Weeks per Semester</label>
+                            <input type="number" class="form-control border-success" name="weeks_per_semester" placeholder="e.g. 15" value="{{ settings.get('weeks_per_semester', '15') }}" required>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning text-dark shadow-sm">
+                        ⚠️ <strong>Note:</strong> Changing these settings will require you to regenerate the timetable from the Generate Button for the changes to take effect.
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 fw-bold fs-5">Save Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
