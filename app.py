@@ -170,7 +170,7 @@ with app.app_context():
 # ==========================================
 @app.route('/')
 def home():
-    return render_template('public/landing.html')
+    return render_template('main_site/landing.html')
 
 @app.route('/login')
 def login_page():
