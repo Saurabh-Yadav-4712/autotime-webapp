@@ -1,7 +1,7 @@
 {% extends 'shared/base.html' %}
 
 {% block content %}
-<!-- PDF PRINT FIX CSS (Saves perfect PDF in landscape) -->
+<!-- PDF PRINT FIX CSS -->
 <style>
     @media print {
         @page {
@@ -27,67 +27,82 @@
     }
 </style>
 
-<div class="d-flex justify-content-between align-items-center mb-4 mt-3 border-bottom pb-3 d-print-none">
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom d-print-none">
     <div>
-        <h2 class="fw-bold text-primary mb-0">🎓 Hello, {{ s_name }}</h2>
-        <small class="text-muted">Live Timetable Portal • Class: <strong class="text-dark">{{ class_id }}</strong></small>
+        <h2 class="fw-bold text-primary mb-1 d-flex align-items-center"><i class="bi bi-mortarboard me-2"></i> Hello, {{ s_name }}</h2>
+        <small class="text-muted">Live Timetable Portal • Class: <strong class="text-dark bg-light px-2 py-1 rounded ms-1">{{ class_id }}</strong></small>
     </div>
-    <div>
-        <button onclick="window.print()" class="btn btn-outline-dark fw-bold me-2">🖨️ Save as PDF</button>
-        <a href="/logout" class="btn btn-outline-danger fw-bold">🚪 Logout</a>
+    <div class="d-flex gap-2">
+        <a href="/change_password" class="btn btn-outline-secondary fw-bold"><i class="bi bi-key me-1"></i> Change Password</a>
+        <button onclick="window.print()" class="btn btn-outline-dark fw-bold"><i class="bi bi-printer me-1"></i> Save as PDF</button>
+        <a href="/logout" class="btn btn-outline-danger fw-bold"><i class="bi bi-box-arrow-right me-1"></i> Logout</a>
     </div>
 </div>
 
 <div class="card shadow-sm border-0 border-top border-primary border-4 mb-5">
-    <div class="card-header bg-white pt-3 pb-2 text-center d-print-none">
-        <span class="badge bg-danger text-white">Proxy lectures are highlighted automatically</span>
+    <div class="card-header bg-white pt-4 pb-3 text-center d-print-none border-0">
+        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger p-2"><i class="bi bi-info-circle-fill me-1"></i> Proxy lectures are highlighted automatically</span>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <!-- Table id used for printing layout -->
             <table class="table table-bordered text-center align-middle mb-0" id="timetable-pdf" style="table-layout: fixed; min-width: 800px;">
-                <thead class="table-dark">
+                <thead class="table-light">
                     <tr>
-                        <th style="width: 12%;">Day / Time</th>
+                        <th class="bg-secondary text-white py-3" style="width: 12%;">Day \ Time</th>
+                        
+                        {% set break_printed = namespace(value=false) %}
                         {% for slot in time_slots %}
-                            <th>{{ slot[0] }} - {{ slot[1] }}</th>
-                            {% if loop.index == lunch_after %}
-                                <th class="bg-secondary text-white" style="width: 40px;">B<br>R<br>E<br>A<br>K</th>
+                            
+                            {% if loop.index0 == lunch_after and not break_printed.value %}
+                                <th class="bg-warning text-dark py-3" style="width: 40px;">
+                                    <div style="writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 0.8rem; letter-spacing: 2px;">BREAK</div>
+                                </th>
+                                {% set break_printed.value = true %}
                             {% endif %}
+                            
+                            <th class="py-3">
+                                <div class="text-primary">{{ slot[0] }}</div>
+                                <div class="small text-muted">to</div>
+                                <div class="text-primary">{{ slot[1] }}</div>
+                            </th>
+                            
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for day in days %}
                     <tr>
-                        <td class="fw-bold bg-light">{{ day }}</td>
+                        <td class="fw-bold bg-light fs-5 align-middle">{{ day }}</td>
+                        
+                        {% set break_printed_row = namespace(value=false) %}
                         {% for slot in time_slots %}
                             {% set start_time = slot[0] %}
+                            
+                            {% if loop.index0 == lunch_after and not break_printed_row.value %}
+                                <td class="bg-warning bg-opacity-25 border-warning"></td>
+                                {% set break_printed_row.value = true %}
+                            {% endif %}
                             
                             {% if day in schedule and start_time in schedule[day] %}
                                 {% set entry = schedule[day][start_time] %}
                                 
-                                <!-- PROXY HIGHLIGHT FOR STUDENTS -->
                                 {% if entry.is_proxy %}
-                                    <td class="bg-danger bg-opacity-25 border-danger shadow-sm">
-                                        <div class="fw-bold text-danger small">⚠️ NEW TEACHER</div>
+                                    <td class="bg-danger bg-opacity-10 border-danger shadow-sm p-3">
+                                        <div class="fw-bold text-danger small mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> NEW TEACHER</div>
                                         <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
-                                        <div class="badge bg-danger mt-1">{{ entry.teacher_name }}</div>
+                                        <div class="badge bg-danger mt-2">{{ entry.teacher_name }}</div>
                                     </td>
                                 {% else %}
-                                    <td class="bg-primary bg-opacity-10 border-primary">
-                                        <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
-                                        <div class="badge bg-primary mt-1">{{ entry.teacher_name }}</div>
+                                    <td class="bg-primary bg-opacity-10 border-primary p-3">
+                                        <div class="fw-bold text-dark fs-6 mb-1">{{ entry.subject_name }}</div>
+                                        <div class="badge bg-primary mt-2">{{ entry.teacher_name }}</div>
                                     </td>
                                 {% endif %}
                                 
                             {% else %}
-                                <td class="text-muted bg-light"><small>---</small></td>
+                                <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
                             {% endif %}
                             
-                            {% if loop.index == lunch_after %}
-                                <td class="bg-secondary bg-opacity-10"></td>
-                            {% endif %}
                         {% endfor %}
                     </tr>
                     {% endfor %}

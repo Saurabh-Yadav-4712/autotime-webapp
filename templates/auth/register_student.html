@@ -1,43 +1,56 @@
 {% extends 'shared/base.html' %}
 {% block content %}
-<div class="row justify-content-center mt-5 mb-5">
-    <div class="col-md-5">
-        <div class="card shadow-lg border-0 rounded-4 border-top border-primary border-4">
-            <div class="card-body p-4 p-md-5">
-                <div class="text-center mb-4">
-                    <h1 class="display-4">🎓</h1>
-                    <h3 class="fw-bold text-primary">Student Registration</h3>
-                    <p class="text-muted small">Join your college portal to view live schedules.</p>
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="card p-5 border-0 shadow-lg w-100" style="max-width: 500px;">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary mb-1"><i class="bi bi-mortarboard me-2"></i>Student Registration</h3>
+            <p class="text-muted small">Create your student account</p>
+        </div>
+
+        <form action="/register_student" method="POST">
+            <div class="mb-3">
+                <label class="form-label">Institute Code</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-hash"></i></span>
+                    <input type="text" name="inst_code" class="form-control" required placeholder="e.g. INS-XXXXX">
                 </div>
-                
-                <form method="POST" action="/register_student">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">INSTITUTE CODE</label>
-                        <input type="text" class="form-control bg-light border-0" name="inst_code" placeholder="e.g., INS-XXXX" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">FULL NAME</label>
-                        <input type="text" class="form-control bg-light border-0" name="name" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">CLASS ID (e.g., FYCS-A)</label>
-                        <input type="text" class="form-control border-primary bg-light" name="class_id" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-muted">EMAIL ADDRESS</label>
-                        <input type="email" class="form-control bg-light border-0" name="email" required>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label fw-bold small text-muted">SET PASSWORD</label>
-                        <input type="password" class="form-control bg-light border-0" name="password" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary w-100 fw-bold fs-5 mb-3">Register Account</button>
-                    <div class="text-center">
-                        <a href="/" class="text-secondary text-decoration-none small">Already have an account? Login</a>
-                    </div>
-                </form>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Full Name</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input type="text" name="name" class="form-control" required placeholder="John Doe">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Class ID (e.g., FYCS)</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-journal-bookmark"></i></span>
+                    <input type="text" name="class_id" class="form-control text-uppercase" required placeholder="FYCS">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email Address</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                    <input type="email" name="email" class="form-control" required placeholder="student@example.com">
+                </div>
+                <div class="form-text">We will send an OTP to this email for verification.</div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                    <input type="password" name="password" id="regStudentPwd" class="form-control border-end-0" required minlength="6">
+                    <span class="input-group-text bg-white toggle-password border-start-0" data-target="regStudentPwd">
+                        <i class="bi bi-eye"></i>
+                    </span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Continue to Verification</button>
+        </form>
+        <div class="text-center">
+            <p class="small text-muted mb-0">Already registered? <a href="/" class="text-primary text-decoration-none fw-bold">Login Here</a></p>
         </div>
     </div>
 </div>

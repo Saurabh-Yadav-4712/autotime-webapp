@@ -1,38 +1,49 @@
 {% extends 'shared/base.html' %}
-
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow border-0 rounded-3 mt-4">
-            <div class="card-body p-4 p-md-5">
-                <h4 class="text-center mb-4 fw-bold text-dark">Register New College</h4>
-                <p class="text-center text-muted small mb-4">System will generate a unique Institute Code for your college.</p>
-                
-                <form action="/register_institute" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">College / Institute Name</label>
-                        <input type="text" class="form-control" name="college_name" required placeholder="e.g. Kapol Vidhyanidhi College">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Admin Username</label>
-                        <input type="text" class="form-control" name="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Admin Email</label>
-                        <input type="email" class="form-control" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Admin Password</label>
-                        <input type="password" class="form-control" name="password" required>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-dark w-100">Register & Generate Code</button>
-                    
-                    <div class="text-center mt-3">
-                        <a href="/" class="text-decoration-none small text-secondary">Back to Login</a>
-                    </div>
-                </form>
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="card p-5 border-0 shadow-lg w-100" style="max-width: 500px;">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-primary mb-1"><i class="bi bi-building me-2"></i>Institute Registration</h3>
+            <p class="text-muted small">Register your college/institute to get started</p>
+        </div>
+
+        <form action="/register_institute" method="POST">
+            <div class="mb-3">
+                <label class="form-label">Institute / College Name</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-bank"></i></span>
+                    <input type="text" name="college_name" class="form-control" required placeholder="e.g. Example University">
+                </div>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Admin Username</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+                    <input type="text" name="username" class="form-control" required placeholder="admin_123">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Admin Email Address</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                    <input type="email" name="email" class="form-control" required placeholder="admin@example.com">
+                </div>
+                <div class="form-text">We will send an OTP to this email for verification.</div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                    <input type="password" name="password" id="regInstPwd" class="form-control border-end-0" required minlength="6">
+                    <span class="input-group-text bg-white toggle-password border-start-0" data-target="regInstPwd">
+                        <i class="bi bi-eye"></i>
+                    </span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Continue to Verification</button>
+        </form>
+        <div class="text-center">
+            <p class="small text-muted mb-0">Already registered? <a href="/" class="text-primary text-decoration-none fw-bold">Login Here</a></p>
         </div>
     </div>
 </div>

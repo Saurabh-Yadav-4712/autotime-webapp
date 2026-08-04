@@ -11,20 +11,21 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 
-def send_otp_email(to_email, otp):
+def send_otp_email(to_email, otp, context="Account Verification"):
     smtp_email = os.environ.get('SMTP_EMAIL')
     smtp_password = os.environ.get('SMTP_PASSWORD')
     
     if not smtp_email or not smtp_password:
         print("\n" + "="*50)
         print(f"🔔 [MOCK EMAIL] EMAIL SENT TO: {to_email}")
+        print(f"🔔 CONTEXT: {context}")
         print(f"🔔 OTP CODE: {otp}")
         print("="*50 + "\n")
         return False
         
     try:
-        msg = MIMEText(f"Your AutoTime Teacher Account Activation OTP is: {otp}")
-        msg['Subject'] = 'AutoTime Account Activation OTP'
+        msg = MIMEText(f"Your AutoTime {context} OTP is: {otp}")
+        msg['Subject'] = f'AutoTime - {context} OTP'
         msg['From'] = smtp_email
         msg['To'] = to_email
         
@@ -174,26 +175,89 @@ def home():
 @app.route('/register_institute', methods=['GET', 'POST'])
 def register_institute():
     if request.method == 'POST':
-        if Institute.query.filter_by(admin_username=request.form['username']).first():
+        username = request.form['username'].strip()
+        email = request.form['email'].strip()
+        college_name = request.form['college_name'].strip()
+        password = request.form['password']
+
+        if Institute.query.filter_by(admin_username=username).first():
             flash('Username already exists.', 'danger')
             return redirect(url_for('register_institute'))
-        if Institute.query.filter_by(admin_email=request.form['email']).first():
+        if Institute.query.filter_by(admin_email=email).first():
             flash('Email already registered.', 'danger')
             return redirect(url_for('register_institute'))
         
-        inst_code = generate_institute_code()
-        new_institute = Institute(
-            name=request.form['college_name'],
-            institute_code=inst_code,
-            admin_username=request.form['username'],
-            admin_email=request.form['email'],
-            admin_password=generate_password_hash(request.form['password'])
-        )
-        db.session.add(new_institute)
-        db.session.commit()
-        flash(f'College Registered! Code: {inst_code}', 'success')
-        return redirect(url_for('home'))
+        # Save temp data and send OTP
+        otp = str(random.randint(100000, 999999))
+        session['reg_data'] = {
+            'type': 'institute',
+            'college_name': college_name,
+            'username': username,
+            'email': email,
+            'password': password
+        }
+        session['reg_otp'] = otp
+        
+        email_sent = send_otp_email(email, otp, context="Institute Registration")
+        if not email_sent:
+            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
+        else:
+            flash('An OTP has been sent to your email for verification.', 'info')
+        return redirect(url_for('verify_reg_otp'))
     return render_template('auth/register_institute.html')
+
+@app.route('/verify_reg_otp', methods=['GET', 'POST'])
+def verify_reg_otp():
+    if 'reg_data' not in session or 'reg_otp' not in session:
+        flash('Session expired. Please register again.', 'danger')
+        return redirect(url_for('home'))
+        
+    if request.method == 'POST':
+        user_otp = request.form['otp'].strip()
+        if user_otp == session['reg_otp']:
+            data = session['reg_data']
+            
+            if data['type'] == 'institute':
+                inst_code = generate_institute_code()
+                new_institute = Institute(
+                    name=data['college_name'],
+                    institute_code=inst_code,
+                    admin_username=data['username'],
+                    admin_email=data['email'],
+                    admin_password=generate_password_hash(data['password'])
+                )
+                db.session.add(new_institute)
+                db.session.commit()
+                
+                # Clear session
+                session.pop('reg_data', None)
+                session.pop('reg_otp', None)
+                
+                flash(f'College Registered Successfully! Your Institute Code is: {inst_code}', 'success')
+                return redirect(url_for('home'))
+                
+            elif data['type'] == 'student':
+                new_student = Student(
+                    institute_code=data['inst_code'],
+                    name=data['name'],
+                    email=data['email'],
+                    class_id=data['class_id'],
+                    password=generate_password_hash(data['password'])
+                )
+                db.session.add(new_student)
+                db.session.commit()
+                
+                session.pop('reg_data', None)
+                session.pop('reg_otp', None)
+                
+                flash('Student Registered Successfully! You can now login.', 'success')
+                return redirect(url_for('home'))
+                
+        else:
+            flash('Invalid OTP. Please try again.', 'danger')
+            return redirect(url_for('verify_reg_otp'))
+            
+    return render_template('auth/verify_reg_otp.html')
 
 @app.route('/login_admin', methods=['POST'])
 def login_admin():
@@ -938,12 +1002,12 @@ def activate_teacher():
         session['activation_otp'] = otp
         
         # Send Real Email
-        email_sent = send_otp_email(email, otp)
+        email_sent = send_otp_email(email, otp, context="Teacher Activation")
         
         if email_sent:
             flash('An OTP has been sent to your email address.', 'success')
         else:
-            flash('An OTP has been generated. (Check Terminal if no SMTP configured)', 'info')
+            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
         return redirect(url_for('verify_teacher_otp'))
         
     return render_template('teacher/activate_teacher.html')
@@ -1182,19 +1246,25 @@ def register_student():
             flash('Email already registered! Please login.', 'warning')
             return redirect(url_for('home'))
 
-        # Save to DB
-        new_student = Student(
-            institute_code=inst_code,
-            name=name,
-            email=email,
-            password=generate_password_hash(password),
-            class_id=class_id
-        )
-        db.session.add(new_student)
-        db.session.commit()
-        flash('Student Registration successful! You can now login.', 'success')
-        return redirect(url_for('home'))
+        # Generate OTP and store in session
+        otp = str(random.randint(100000, 999999))
+        session['reg_data'] = {
+            'type': 'student',
+            'inst_code': inst_code,
+            'name': name,
+            'email': email,
+            'class_id': class_id,
+            'password': password
+        }
+        session['reg_otp'] = otp
         
+        email_sent = send_otp_email(email, otp, context="Student Registration")
+        if not email_sent:
+            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
+        else:
+            flash('An OTP has been sent to your email for verification.', 'info')
+        return redirect(url_for('verify_reg_otp'))
+
     return render_template('auth/register_student.html')
 
 @app.route('/login_student', methods=['POST'])
@@ -1262,11 +1332,11 @@ def forgot_password():
         session['reset_role'] = role
         session['reset_otp'] = otp
         
-        email_sent = send_otp_email(email, otp)
+        email_sent = send_otp_email(email, otp, context="Password Reset")
         if email_sent:
             flash('A reset OTP has been sent to your email.', 'success')
         else:
-            flash('OTP generated. (Check Terminal if no SMTP configured)', 'info')
+            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
             
         return render_template('auth/reset_password.html', email=email)
         
@@ -1307,3 +1377,40 @@ def reset_password():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
+        flash('Please login to change password.', 'danger')
+        return redirect(url_for('home'))
+    
+    if request.method == 'POST':
+        old_pass = request.form['old_password']
+        new_pass = request.form['new_password']
+        
+        if 'admin_id' in session:
+            user = Institute.query.get(session['admin_id'])
+            if check_password_hash(user.admin_password, old_pass):
+                user.admin_password = generate_password_hash(new_pass)
+                db.session.commit()
+                flash('Password changed successfully!', 'success')
+                return redirect(url_for('admin_dash'))
+        elif 'teacher_id' in session:
+            user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+            if user and check_password_hash(user.password, old_pass):
+                user.password = generate_password_hash(new_pass)
+                db.session.commit()
+                flash('Password changed successfully!', 'success')
+                return redirect(url_for('teacher_dash'))
+        elif 'student_id' in session:
+            user = Student.query.get(session['student_id'])
+            if user and check_password_hash(user.password, old_pass):
+                user.password = generate_password_hash(new_pass)
+                db.session.commit()
+                flash('Password changed successfully!', 'success')
+                return redirect(url_for('student_dash'))
+                
+        flash('Incorrect old password.', 'danger')
+        return redirect(url_for('change_password'))
+        
+    return render_template('auth/change_password.html')

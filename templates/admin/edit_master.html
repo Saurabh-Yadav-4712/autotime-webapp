@@ -2,74 +2,94 @@
 {% block content %}
 <div class="row justify-content-center mt-4">
     <div class="col-md-6">
-        <div class="card shadow border-0">
-            <div class="card-header bg-warning text-dark fw-bold">
-                ✏️ Edit {% if edit_type == 'course' %}Course{% elif edit_type == 'teacher' %}Teacher{% else %}Subject{% endif %}
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-dark fw-bold d-flex align-items-center py-3">
+                <i class="bi bi-pencil-square me-2"></i> Edit {% if edit_type == 'course' %}Course{% elif edit_type == 'teacher' %}Teacher{% else %}Subject{% endif %}
             </div>
-            <div class="card-body">
+            <div class="card-body bg-light-custom">
                 <form method="POST">
                     
                     {% if edit_type == 'course' %}
                         <!-- COURSE FIELDS -->
-                        <div class="mb-3"><label class="form-label">Class ID</label><input type="text" class="form-control" name="class_id" value="{{ item.class_id }}"></div>
-                        <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="department" value="{{ item.department }}"></div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3"><label class="form-label">Semester</label><input type="number" class="form-control" name="semester" value="{{ item.semester }}"></div>
-                            <div class="col-md-6 mb-3"><label class="form-label">Division</label><input type="text" class="form-control" name="division" value="{{ item.division }}"></div>
+                        <div class="mb-3"><label class="form-label">Class ID</label><input type="text" class="form-control" name="class_id" value="{{ item.class_id }}" required></div>
+                        <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="department" value="{{ item.department }}" required></div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-3"><label class="form-label">Semester</label><input type="number" class="form-control" name="semester" value="{{ item.semester }}" min="1" required></div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Division</label>
+                                <select class="form-select" name="division" required>
+                                    <option value="" disabled>Select...</option>
+                                    <option value="A" {% if item.division == 'A' %}selected{% endif %}>A</option>
+                                    <option value="B" {% if item.division == 'B' %}selected{% endif %}>B</option>
+                                    <option value="C" {% if item.division == 'C' %}selected{% endif %}>C</option>
+                                    <option value="D" {% if item.division == 'D' %}selected{% endif %}>D</option>
+                                    <option value="E" {% if item.division == 'E' %}selected{% endif %}>E</option>
+                                    <option value="F" {% if item.division == 'F' %}selected{% endif %}>F</option>
+                                    <option value="G" {% if item.division == 'G' %}selected{% endif %}>G</option>
+                                    <option value="H" {% if item.division == 'H' %}selected{% endif %}>H</option>
+                                </select>
+                            </div>
                         </div>
 
                     {% elif edit_type == 'teacher' %}
                         <!-- TEACHER FIELDS -->
-                        <div class="row">
-                            <div class="col-md-6 mb-3"><label class="form-label">Teacher ID</label><input type="text" class="form-control" name="teacher_id" value="{{ item.teacher_id }}"></div>
-                            <div class="col-md-6 mb-3"><label class="form-label">Max Hrs/Week</label><input type="number" class="form-control" name="max_hours" value="{{ item.max_hours }}"></div>
+                        <div class="row g-2">
+                            <div class="col-6 mb-3"><label class="form-label">Teacher ID</label><input type="text" class="form-control" name="teacher_id" value="{{ item.teacher_id }}" required></div>
+                            <div class="col-6 mb-3"><label class="form-label">Max Hrs/Week</label><input type="number" class="form-control" name="max_hours" value="{{ item.max_hours }}" min="1" max="60" required></div>
                         </div>
-                        <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" name="name" value="{{ item.name }}"></div>
-                        <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ item.email }}"></div>
-                        <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="departments" value="{{ item.departments }}"></div>
+                        <div class="mb-3"><label class="form-label">Name</label><input type="text" class="form-control" name="name" value="{{ item.name }}" required></div>
+                        <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" value="{{ item.email }}" required></div>
+                        <div class="mb-3">
+                            <label class="form-label">Department</label>
+                            <input class="form-control" list="deptOpts" name="departments" value="{{ item.departments }}" required>
+                            <datalist id="deptOpts">{% for d in unique_depts %}<option value="{{ d }}">{% endfor %}</datalist>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">Available Days</label>
-                            <div class="d-flex flex-wrap gap-2">
+                            <div class="d-flex flex-wrap gap-2 p-2 bg-white border rounded">
                                 {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] %}
-                                <div class="form-check"><input class="form-check-input" type="checkbox" name="days" value="{{ day }}" id="{{ day }}" {% if day in item.available_days %}checked{% endif %}><label for="{{ day }}">{{ day }}</label></div>
+                                <div class="form-check form-check-inline m-0">
+                                    <input class="form-check-input" type="checkbox" name="days" value="{{ day }}" id="day_{{ day }}" {% if day in item.available_days %}checked{% endif %}>
+                                    <label class="form-check-label small" for="day_{{ day }}">{{ day }}</label>
+                                </div>
                                 {% endfor %}
                             </div>
                         </div>
 
                     {% elif edit_type == 'subject' %}
-                        <!-- SUBJECT FIELDS (Tkinter Logic Parity) -->
-                        <div class="row">
-                            <div class="col-md-4 mb-3"><label class="form-label">Sub Code</label><input type="text" class="form-control" name="subject_code" value="{{ item.subject_code }}"></div>
-                            <div class="col-md-8 mb-3"><label class="form-label">Subject Name</label><input type="text" class="form-control" name="subject_name" value="{{ item.subject_name }}"></div>
+                        <!-- SUBJECT FIELDS -->
+                        <div class="row g-2">
+                            <div class="col-4 mb-3"><label class="form-label">Sub Code</label><input type="text" class="form-control" name="subject_code" value="{{ item.subject_code }}" required></div>
+                            <div class="col-8 mb-3"><label class="form-label">Subject Name</label><input type="text" class="form-control" name="subject_name" value="{{ item.subject_name }}" required></div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Assigned Classes <small>(Current: {{ item.class_id }})</small></label>
-                            <select class="form-select" name="class_id" multiple size="3">
+                            <label class="form-label">Assigned Classes <small class="text-muted">(Current: {{ item.class_id }})</small></label>
+                            <select class="form-select" name="class_id" multiple size="3" required>
                                 {% for course in courses %}<option value="{{ course.class_id }}">{{ course.class_id }}</option>{% endfor %}
                             </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Assigned Teacher</label>
-                            <select class="form-select" name="teacher_id">
+                            <select class="form-select" name="teacher_id" required>
                                 <option value="{{ item.teacher_id }}" selected>Current: {{ item.teacher_id }}</option>
                                 {% for teacher in teachers %}<option value="{{ teacher.teacher_id }}">{{ teacher.name }} ({{ teacher.teacher_id }})</option>{% endfor %}
                             </select>
                         </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Type (Theory/Practical)</label>
+                        <div class="row g-2">
+                            <div class="col-4 mb-3">
+                                <label class="form-label">Type</label>
                                 <select class="form-select" name="subject_type">
                                     <option value="Theory" {% if item.subject_type == 'Theory' %}selected{% endif %}>Theory</option>
                                     <option value="Practical" {% if item.subject_type == 'Practical' %}selected{% endif %}>Practical</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 mb-3"><label class="form-label">Total Course Hrs</label><input type="number" class="form-control" name="total_course_hours" value="{{ item.total_course_hours }}"></div>
-                            <div class="col-md-4 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" value="{{ item.session_length }}"></div>
+                            <div class="col-4 mb-3"><label class="form-label">Total Course Hrs</label><input type="number" class="form-control" name="total_course_hours" value="{{ item.total_course_hours }}" min="1" required></div>
+                            <div class="col-4 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" value="{{ item.session_length }}" min="1" required></div>
                         </div>
                     {% endif %}
 
-                    <button type="submit" class="btn btn-warning w-100 fw-bold mt-3">Update Details</button>
-                    <a href="javascript:history.back()" class="btn btn-secondary w-100 mt-2">Cancel</a>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold mt-3"><i class="bi bi-save me-1"></i> Update Details</button>
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary w-100 mt-2">Cancel</a>
                 </form>
             </div>
         </div>
