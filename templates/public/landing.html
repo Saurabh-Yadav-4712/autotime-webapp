@@ -1,0 +1,101 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<!-- Hero Section -->
+<div class="container-fluid bg-primary text-white py-5 text-center rounded-bottom shadow" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); margin-top: -1.5rem;">
+    <div class="container py-5">
+        <h1 class="display-3 fw-bold mb-3"><i class="bi bi-clock-history me-3"></i>AutoTime</h1>
+        <p class="lead fw-light mb-5 fs-4">The Smartest Way to Generate & Manage Timetables for Your Institute</p>
+        <div class="d-flex gap-3 justify-content-center">
+            <a href="/login" class="btn btn-light btn-lg fw-bold text-primary px-5 rounded-pill shadow-sm"><i class="bi bi-box-arrow-in-right me-2"></i>Log In</a>
+            <a href="/register_institute" class="btn btn-outline-light btn-lg fw-bold px-5 rounded-pill"><i class="bi bi-building me-2"></i>Register Institute</a>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container py-5 mt-4">
+    <div class="text-center mb-5">
+        <h2 class="fw-bold text-dark">Why Choose AutoTime?</h2>
+        <div class="mx-auto bg-primary rounded" style="width: 60px; height: 4px;"></div>
+    </div>
+    <div class="row g-4">
+        <!-- Feature 1 -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 text-center hover-lift transition-all">
+                <div class="display-4 text-primary mb-3"><i class="bi bi-magic"></i></div>
+                <h4 class="fw-bold">Automated Generation</h4>
+                <p class="text-muted">Say goodbye to manual clashes. Our algorithm automatically assigns teachers and subjects optimally without any overlaps.</p>
+            </div>
+        </div>
+        <!-- Feature 2 -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 text-center hover-lift transition-all">
+                <div class="display-4 text-success mb-3"><i class="bi bi-person-check-fill"></i></div>
+                <h4 class="fw-bold">Live Proxy Management</h4>
+                <p class="text-muted">Teachers can apply for leave and the system will automatically assign proxy teachers for the day.</p>
+            </div>
+        </div>
+        <!-- Feature 3 -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-4 text-center hover-lift transition-all">
+                <div class="display-4 text-danger mb-3"><i class="bi bi-file-earmark-pdf-fill"></i></div>
+                <h4 class="fw-bold">One-Click PDF Export</h4>
+                <p class="text-muted">Easily export beautiful, print-ready timetables to PDF or Excel formats with just one click.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="container-fluid bg-light py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-dark">How It Works</h2>
+            <div class="mx-auto bg-primary rounded" style="width: 60px; height: 4px;"></div>
+        </div>
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="d-flex mb-4 align-items-start">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3 shadow" style="width: 50px; height: 50px; font-size: 1.5rem; font-weight: bold;">1</div>
+                    <div>
+                        <h4 class="fw-bold">Register & Setup</h4>
+                        <p class="text-muted">Create an account for your institute. Define your working hours, break times, and total lectures per day.</p>
+                    </div>
+                </div>
+                <div class="d-flex mb-4 align-items-start">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3 shadow" style="width: 50px; height: 50px; font-size: 1.5rem; font-weight: bold;">2</div>
+                    <div>
+                        <h4 class="fw-bold">Add Data</h4>
+                        <p class="text-muted">Input your teachers, classes, and subjects. Specify how many hours per week each subject requires.</p>
+                    </div>
+                </div>
+                <div class="d-flex align-items-start">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 me-3 shadow" style="width: 50px; height: 50px; font-size: 1.5rem; font-weight: bold;">3</div>
+                    <div>
+                        <h4 class="fw-bold">Generate</h4>
+                        <p class="text-muted">Click generate and watch AutoTime build a fully optimized, collision-free timetable in seconds.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <div class="card border-0 shadow-lg p-3 bg-white rounded-4">
+                    <i class="bi bi-calendar3 display-1 text-primary my-5"></i>
+                    <h3 class="fw-bold text-dark mb-4">Ready to automate?</h3>
+                    <a href="/login" class="btn btn-primary btn-lg fw-bold rounded-pill mb-4 w-75 mx-auto shadow"><i class="bi bi-rocket-takeoff me-2"></i> Get Started Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS for hover effects -->
+<style>
+    .hover-lift {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+</style>
+{% endblock %}
