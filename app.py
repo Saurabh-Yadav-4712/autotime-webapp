@@ -763,7 +763,10 @@ def view_timetable():
                     schedule[day][entry.start_time] = entry
         time_slots = trim_time_slots(schedule, time_slots, lunch_after)
 
-    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration)
+    inst = Institute.query.filter_by(institute_code=inst_code).first()
+    inst_name = inst.name if inst else "Institute"
+    
+    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name)
 
 # ==========================================
 # ORIGINAL GRID EXCEL EXPORT (OPENPYXL)
@@ -1092,7 +1095,10 @@ def teacher_dash():
     
     today_str = datetime.now().strftime('%a')
     
-    return render_template('teacher/teacher_dash.html', schedule=schedule, courses=courses, days=days, time_slots=time_slots, lunch_after=lunch_after, t_name=t_name, today_str=today_str)
+    inst = Institute.query.filter_by(institute_code=inst_code).first()
+    inst_name = inst.name if inst else "Institute"
+    
+    return render_template('teacher/teacher_dash.html', schedule=schedule, courses=courses, days=days, time_slots=time_slots, lunch_after=lunch_after, t_name=t_name, today_str=today_str, inst_name=inst_name)
 
 @app.route('/teacher_view_class')
 def teacher_view_class():
@@ -1300,7 +1306,9 @@ def student_dash():
     for entry in entries:
         schedule[entry.day_name][entry.start_time] = entry
 
-    return render_template('student/student_dash.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, class_id=class_id, s_name=s_name)
+    inst = Institute.query.filter_by(institute_code=inst_code).first()
+    inst_name = inst.name if inst else "Institute"
+    return render_template('student/student_dash.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, class_id=class_id, s_name=s_name, inst_name=inst_name)
 
 # ==========================================
 # FORGOT PASSWORD ROUTES

@@ -50,8 +50,13 @@
                         {% set break_printed = namespace(value=false) %}
                         {% for slot in time_slots %}
                             {% if loop.index0 == lunch_after and not break_printed.value %}
-                                <th class="bg-warning text-dark py-3" style="width: 40px;">
-                                    <div style="writing-mode: vertical-rl; text-orientation: upright; font-weight: bold; font-size: 0.8rem; letter-spacing: 2px;">BREAK</div>
+                                <th class="bg-warning text-dark py-3" style="width: 80px;">
+                                    <div class="fw-bold mb-2" style="letter-spacing: 1px;">BREAK</div>
+                                    {% if loop.index0 > 0 %}
+                                    <div class="small opacity-75" style="font-size: 0.75rem; line-height: 1.2;">
+                                        {{ time_slots[loop.index0 - 1][1] }}<br>to<br>{{ slot[0] }}
+                                    </div>
+                                    {% endif %}
                                 </th>
                                 {% set break_printed.value = true %}
                             {% endif %}
