@@ -120,24 +120,25 @@
         // Turbo Drive Configuration
         Turbo.session.drive = true;
         
-        // Global Theme Toggle Logic (Turbo-safe)
-        document.addEventListener("turbo:load", function() {
+        // Global Theme Toggle Logic (Event Delegation for Turbo safety)
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'globalThemeToggle') {
+                const newTheme = e.target.checked ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                localStorage.setItem('autotime_theme', newTheme);
+            }
+        });
+
+        function syncThemeToggle() {
             const toggleInput = document.getElementById('globalThemeToggle');
             if (toggleInput) {
                 const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
                 toggleInput.checked = (currentTheme === 'dark');
-
-                // Remove existing listener to prevent duplicates if turbo:load fires multiple times on same elements
-                const newToggleInput = toggleInput.cloneNode(true);
-                toggleInput.parentNode.replaceChild(newToggleInput, toggleInput);
-
-                newToggleInput.addEventListener('change', function() {
-                    const newTheme = this.checked ? 'dark' : 'light';
-                    document.documentElement.setAttribute('data-bs-theme', newTheme);
-                    localStorage.setItem('autotime_theme', newTheme);
-                });
             }
-        });
+        }
+        
+        document.addEventListener('DOMContentLoaded', syncThemeToggle);
+        document.addEventListener('turbo:load', syncThemeToggle);
     </script>
 </body>
 </html>
