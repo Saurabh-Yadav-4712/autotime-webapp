@@ -1479,7 +1479,7 @@ def settings():
     if 'admin_id' in session:
         user_role = "admin"
         inst = Institute.query.get(session['admin_id'])
-        user_info = {'name': inst.name, 'email': inst.email, 'institute_code': inst.institute_code}
+        user_info = {'name': inst.name, 'email': inst.admin_email, 'institute_code': inst.institute_code}
     elif 'teacher_id' in session:
         user_role = "teacher"
         t = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
