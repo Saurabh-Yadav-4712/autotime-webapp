@@ -1491,6 +1491,35 @@ def settings():
 
     return render_template('shared/settings.html', user_role=user_role, user_info=user_info)
 
+@app.route('/settings/update_profile', methods=['POST'])
+def update_profile():
+    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
+        return redirect(url_for('login_page'))
+    
+    new_name = request.form.get('name', '').strip()
+    if not new_name:
+        flash('Name cannot be empty.', 'danger')
+        return redirect(url_for('settings'))
+
+    if 'admin_id' in session:
+        inst = Institute.query.get(session['admin_id'])
+        if inst:
+            inst.name = new_name
+            db.session.commit()
+    elif 'teacher_id' in session:
+        t = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        if t:
+            t.name = new_name
+            db.session.commit()
+    elif 'student_id' in session:
+        s = Student.query.get(session['student_id'])
+        if s:
+            s.name = new_name
+            db.session.commit()
+
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('settings'))
+
 @app.route('/settings/change_password', methods=['POST'])
 def settings_change_password():
     if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:

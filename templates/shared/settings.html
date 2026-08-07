@@ -5,7 +5,7 @@
         <div class="col-md-8 col-lg-6">
             
             <div class="d-flex align-items-center mb-4">
-                <a href="javascript:history.back()" class="btn btn-light rounded-circle shadow-sm me-3" style="width: 40px; height: 40px; padding: 0; line-height: 38px;">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-circle shadow-sm me-3" style="width: 40px; height: 40px; padding: 0; line-height: 38px;">
                     <i class="bi bi-arrow-left"></i>
                 </a>
                 <h3 class="fw-bold mb-0">Account Settings</h3>
@@ -13,7 +13,7 @@
 
             <!-- Appearance Settings -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
                     <h5 class="fw-bold text-primary"><i class="bi bi-palette me-2"></i>Appearance</h5>
                 </div>
                 <div class="card-body">
@@ -35,38 +35,41 @@
 
             <!-- Profile Overview -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
                     <h5 class="fw-bold text-success"><i class="bi bi-person-badge me-2"></i>Profile Details</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Role</label>
-                        <div class="form-control bg-light">{{ user_role|title }}</div>
-                    </div>
-                    {% if user_info.name %}
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Name</label>
-                        <div class="form-control bg-light">{{ user_info.name }}</div>
-                    </div>
-                    {% endif %}
-                    {% if user_info.email %}
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Email</label>
-                        <div class="form-control bg-light">{{ user_info.email }}</div>
-                    </div>
-                    {% endif %}
-                    {% if user_info.institute_code %}
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Institute Code</label>
-                        <div class="form-control bg-light">{{ user_info.institute_code }}</div>
-                    </div>
-                    {% endif %}
+                    <form action="/settings/update_profile" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Role</label>
+                            <input type="text" class="form-control bg-body-tertiary" value="{{ user_role|title }}" disabled>
+                        </div>
+                        {% if user_info.name %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Full Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ user_info.name }}" required>
+                        </div>
+                        {% endif %}
+                        {% if user_info.email %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Email</label>
+                            <input type="email" class="form-control bg-body-tertiary" value="{{ user_info.email }}" disabled>
+                        </div>
+                        {% endif %}
+                        {% if user_info.institute_code %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Institute Code</label>
+                            <input type="text" class="form-control bg-body-tertiary" value="{{ user_info.institute_code }}" disabled>
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-success w-100 fw-bold mt-2 shadow-sm">Save Profile</button>
+                    </form>
                 </div>
             </div>
 
             <!-- Security Settings -->
             <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0">
+                <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
                     <h5 class="fw-bold text-danger"><i class="bi bi-shield-lock me-2"></i>Security</h5>
                 </div>
                 <div class="card-body">

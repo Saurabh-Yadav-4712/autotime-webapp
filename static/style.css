@@ -19,6 +19,23 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+[data-bs-theme="dark"] {
+    --bg-color: #0f172a;     /* Slate 900 */
+    --surface: #1e293b;      /* Slate 800 */
+    --text-main: #f8fafc;    /* Slate 50 */
+    --text-muted: #94a3b8;   /* Slate 400 */
+    --border: #334155;       /* Slate 700 */
+}
+
+/* Force dark mode colors on Bootstrap utilities */
+[data-bs-theme="dark"] .bg-light, 
+[data-bs-theme="dark"] .bg-white {
+    background-color: var(--surface) !important;
+}
+[data-bs-theme="dark"] .text-dark {
+    color: var(--text-main) !important;
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-main);

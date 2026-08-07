@@ -25,10 +25,10 @@
     <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="d-flex flex-column min-vh-100 bg-light">
+<body class="d-flex flex-column min-vh-100">
 
     <!-- Global Loader Overlay -->
-    <div id="globalLoader" class="d-none align-items-center justify-content-center flex-column" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255,255,255,0.85); z-index: 9999; backdrop-filter: blur(5px);">
+    <div id="globalLoader" class="d-none align-items-center justify-content-center flex-column" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--surface); opacity: 0.9; z-index: 9999; backdrop-filter: blur(5px);">
         <div class="spinner-border text-primary shadow-sm" style="width: 4rem; height: 4rem;" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Global Footer -->
-    <footer class="bg-white border-top py-3 mt-auto shadow-sm">
+    <footer class="bg-body-tertiary border-top py-3 mt-auto shadow-sm">
         <div class="container-fluid px-4 text-center">
             <p class="mb-0 text-muted small fw-semibold">
                 &copy; <script>document.write(new Date().getFullYear())</script> AutoTime. All rights reserved.
@@ -119,23 +119,37 @@
             hideLoader();
         });
 
+        // Show loader on explicit button clicks (excluding modals)
+        if (!window.btnLoaderInitialized) {
+            window.btnLoaderInitialized = true;
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn');
+                if (btn && btn.tagName === 'A' && !btn.hasAttribute('data-bs-toggle') && btn.getAttribute('href') !== '#') {
+                    showLoader();
+                }
+            });
+        }
+
         // Password Visibility Toggle Logic via Event Delegation (Turbo-safe)
-        document.addEventListener('click', function(e) {
-            const btn = e.target.closest('.toggle-password');
-            if (btn) {
-                const targetId = btn.getAttribute('data-target');
-                const input = document.getElementById(targetId);
-                if (input) {
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
-                    } else {
-                        input.type = 'password';
-                        btn.innerHTML = '<i class="bi bi-eye"></i>';
+        if (!window.passwordToggleInitialized) {
+            window.passwordToggleInitialized = true;
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.toggle-password');
+                if (btn) {
+                    const targetId = btn.getAttribute('data-target');
+                    const input = document.getElementById(targetId);
+                    if (input) {
+                        if (input.type === 'password') {
+                            input.type = 'text';
+                            btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+                        } else {
+                            input.type = 'password';
+                            btn.innerHTML = '<i class="bi bi-eye"></i>';
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     </script>
 </body>
 </html>
