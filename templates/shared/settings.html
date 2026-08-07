@@ -11,27 +11,7 @@
                 <h3 class="fw-bold mb-0">Account Settings</h3>
             </div>
 
-            <!-- Appearance Settings -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
-                    <h5 class="fw-bold text-primary"><i class="bi bi-palette me-2"></i>Appearance</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted small mb-3">Choose how AutoTime looks to you. This setting is saved on this device.</p>
-                    
-                    <div class="d-flex gap-3">
-                        <button class="btn btn-outline-secondary flex-fill theme-btn" data-theme="light">
-                            <i class="bi bi-sun d-block fs-4 mb-1"></i> Light
-                        </button>
-                        <button class="btn btn-outline-secondary flex-fill theme-btn" data-theme="dark">
-                            <i class="bi bi-moon-stars d-block fs-4 mb-1"></i> Dark
-                        </button>
-                        <button class="btn btn-outline-secondary flex-fill theme-btn" data-theme="auto">
-                            <i class="bi bi-display d-block fs-4 mb-1"></i> Auto
-                        </button>
-                    </div>
-                </div>
-            </div>
+
 
             <!-- Profile Overview -->
             <div class="card border-0 shadow-sm mb-4">
@@ -53,13 +33,17 @@
                         {% if user_info.email %}
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Email</label>
-                            <input type="email" class="form-control bg-body-tertiary" value="{{ user_info.email }}" disabled>
+                            <input type="email" name="email" class="form-control" value="{{ user_info.email }}" required>
                         </div>
                         {% endif %}
                         {% if user_info.institute_code %}
                         <div class="mb-3">
                             <label class="form-label text-muted small fw-bold">Institute Code</label>
-                            <input type="text" class="form-control bg-body-tertiary" value="{{ user_info.institute_code }}" disabled>
+                            {% if user_role == 'admin' %}
+                                <input type="text" name="institute_code" class="form-control text-uppercase" value="{{ user_info.institute_code }}" required>
+                            {% else %}
+                                <input type="text" class="form-control bg-body-tertiary" value="{{ user_info.institute_code }}" disabled>
+                            {% endif %}
                         </div>
                         {% endif %}
                         <button type="submit" class="btn btn-success w-100 fw-bold mt-2 shadow-sm">Save Profile</button>
@@ -107,40 +91,5 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener("turbo:load", function() {
-        const themeBtns = document.querySelectorAll('.theme-btn');
-        if (!themeBtns.length) return;
 
-        function updateActiveButton(theme) {
-            themeBtns.forEach(btn => {
-                if (btn.getAttribute('data-theme') === theme) {
-                    btn.classList.remove('btn-outline-secondary');
-                    btn.classList.add('btn-primary');
-                } else {
-                    btn.classList.remove('btn-primary');
-                    btn.classList.add('btn-outline-secondary');
-                }
-            });
-        }
-
-        const currentTheme = localStorage.getItem('autotime_theme') || 'auto';
-        updateActiveButton(currentTheme);
-
-        themeBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const theme = this.getAttribute('data-theme');
-                localStorage.setItem('autotime_theme', theme);
-                
-                if (theme === 'auto') {
-                    document.documentElement.setAttribute('data-bs-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                } else {
-                    document.documentElement.setAttribute('data-bs-theme', theme);
-                }
-                
-                updateActiveButton(theme);
-            });
-        });
-    });
-</script>
 {% endblock %}

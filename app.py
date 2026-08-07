@@ -1497,28 +1497,106 @@ def update_profile():
         return redirect(url_for('login_page'))
     
     new_name = request.form.get('name', '').strip()
-    if not new_name:
-        flash('Name cannot be empty.', 'danger')
+    new_email = request.form.get('email', '').strip()
+    
+    if not new_name or not new_email:
+        flash('Name and Email cannot be empty.', 'danger')
         return redirect(url_for('settings'))
 
+    user = None
+    role = None
+    current_email = None
+
     if 'admin_id' in session:
-        inst = Institute.query.get(session['admin_id'])
-        if inst:
-            inst.name = new_name
+        role = 'admin'
+        user = Institute.query.get(session['admin_id'])
+        current_email = user.admin_email
+        new_code = request.form.get('institute_code', '').strip().upper()
+        if new_code and new_code != user.institute_code:
+            if Institute.query.filter_by(institute_code=new_code).first():
+                flash('Institute Code already taken by another institute.', 'danger')
+                return redirect(url_for('settings'))
+            
+            # Cascade update to related tables
+            old_code = user.institute_code
+            Teacher.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            Student.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            Course.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            Timetable.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            # Also subjects are tied to course_id, which is fine, but they don't have institute_code directly.
+            user.institute_code = new_code
             db.session.commit()
+            
     elif 'teacher_id' in session:
-        t = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
-        if t:
-            t.name = new_name
-            db.session.commit()
+        role = 'teacher'
+        user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        current_email = user.email
     elif 'student_id' in session:
-        s = Student.query.get(session['student_id'])
-        if s:
-            s.name = new_name
-            db.session.commit()
+        role = 'student'
+        user = Student.query.get(session['student_id'])
+        current_email = user.email
+
+    if user:
+        user.name = new_name
+        db.session.commit()
+
+    # If email changed, trigger OTP flow
+    if new_email != current_email:
+        # Check uniqueness across models
+        if Institute.query.filter_by(admin_email=new_email).first() or \
+           Teacher.query.filter_by(email=new_email).first() or \
+           Student.query.filter_by(email=new_email).first():
+            flash('This email is already in use.', 'danger')
+            return redirect(url_for('settings'))
+            
+        otp = str(random.randint(100000, 999999))
+        if send_otp_email(new_email, otp, context="Email Update"):
+            session['pending_email'] = new_email
+            session['email_update_otp'] = otp
+            session['email_update_role'] = role
+            return redirect(url_for('verify_email_update'))
+        else:
+            flash('Failed to send verification email. Please try again.', 'danger')
+            return redirect(url_for('settings'))
 
     flash('Profile updated successfully!', 'success')
     return redirect(url_for('settings'))
+
+@app.route('/verify_email_update', methods=['GET', 'POST'])
+def verify_email_update():
+    if 'pending_email' not in session or 'email_update_otp' not in session:
+        flash('No pending email update found.', 'warning')
+        return redirect(url_for('settings'))
+        
+    if request.method == 'POST':
+        user_otp = request.form.get('otp', '').strip()
+        if user_otp == str(session['email_update_otp']):
+            new_email = session['pending_email']
+            role = session['email_update_role']
+            
+            if role == 'admin' and 'admin_id' in session:
+                user = Institute.query.get(session['admin_id'])
+                user.admin_email = new_email
+            elif role == 'teacher' and 'teacher_id' in session:
+                user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+                user.email = new_email
+            elif role == 'student' and 'student_id' in session:
+                user = Student.query.get(session['student_id'])
+                user.email = new_email
+                
+            db.session.commit()
+            
+            session.pop('pending_email', None)
+            session.pop('email_update_otp', None)
+            session.pop('email_update_role', None)
+            
+            flash('Email successfully updated!', 'success')
+            return redirect(url_for('settings'))
+        else:
+            flash('Invalid OTP code.', 'danger')
+            
+    return render_template('auth/verify_email_update.html')
+
 
 @app.route('/settings/change_password', methods=['POST'])
 def settings_change_password():

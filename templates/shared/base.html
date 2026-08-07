@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="auto">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +7,8 @@
     <!-- Theme Script (runs early to prevent flicker) -->
     <script>
         (function() {
-            const savedTheme = localStorage.getItem('autotime_theme') || 'auto';
-            if (savedTheme === 'auto') {
-                document.documentElement.setAttribute('data-bs-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            } else {
-                document.documentElement.setAttribute('data-bs-theme', savedTheme);
-            }
+            const savedTheme = localStorage.getItem('autotime_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
         })();
     </script>
     <!-- Bootstrap 5 CSS -->
@@ -57,16 +53,20 @@
     <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm">
         <div class="container-fluid px-2 px-md-4">
             <a class="navbar-brand fw-bold" href="/" data-turbo="false"><i class="bi bi-clock-history me-2"></i>AutoTime</a>
-            {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
             <div class="d-flex align-items-center gap-2">
+                <button id="globalThemeToggle" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Toggle Theme">
+                    <i class="bi bi-moon-stars-fill dark-icon d-none"></i>
+                    <i class="bi bi-sun-fill light-icon d-none"></i>
+                </button>
+                {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
                 <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
                     <i class="bi bi-gear-fill"></i>
                 </a>
                 <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm" data-turbo="false">
                     <i class="bi bi-box-arrow-right me-1"></i> Logout
                 </a>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </nav>
 
@@ -114,6 +114,40 @@
     <script>
         // Turbo Drive Configuration
         Turbo.session.drive = true;
+        
+        // Global Theme Toggle Logic (Turbo-safe)
+        document.addEventListener("turbo:load", function() {
+            const toggleBtn = document.getElementById('globalThemeToggle');
+            if (toggleBtn) {
+                // Prevent duplicate listeners
+                const newToggleBtn = toggleBtn.cloneNode(true);
+                toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+                
+                const updateIcon = (theme) => {
+                    const darkIcon = newToggleBtn.querySelector('.dark-icon');
+                    const lightIcon = newToggleBtn.querySelector('.light-icon');
+                    if (theme === 'dark') {
+                        darkIcon.classList.add('d-none');
+                        lightIcon.classList.remove('d-none');
+                    } else {
+                        lightIcon.classList.add('d-none');
+                        darkIcon.classList.remove('d-none');
+                    }
+                };
+
+                const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                updateIcon(currentTheme);
+
+                newToggleBtn.addEventListener('click', function() {
+                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    document.documentElement.setAttribute('data-bs-theme', newTheme);
+                    localStorage.setItem('autotime_theme', newTheme);
+                    updateIcon(newTheme);
+                });
+            }
+        });
     </script>
 </body>
 </html>
