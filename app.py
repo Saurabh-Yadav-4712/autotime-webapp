@@ -776,7 +776,55 @@ def view_timetable():
     inst = Institute.query.filter_by(institute_code=inst_code).first()
     inst_name = inst.name if inst else "Institute"
     
-    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name)
+    # Fetch teachers and subjects for manual editing
+    teachers = Teacher.query.filter_by(institute_code=inst_code).all()
+    if selected_class:
+        subjects = Subject.query.filter_by(institute_code=inst_code, class_id=selected_class).all()
+    else:
+        subjects = []
+    
+    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
+
+# ==========================================
+# EDIT TIMETABLE SLOT (MANUAL)
+# ==========================================
+@app.route('/edit_timetable_slot', methods=['POST'])
+def edit_timetable_slot():
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
+    
+    entry_id = request.form.get('entry_id')
+    new_subject = request.form.get('new_subject')
+    new_teacher = request.form.get('new_teacher')
+    
+    entry = Timetable.query.get(entry_id)
+    if not entry:
+        flash('Timetable slot not found.', 'danger')
+        return redirect(url_for('view_timetable', class_id=request.form.get('class_id')))
+        
+    # Check for teacher clash (is the new teacher busy at this exact day and time?)
+    if new_teacher != entry.teacher_name:
+        clash = Timetable.query.filter_by(
+            institute_code=entry.institute_code,
+            day_name=entry.day_name,
+            start_time=entry.start_time,
+            teacher_name=new_teacher
+        ).first()
+        
+        if clash:
+            flash(f'Cannot assign {new_teacher}. They are already teaching Class {clash.class_id} at this time!', 'danger')
+            return redirect(url_for('view_timetable', class_id=entry.class_id))
+            
+    # Update entry
+    entry.subject_name = new_subject
+    entry.teacher_name = new_teacher
+    # Clear proxy flag if any
+    if hasattr(entry, 'is_proxy') and entry.is_proxy:
+        entry.is_proxy = False
+        entry.original_teacher = None
+        
+    db.session.commit()
+    flash('Timetable slot updated successfully!', 'success')
+    return redirect(url_for('view_timetable', class_id=entry.class_id))
 
 # ==========================================
 # ORIGINAL GRID EXCEL EXPORT (OPENPYXL)
