@@ -16,11 +16,7 @@ def send_otp_email(to_email, otp, context="Account Verification"):
     smtp_password = os.environ.get('SMTP_PASSWORD')
     
     if not smtp_email or not smtp_password:
-        print("\n" + "="*50)
-        print(f"🔔 [MOCK EMAIL] EMAIL SENT TO: {to_email}")
-        print(f"🔔 CONTEXT: {context}")
-        print(f"🔔 OTP CODE: {otp}")
-        print("="*50 + "\n")
+        print(f"Error: SMTP credentials missing. Cannot send {context} OTP to {to_email}")
         return False
         
     try:
@@ -38,9 +34,14 @@ def send_otp_email(to_email, otp, context="Account Verification"):
         return False
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'super_secret_key_for_autotime'
-db_url = os.environ.get('DATABASE_URL', 'sqlite:///autotime.db')
+
+db_url = os.environ.get('DATABASE_URL')
+if not db_url:
+    raise ValueError("No DATABASE_URL environment variable set. A PostgreSQL database is required.")
+
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -1632,4 +1633,4 @@ def settings_change_password():
     return redirect(url_for('settings'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
