@@ -1296,6 +1296,12 @@ def apply_leave():
 # ==========================================
 # STUDENT REGISTRATION, LOGIN & DASHBOARD
 # ==========================================
+@app.route('/api/get_classes/<inst_code>')
+def get_classes(inst_code):
+    courses = Course.query.filter_by(institute_code=inst_code).all()
+    classes = [c.class_id for c in courses]
+    return jsonify({'classes': classes})
+
 @app.route('/register_student', methods=['GET', 'POST'])
 def register_student():
     if request.method == 'POST':
@@ -1303,12 +1309,18 @@ def register_student():
         name = request.form['name'].strip()
         email = request.form['email'].strip()
         password = request.form['password'].strip()
-        class_id = request.form['class_id'].strip().upper()
+        class_id = request.form.get('class_id', '').strip().upper()
 
         # Institute check
         institute = Institute.query.filter_by(institute_code=inst_code).first()
         if not institute:
             flash('Invalid Institute Code!', 'danger')
+            return redirect(url_for('register_student'))
+            
+        # Class check
+        course = Course.query.filter_by(institute_code=inst_code, class_id=class_id).first()
+        if not course:
+            flash(f'Invalid Class ID for Institute {inst_code}!', 'danger')
             return redirect(url_for('register_student'))
 
         # Email check
@@ -1453,42 +1465,64 @@ def reset_password():
     flash('Password successfully reset! Please login.', 'success')
     return redirect(url_for('login_page'))
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
-@app.route('/change_password', methods=['GET', 'POST'])
-def change_password():
+
+@app.route('/settings')
+def settings():
     if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
-        flash('Please login to change password.', 'danger')
+        flash('Please login to access settings.', 'danger')
+        return redirect(url_for('login_page'))
+        
+    user_role = ""
+    user_info = {}
+    
+    if 'admin_id' in session:
+        user_role = "admin"
+        inst = Institute.query.get(session['admin_id'])
+        user_info = {'name': inst.name, 'email': inst.email, 'institute_code': inst.institute_code}
+    elif 'teacher_id' in session:
+        user_role = "teacher"
+        t = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        user_info = {'name': t.name, 'email': t.email, 'institute_code': t.institute_code}
+    elif 'student_id' in session:
+        user_role = "student"
+        s = Student.query.get(session['student_id'])
+        user_info = {'name': s.name, 'email': s.email, 'institute_code': s.institute_code}
+
+    return render_template('shared/settings.html', user_role=user_role, user_info=user_info)
+
+@app.route('/settings/change_password', methods=['POST'])
+def settings_change_password():
+    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
         return redirect(url_for('login_page'))
     
-    if request.method == 'POST':
-        old_pass = request.form['old_password']
-        new_pass = request.form['new_password']
-        
-        if 'admin_id' in session:
-            user = Institute.query.get(session['admin_id'])
-            if check_password_hash(user.admin_password, old_pass):
-                user.admin_password = generate_password_hash(new_pass)
-                db.session.commit()
-                flash('Password changed successfully!', 'success')
-                return redirect(url_for('admin_dash'))
-        elif 'teacher_id' in session:
-            user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
-            if user and check_password_hash(user.password, old_pass):
-                user.password = generate_password_hash(new_pass)
-                db.session.commit()
-                flash('Password changed successfully!', 'success')
-                return redirect(url_for('teacher_dash'))
-        elif 'student_id' in session:
-            user = Student.query.get(session['student_id'])
-            if user and check_password_hash(user.password, old_pass):
-                user.password = generate_password_hash(new_pass)
-                db.session.commit()
-                flash('Password changed successfully!', 'success')
-                return redirect(url_for('student_dash'))
-                
-        flash('Incorrect old password.', 'danger')
-        return redirect(url_for('change_password'))
-        
-    return render_template('auth/change_password.html')
+    old_pass = request.form['current_password']
+    new_pass = request.form['new_password']
+    
+    if 'admin_id' in session:
+        user = Institute.query.get(session['admin_id'])
+        if check_password_hash(user.admin_password, old_pass):
+            user.admin_password = generate_password_hash(new_pass)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('settings'))
+    elif 'teacher_id' in session:
+        user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        if user and check_password_hash(user.password, old_pass):
+            user.password = generate_password_hash(new_pass)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('settings'))
+    elif 'student_id' in session:
+        user = Student.query.get(session['student_id'])
+        if user and check_password_hash(user.password, old_pass):
+            user.password = generate_password_hash(new_pass)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('settings'))
+            
+    flash('Incorrect current password.', 'danger')
+    return redirect(url_for('settings'))
+
+if __name__ == '__main__':
+    app.run(debug=True)
