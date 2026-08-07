@@ -130,26 +130,28 @@
             });
         }
 
-        // Password Visibility Toggle Logic via Event Delegation (Turbo-safe)
-        if (!window.passwordToggleInitialized) {
-            window.passwordToggleInitialized = true;
-            document.addEventListener('click', function(e) {
-                const btn = e.target.closest('.toggle-password');
-                if (btn) {
-                    const targetId = btn.getAttribute('data-target');
+        // Password Visibility Toggle Logic (Turbo-safe)
+        document.addEventListener('turbo:load', function() {
+            document.querySelectorAll('.toggle-password').forEach(btn => {
+                // Prevent duplicate listeners by cloning
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                
+                newBtn.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
                     const input = document.getElementById(targetId);
                     if (input) {
                         if (input.type === 'password') {
                             input.type = 'text';
-                            btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+                            this.innerHTML = '<i class="bi bi-eye-slash"></i>';
                         } else {
                             input.type = 'password';
-                            btn.innerHTML = '<i class="bi bi-eye"></i>';
+                            this.innerHTML = '<i class="bi bi-eye"></i>';
                         }
                     }
-                }
+                });
             });
-        }
+        });
     </script>
 </body>
 </html>

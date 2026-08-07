@@ -108,30 +108,37 @@
 </div>
 
 <script>
-    document.addEventListener('turbo:load', function() {
-        // Highlight active theme button
+    document.addEventListener("turbo:load", function() {
+        const themeBtns = document.querySelectorAll('.theme-btn');
+        if (!themeBtns.length) return;
+
+        function updateActiveButton(theme) {
+            themeBtns.forEach(btn => {
+                if (btn.getAttribute('data-theme') === theme) {
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-primary');
+                } else {
+                    btn.classList.remove('btn-primary');
+                    btn.classList.add('btn-outline-secondary');
+                }
+            });
+        }
+
         const currentTheme = localStorage.getItem('autotime_theme') || 'auto';
-        document.querySelectorAll('.theme-btn').forEach(btn => {
-            if (btn.dataset.theme === currentTheme) {
-                btn.classList.replace('btn-outline-secondary', 'btn-primary');
-            }
-            
+        updateActiveButton(currentTheme);
+
+        themeBtns.forEach(btn => {
             btn.addEventListener('click', function() {
-                const theme = this.dataset.theme;
+                const theme = this.getAttribute('data-theme');
                 localStorage.setItem('autotime_theme', theme);
                 
-                // Update active state
-                document.querySelectorAll('.theme-btn').forEach(b => {
-                    b.classList.replace('btn-primary', 'btn-outline-secondary');
-                });
-                this.classList.replace('btn-outline-secondary', 'btn-primary');
-                
-                // Apply theme immediately
                 if (theme === 'auto') {
                     document.documentElement.setAttribute('data-bs-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                 } else {
                     document.documentElement.setAttribute('data-bs-theme', theme);
                 }
+                
+                updateActiveButton(theme);
             });
         });
     });
