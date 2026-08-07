@@ -111,6 +111,11 @@
     </div>
 </div>
 
+{% endif %}
+{% endblock %}
+
+{% block modals %}
+{% if session.get('admin_id') %}
 <!-- Edit Timetable Slot Modal -->
 <div class="modal fade" id="editTimetableModal" tabindex="-1" aria-labelledby="editTimetableModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -153,6 +158,5 @@
         </div>
     </div>
 </div>
-
 {% endif %}
 {% endblock %}
