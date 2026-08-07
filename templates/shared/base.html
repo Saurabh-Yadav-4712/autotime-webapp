@@ -54,10 +54,15 @@
         <div class="container-fluid px-2 px-md-4">
             <a class="navbar-brand fw-bold" href="/" data-turbo="false"><i class="bi bi-clock-history me-2"></i>AutoTime</a>
             <div class="d-flex align-items-center gap-2">
-                <button id="globalThemeToggle" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Toggle Theme">
-                    <i class="bi bi-moon-stars-fill dark-icon d-none"></i>
-                    <i class="bi bi-sun-fill light-icon d-none"></i>
-                </button>
+                <div class="theme-switch-wrapper me-2" title="Toggle Theme">
+                    <label class="theme-switch" for="globalThemeToggle">
+                        <input type="checkbox" id="globalThemeToggle" />
+                        <div class="theme-slider">
+                            <i class="bi bi-sun-fill"></i>
+                            <i class="bi bi-moon-stars-fill"></i>
+                        </div>
+                    </label>
+                </div>
                 {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
                 <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
                     <i class="bi bi-gear-fill"></i>
@@ -117,34 +122,19 @@
         
         // Global Theme Toggle Logic (Turbo-safe)
         document.addEventListener("turbo:load", function() {
-            const toggleBtn = document.getElementById('globalThemeToggle');
-            if (toggleBtn) {
-                // Prevent duplicate listeners
-                const newToggleBtn = toggleBtn.cloneNode(true);
-                toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
-                
-                const updateIcon = (theme) => {
-                    const darkIcon = newToggleBtn.querySelector('.dark-icon');
-                    const lightIcon = newToggleBtn.querySelector('.light-icon');
-                    if (theme === 'dark') {
-                        darkIcon.classList.add('d-none');
-                        lightIcon.classList.remove('d-none');
-                    } else {
-                        lightIcon.classList.add('d-none');
-                        darkIcon.classList.remove('d-none');
-                    }
-                };
-
+            const toggleInput = document.getElementById('globalThemeToggle');
+            if (toggleInput) {
                 const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-                updateIcon(currentTheme);
+                toggleInput.checked = (currentTheme === 'dark');
 
-                newToggleBtn.addEventListener('click', function() {
-                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                    
+                // Remove existing listener to prevent duplicates if turbo:load fires multiple times on same elements
+                const newToggleInput = toggleInput.cloneNode(true);
+                toggleInput.parentNode.replaceChild(newToggleInput, toggleInput);
+
+                newToggleInput.addEventListener('change', function() {
+                    const newTheme = this.checked ? 'dark' : 'light';
                     document.documentElement.setAttribute('data-bs-theme', newTheme);
                     localStorage.setItem('autotime_theme', newTheme);
-                    updateIcon(newTheme);
                 });
             }
         });
