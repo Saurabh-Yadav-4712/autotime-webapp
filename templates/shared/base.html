@@ -130,10 +130,12 @@
         });
 
         function syncThemeToggle() {
+            const savedTheme = localStorage.getItem('autotime_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            
             const toggleInput = document.getElementById('globalThemeToggle');
             if (toggleInput) {
-                const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-                toggleInput.checked = (currentTheme === 'dark');
+                toggleInput.checked = (savedTheme === 'dark');
             }
         }
         
