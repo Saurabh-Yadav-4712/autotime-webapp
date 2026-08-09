@@ -37,7 +37,9 @@ app.config['SECRET_KEY'] = 'super_secret_key_for_autotime'
 
 db_url = os.environ.get('DATABASE_URL')
 if not db_url:
-    raise ValueError("No DATABASE_URL environment variable set. A PostgreSQL database is required.")
+    # Fallback to local SQLite database for development
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_url = 'sqlite:///' + os.path.join(basedir, 'instance', 'autotime.db')
 
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
