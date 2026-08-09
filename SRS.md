@@ -2,7 +2,7 @@
 ## for AutoTime WebApp
 
 **Version 1.0 approved**
-**Prepared by Antigravity**
+**Prepared by Saurabh Yadav**
 **Date: August 7, 2026**
 
 ---
