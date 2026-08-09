@@ -47,7 +47,12 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-    <!-- Loader Removed as requested -->
+    <!-- Global Loader Overlay -->
+    <div id="global-loader" class="d-none justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100" style="background-color: var(--surface); opacity: 0.85; z-index: 9999;">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm">
@@ -138,6 +143,26 @@
         
         document.addEventListener('DOMContentLoaded', syncThemeToggle);
         document.addEventListener('turbo:load', syncThemeToggle);
+
+        // Global Loader Logic
+        if (!window.loaderInitialized) {
+            window.loaderInitialized = true;
+            
+            document.addEventListener('turbo:visit', function() {
+                const loader = document.getElementById('global-loader');
+                if(loader) { loader.classList.remove('d-none'); loader.classList.add('d-flex'); }
+            });
+            
+            document.addEventListener('turbo:submit-start', function() {
+                const loader = document.getElementById('global-loader');
+                if(loader) { loader.classList.remove('d-none'); loader.classList.add('d-flex'); }
+            });
+            
+            document.addEventListener('turbo:load', function() {
+                const loader = document.getElementById('global-loader');
+                if(loader) { loader.classList.add('d-none'); loader.classList.remove('d-flex'); }
+            });
+        }
     </script>
 </body>
 </html>
