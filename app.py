@@ -1310,7 +1310,7 @@ def register_student():
         name = request.form['name'].strip()
         email = request.form['email'].strip()
         password = request.form['password'].strip()
-        class_id = request.form.get('class_id', '').strip().upper()
+        class_id = request.form.get('class_id', '').strip()
 
         # Institute check
         institute = Institute.query.filter_by(institute_code=inst_code).first()
