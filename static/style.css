@@ -283,3 +283,14 @@ h1, h2, h3, h4, h5, h6 {
 /* Utilities */
 .text-muted-custom { color: var(--text-muted); }
 .bg-light-custom { background-color: var(--bg-color); }
+
+/* Turbo Progress Bar */
+.turbo-progress-bar {
+    height: 4px;
+    background-color: var(--primary);
+    top: 0;
+    left: 0;
+    z-index: 10000;
+    box-shadow: 0 0 10px var(--primary);
+    border-radius: 0 2px 2px 0;
+}
