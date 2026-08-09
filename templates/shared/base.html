@@ -141,34 +141,41 @@
         if (!window.loaderInitialized) {
             window.loaderInitialized = true;
             
-            document.addEventListener('turbo:submit-start', function(e) {
+            document.addEventListener('submit', function(e) {
                 const form = e.target;
-                let submitter = null;
-                
-                if (e.detail && e.detail.formSubmission && e.detail.formSubmission.submitter) {
-                    submitter = e.detail.formSubmission.submitter;
-                } else {
-                    submitter = form.querySelector('button[type="submit"], input[type="submit"]');
-                }
+                let submitter = e.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
                 
                 if (submitter && !submitter.hasAttribute('data-loading')) {
-                    const width = submitter.offsetWidth;
-                    submitter.style.width = width + 'px';
-                    submitter.setAttribute('data-original-html', submitter.innerHTML);
-                    submitter.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                    if (submitter.tagName.toLowerCase() === 'button') {
+                        const width = submitter.offsetWidth;
+                        submitter.style.width = width + 'px';
+                        submitter.setAttribute('data-original-html', submitter.innerHTML);
+                        submitter.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                    } else {
+                        submitter.setAttribute('data-original-value', submitter.value || '');
+                        submitter.value = '...';
+                    }
                     submitter.classList.add('disabled');
+                    // Use setTimeout to ensure the form actually submits before we disable it,
+                    // some browsers ignore the submitter if it's disabled during the submit event
+                    setTimeout(() => {
+                        submitter.disabled = true;
+                    }, 10);
                     submitter.setAttribute('data-loading', 'true');
                 }
             });
             
             document.addEventListener('turbo:submit-end', function(e) {
                 document.querySelectorAll('[data-loading="true"]').forEach(btn => {
-                    if (btn.hasAttribute('data-original-html')) {
+                    if (btn.tagName.toLowerCase() === 'button' && btn.hasAttribute('data-original-html')) {
                         btn.innerHTML = btn.getAttribute('data-original-html');
-                        btn.classList.remove('disabled');
-                        btn.removeAttribute('data-loading');
-                        btn.style.width = ''; 
+                    } else if (btn.hasAttribute('data-original-value')) {
+                        btn.value = btn.getAttribute('data-original-value');
                     }
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                    btn.removeAttribute('data-loading');
+                    btn.style.width = ''; 
                 });
             });
         }
