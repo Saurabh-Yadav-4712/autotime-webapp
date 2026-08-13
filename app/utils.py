@@ -82,11 +82,9 @@ def send_otp_email(to_email, otp, context="Authentication"):
     msg.attach(MIMEText(html, 'html'))
 
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
         return True
     except Exception as e:
         print(f"Failed to send email: {e}")

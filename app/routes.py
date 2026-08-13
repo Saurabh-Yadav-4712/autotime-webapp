@@ -411,14 +411,15 @@ def manage_subjects():
         weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
         weeks = int(weeks_setting.value) if weeks_setting else 15
         total_hours = int(request.form['total_course_hours'])
+        session_len = int(request.form.get('session_length', 1))
         import math
         
         db.session.add(Subject(
             institute_code=inst_code, subject_code=request.form['subject_code'],
             subject_name=request.form['subject_name'], class_id=",".join(class_ids),
             teacher_id=request.form['teacher_id'], total_course_hours=total_hours,
-            required_hours=math.ceil(total_hours / weeks),
-            subject_type=request.form['subject_type'], session_length=int(request.form.get('session_length', 1))
+            required_hours=math.ceil(total_hours / (weeks * session_len)),
+            subject_type=request.form['subject_type'], session_length=session_len
         ))
         db.session.commit()
         flash('Subject mapped!', 'success')
@@ -479,11 +480,12 @@ def edit_subject(id):
         weeks_setting = Settings.query.filter_by(institute_code=session['institute_code'], key='weeks_per_semester').first()
         weeks = int(weeks_setting.value) if weeks_setting else 15
         total_hours = int(request.form['total_course_hours'])
+        session_len = int(request.form.get('session_length', 1))
         import math
         subject.total_course_hours = total_hours
-        subject.required_hours = math.ceil(total_hours / weeks)
+        subject.session_length = session_len
+        subject.required_hours = math.ceil(total_hours / (weeks * session_len))
         subject.subject_type = request.form['subject_type']
-        subject.session_length = int(request.form.get('session_length', 1))
         db.session.commit()
         flash('Subject updated!', 'success')
         return redirect(url_for('main.manage_subjects'))
@@ -514,6 +516,32 @@ def delete_item(type, id):
         db.session.commit()
         flash('Deleted successfully.', 'info')
     
+    return redirect(url_for('main.' + route))
+
+@main_bp.route('/delete_all/<type>')
+def delete_all_items(type):
+    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
+    inst_code = session['institute_code']
+    
+    try:
+        if type == 'course':
+            num_deleted = Course.query.filter_by(institute_code=inst_code).delete()
+            route = 'manage_courses'
+            flash(f'Successfully deleted all {num_deleted} courses.', 'info')
+        elif type == 'teacher':
+            num_deleted = Teacher.query.filter_by(institute_code=inst_code).delete()
+            route = 'manage_teachers'
+            flash(f'Successfully deleted all {num_deleted} teachers.', 'info')
+        elif type == 'subject':
+            num_deleted = Subject.query.filter_by(institute_code=inst_code).delete()
+            route = 'manage_subjects'
+            flash(f'Successfully deleted all {num_deleted} subjects.', 'info')
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting items: {str(e)}', 'danger')
+        route = 'admin_dash'
+        
     return redirect(url_for('main.' + route))
 # ==========================================
 # TIMETABLE ENGINE & ALGORITHM
