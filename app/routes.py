@@ -327,11 +327,20 @@ def bulk_import(manage_type):
                     cid = get_val(row, 'class_id', 'classid')
                     tid = get_val(row, 'teacher_id', 'teacherid')
                     stype = get_val(row, 'subject_type', 'subjecttype') or 'Theory'
-                    req_hrs = get_val(row, 'required_hours', 'requiredhours') or 1
+                    req_hrs_raw = get_val(row, 'required_hours', 'requiredhours')
                     tot_hrs = get_val(row, 'total_course_hours', 'totalcoursehours', 'totalhours') or 50
                     sess_len = get_val(row, 'session_length', 'sessionlength') or 1
+                    
+                    if req_hrs_raw:
+                        req_hrs = int(req_hrs_raw)
+                    else:
+                        weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
+                        weeks = int(weeks_setting.value) if weeks_setting else 15
+                        import math
+                        req_hrs = math.ceil(int(tot_hrs) / (weeks * int(sess_len)))
+                        
                     if not scode: raise ValueError("subject_code missing")
-                    s = Subject(institute_code=inst_code, subject_code=scode, subject_name=sname, class_id=cid, teacher_id=tid, subject_type=stype, required_hours=int(req_hrs), total_course_hours=int(tot_hrs), session_length=int(sess_len))
+                    s = Subject(institute_code=inst_code, subject_code=scode, subject_name=sname, class_id=cid, teacher_id=tid, subject_type=stype, required_hours=req_hrs, total_course_hours=int(tot_hrs), session_length=int(sess_len))
                     db.session.add(s)
                 db.session.commit()
                 success_count += 1
@@ -518,25 +527,31 @@ def delete_item(type, id):
     
     return redirect(url_for('main.' + route))
 
-@main_bp.route('/delete_all/<type>')
-def delete_all_items(type):
+@main_bp.route('/bulk_delete/<type>', methods=['POST'])
+def bulk_delete_items(type):
     if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
+    selected_ids = request.form.getlist('selected_ids')
+    
+    if not selected_ids:
+        flash('No items selected for deletion.', 'warning')
+        if type == 'course': return redirect(url_for('main.manage_courses'))
+        if type == 'teacher': return redirect(url_for('main.manage_teachers'))
+        return redirect(url_for('main.manage_subjects'))
     
     try:
         if type == 'course':
-            num_deleted = Course.query.filter_by(institute_code=inst_code).delete()
+            num_deleted = Course.query.filter(Course.id.in_(selected_ids), Course.institute_code==inst_code).delete(synchronize_session=False)
             route = 'manage_courses'
-            flash(f'Successfully deleted all {num_deleted} courses.', 'info')
         elif type == 'teacher':
-            num_deleted = Teacher.query.filter_by(institute_code=inst_code).delete()
+            num_deleted = Teacher.query.filter(Teacher.id.in_(selected_ids), Teacher.institute_code==inst_code).delete(synchronize_session=False)
             route = 'manage_teachers'
-            flash(f'Successfully deleted all {num_deleted} teachers.', 'info')
         elif type == 'subject':
-            num_deleted = Subject.query.filter_by(institute_code=inst_code).delete()
+            num_deleted = Subject.query.filter(Subject.id.in_(selected_ids), Subject.institute_code==inst_code).delete(synchronize_session=False)
             route = 'manage_subjects'
-            flash(f'Successfully deleted all {num_deleted} subjects.', 'info')
+            
         db.session.commit()
+        flash(f'Successfully deleted {num_deleted} items.', 'info')
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting items: {str(e)}', 'danger')

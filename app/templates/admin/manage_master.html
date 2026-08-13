@@ -132,7 +132,6 @@
                 <!-- BATCH UPLOAD SECTION -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="fw-bold text-dark mb-0"><i class="bi bi-cloud-upload me-1"></i> Batch Data Upload</h6>
-                    <a href="/delete_all/{{ manage_type }}" class="btn btn-sm btn-outline-danger px-3 py-1" data-turbo="false" onclick="return confirm('WARNING: Are you sure you want to delete ALL {{ manage_type }}s? This action cannot be undone.');"><i class="bi bi-trash-fill me-1"></i> Delete All</a>
                 </div>
                 
                 <form action="/bulk_import/{{ manage_type }}" method="POST" enctype="multipart/form-data">
@@ -159,34 +158,47 @@
 
     <!-- DATA TABLE (RIGHT SIDE) -->
     <div class="col-md-8">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                {% if manage_type == 'course' %}
-                                <th>Class ID</th><th>Dept</th><th>Sem</th><th>Div</th>
-                                {% elif manage_type == 'teacher' %}
-                                <th>ID</th><th>Name & Email</th><th>Dept</th><th>Days</th>
-                                {% elif manage_type == 'subject' %}
-                                <th>Code</th><th>Subject</th><th>Classes</th><th>Teacher</th><th>Total Hrs</th>
-                                {% endif %}
-                                <th class="text-end pe-4">Actions</th>
-                            </tr>
-                        </thead>
+        <form id="bulkDeleteForm" action="/bulk_delete/{{ manage_type }}" method="POST" onsubmit="return confirm('Are you sure you want to delete the selected items?');">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold text-dark">Existing Records</h5>
+                    <button type="submit" class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled>
+                        <i class="bi bi-trash-fill me-1"></i> Delete Selected
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4" style="width: 40px;">
+                                        <input class="form-check-input" type="checkbox" id="selectAll">
+                                    </th>
+                                    {% if manage_type == 'course' %}
+                                    <th>Class ID</th><th>Dept</th><th>Sem</th><th>Div</th>
+                                    {% elif manage_type == 'teacher' %}
+                                    <th>ID</th><th>Name & Email</th><th>Dept</th><th>Days</th>
+                                    {% elif manage_type == 'subject' %}
+                                    <th>Code</th><th>Subject</th><th>Classes</th><th>Teacher</th><th>Total Hrs</th>
+                                    {% endif %}
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
                         <tbody>
                             {% for item in items %}
                             <tr>
+                                <td class="ps-4">
+                                    <input class="form-check-input item-checkbox" type="checkbox" name="selected_ids" value="{{ item.id }}">
+                                </td>
                                 {% if manage_type == 'course' %}
-                                <td class="fw-bold ps-4">{{ item.class_id }}</td><td>{{ item.department }}</td><td>{{ item.semester }}</td><td><span class="badge bg-secondary">{{ item.division }}</span></td>
+                                <td class="fw-bold">{{ item.class_id }}</td><td>{{ item.department }}</td><td>{{ item.semester }}</td><td><span class="badge bg-secondary">{{ item.division }}</span></td>
                                 {% elif manage_type == 'teacher' %}
-                                <td class="fw-bold ps-4">{{ item.teacher_id }}</td>
+                                <td class="fw-bold">{{ item.teacher_id }}</td>
                                 <td><div class="fw-semibold">{{ item.name }}</div><small class="text-muted">{{ item.email }}</small></td>
                                 <td><span class="badge bg-light text-dark border">{{ item.departments }}</span></td>
                                 <td><small class="text-muted">{{ item.available_days }}</small></td>
                                 {% elif manage_type == 'subject' %}
-                                <td class="fw-bold ps-4">{{ item.subject_code }}</td>
+                                <td class="fw-bold">{{ item.subject_code }}</td>
                                 <td><div class="fw-semibold">{{ item.subject_name }}</div><span class="badge bg-light text-dark border">{{ item.subject_type }}</span></td>
                                 <td><small class="text-muted">{{ item.class_id }}</small></td>
                                 <td>{{ item.teacher_id }}</td>
@@ -201,7 +213,7 @@
                             {% endfor %}
                             {% if not items %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted py-5">
+                                <td colspan="7" class="text-center text-muted py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     No records found. Add one using the form.
                                 </td>
@@ -210,10 +222,38 @@
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
+        </form>
         
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+        function updateBtnState() {
+            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+            bulkDeleteBtn.disabled = !anyChecked;
+        }
+
+        if(selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(cb => cb.checked = this.checked);
+                updateBtnState();
+            });
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                if(!this.checked) selectAll.checked = false;
+                if(Array.from(checkboxes).every(c => c.checked)) selectAll.checked = true;
+                updateBtnState();
+            });
+        });
+    });
+</script>
 {% endblock %}
