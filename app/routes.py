@@ -104,7 +104,7 @@ def register_institute():
         
         email_sent = send_otp_email(email, otp, context="Institute Registration")
         if not email_sent:
-            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
+            flash('Failed to send OTP email. Please try again later or contact support.', 'warning')
         else:
             flash('An OTP has been sent to your email for verification.', 'info')
         return redirect(url_for('main.verify_reg_otp'))
@@ -514,7 +514,7 @@ def delete_item(type, id):
         db.session.commit()
         flash('Deleted successfully.', 'info')
     
-    return redirect(url_for(route))
+    return redirect(url_for('main.' + route))
 # ==========================================
 # TIMETABLE ENGINE & ALGORITHM
 # ==========================================
@@ -1065,7 +1065,7 @@ def activate_teacher():
         if email_sent:
             flash('An OTP has been sent to your email address.', 'success')
         else:
-            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
+            flash('Failed to send OTP email. Please try again later or contact support.', 'warning')
         return redirect(url_for('main.verify_teacher_otp'))
         
     return render_template('teacher/activate_teacher.html')
@@ -1341,7 +1341,7 @@ def register_student():
         
         email_sent = send_otp_email(email, otp, context="Student Registration")
         if not email_sent:
-            flash('Error sending email or SMTP not configured. OTP printed in server logs.', 'warning')
+            flash('Failed to send OTP email. Please try again later or contact support.', 'warning')
         else:
             flash('An OTP has been sent to your email for verification.', 'info')
         return redirect(url_for('main.verify_reg_otp'))

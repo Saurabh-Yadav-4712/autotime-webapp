@@ -49,8 +49,8 @@ def clear_session_otp(purpose):
     session.pop(f'{purpose}_otp_attempts', None)
 
 def send_otp_email(to_email, otp, context="Authentication"):
-    sender_email = os.environ.get("EMAIL_USER")
-    sender_password = os.environ.get("EMAIL_PASS")
+    sender_email = os.environ.get("SMTP_EMAIL")
+    sender_password = os.environ.get("SMTP_PASSWORD")
 
     if not sender_email or not sender_password:
         print(f"[DEV MODE] SMTP not configured. OTP for {to_email} is {otp}")
