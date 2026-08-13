@@ -275,35 +275,69 @@ def bulk_import(manage_type):
     error_count = 0
     
     try:
+        def get_val(r, *keys):
+            for k in keys:
+                if k in r and r[k] is not None and str(r[k]).strip() != '': return str(r[k]).strip()
+            for k in keys:
+                target = str(k).lower().replace(' ', '').replace('_', '').replace('/', '')
+                for rk in r.keys():
+                    if rk is not None:
+                        if str(rk).lower().replace(' ', '').replace('_', '').replace('/', '') == target:
+                            if r[rk] is not None and str(r[rk]).strip() != '':
+                                return str(r[rk]).strip()
+            return ''
+
         data = []
         if file.filename.endswith('.csv'):
             stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
             csv_input = csv.DictReader(stream)
             for row in csv_input:
-                data.append({k.strip(): v.strip() if v else '' for k, v in row.items()})
+                data.append(row)
         else:
             wb = openpyxl.load_workbook(filename=io.BytesIO(file.read()))
             sheet = wb.active
             headers = [cell.value for cell in sheet[1]]
             for row in sheet.iter_rows(min_row=2, values_only=True):
                 if any(row):
-                    data.append(dict(zip(headers, [str(v).strip() if v is not None else '' for v in row])))
+                    data.append(dict(zip(headers, row)))
                     
         for row in data:
             try:
                 if manage_type == 'course':
-                    c = Course(institute_code=inst_code, class_id=row['class_id'], department=row['department'], semester=row['semester'], division=row['division'])
+                    class_id = get_val(row, 'class_id', 'classid')
+                    dept = get_val(row, 'department', 'departments')
+                    sem = get_val(row, 'semester')
+                    div = get_val(row, 'division')
+                    if not class_id: raise ValueError("class_id missing")
+                    c = Course(institute_code=inst_code, class_id=class_id, department=dept, semester=sem, division=div)
                     db.session.add(c)
                 elif manage_type == 'teacher':
-                    t = Teacher(institute_code=inst_code, teacher_id=row['teacher_id'], name=row['name'], email=row['email'], departments=row['departments'], max_hours=int(row['max_hours']), available_days=row['available_days'])
+                    tid = get_val(row, 'teacher_id', 'teacherid')
+                    name = get_val(row, 'name')
+                    email = get_val(row, 'email')
+                    depts = get_val(row, 'departments', 'department')
+                    hours = get_val(row, 'max_hours', 'max_hours_week', 'maxhoursweek', 'maxhours')
+                    days = get_val(row, 'available_days', 'days')
+                    if not tid or not name: raise ValueError("teacher_id or name missing")
+                    t = Teacher(institute_code=inst_code, teacher_id=tid, name=name, email=email, departments=depts, max_hours=int(hours or 0), available_days=days)
                     db.session.add(t)
                 elif manage_type == 'subject':
-                    s = Subject(institute_code=inst_code, subject_code=row['subject_code'], subject_name=row['subject_name'], class_id=row['class_id'], teacher_id=row['teacher_id'], subject_type=row.get('subject_type', 'Theory'), required_hours=int(row.get('required_hours', 1)), total_course_hours=int(row.get('total_course_hours', 50)), session_length=int(row.get('session_length', 1)))
+                    scode = get_val(row, 'subject_code', 'subjectcode')
+                    sname = get_val(row, 'subject_name', 'subjectname', 'subject')
+                    cid = get_val(row, 'class_id', 'classid')
+                    tid = get_val(row, 'teacher_id', 'teacherid')
+                    stype = get_val(row, 'subject_type', 'subjecttype') or 'Theory'
+                    req_hrs = get_val(row, 'required_hours', 'requiredhours') or 1
+                    tot_hrs = get_val(row, 'total_course_hours', 'totalcoursehours', 'totalhours') or 50
+                    sess_len = get_val(row, 'session_length', 'sessionlength') or 1
+                    if not scode: raise ValueError("subject_code missing")
+                    s = Subject(institute_code=inst_code, subject_code=scode, subject_name=sname, class_id=cid, teacher_id=tid, subject_type=stype, required_hours=int(req_hrs), total_course_hours=int(tot_hrs), session_length=int(sess_len))
                     db.session.add(s)
                 db.session.commit()
                 success_count += 1
             except Exception as e:
                 db.session.rollback()
+                print(f"Error importing row {row}: {e}")
                 error_count += 1
                 
         flash(f'Batch Upload Complete! Successfully added: {success_count}. Failed/Duplicates: {error_count}.', 'info')
