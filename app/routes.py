@@ -183,7 +183,7 @@ def admin_dash():
     inst_code = session['institute_code']
     
     # Calculate Analytics
-    c_count = Course.query.filter_by(institute_code=inst_code).count()
+    c_count = db.session.query(Course.department).filter_by(institute_code=inst_code).distinct().count()
     t_count = Teacher.query.filter_by(institute_code=inst_code).count()
     s_count = Subject.query.filter_by(institute_code=inst_code).count()
     
@@ -227,12 +227,24 @@ def admin_dash():
 
     import math
     subjects = Subject.query.filter_by(institute_code=inst_code).all()
+    all_courses = Course.query.filter_by(institute_code=inst_code).all()
+    
+    # Create mapping of class_id to department
+    class_dept_map = {c.class_id: c.department for c in all_courses}
+    
     weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
     weeks_per_semester = int(weeks_setting.value) if weeks_setting else 15
     
-    syllabus_tracking = []
+    syllabus_tracking_grouped = {}
     for s in subjects:
-        syllabus_tracking.append({
+        # Attempt to determine department from first class_id mapping
+        first_class = s.class_id.split(',')[0].strip() if s.class_id else ""
+        dept = class_dept_map.get(first_class, "General/Unassigned")
+        
+        if dept not in syllabus_tracking_grouped:
+            syllabus_tracking_grouped[dept] = []
+            
+        syllabus_tracking_grouped[dept].append({
             'name': s.subject_name,
             'code': s.subject_code,
             'teacher': s.teacher_id,
@@ -243,7 +255,7 @@ def admin_dash():
 
     pending_requests = TeacherUpdateRequest.query.filter_by(institute_code=inst_code, status='Pending').all()
     admin = Institute.query.get(session['admin_id'])
-    return render_template('admin/admin_dash.html', admin=admin, c_count=c_count, t_count=t_count, s_count=s_count, generated=generated, free_teachers=free_teachers_count, faculty_workload=faculty_workload, syllabus_tracking=syllabus_tracking, weeks_per_semester=weeks_per_semester, pending_requests=pending_requests)
+    return render_template('admin/admin_dash.html', admin=admin, c_count=c_count, t_count=t_count, s_count=s_count, generated=generated, free_teachers=free_teachers_count, faculty_workload=faculty_workload, syllabus_tracking_grouped=syllabus_tracking_grouped, weeks_per_semester=weeks_per_semester, pending_requests=pending_requests)
 
 @main_bp.route('/logout')
 def logout():

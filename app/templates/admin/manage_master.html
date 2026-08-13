@@ -160,11 +160,31 @@
     <div class="col-md-8">
         <form id="bulkDeleteForm" action="/bulk_delete/{{ manage_type }}" method="POST" onsubmit="return confirm('Are you sure you want to delete the selected items?');">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
+                <div class="card-header bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
                     <h5 class="mb-0 fw-bold text-dark">Existing Records</h5>
-                    <button type="submit" class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled>
-                        <i class="bi bi-trash-fill me-1"></i> Delete Selected
-                    </button>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        {% if manage_type == 'course' or manage_type == 'subject' %}
+                        <select id="tableFilter" class="form-select form-select-sm" style="max-width: 200px;">
+                            <option value="ALL">All Records</option>
+                            {% set filter_opts = [] %}
+                            {% for item in items %}
+                                {% if manage_type == 'course' and item.department not in filter_opts %}
+                                    {% set _ = filter_opts.append(item.department) %}
+                                {% elif manage_type == 'subject' and item.class_id not in filter_opts %}
+                                    {% set _ = filter_opts.append(item.class_id) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for opt in filter_opts|sort %}
+                                <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-sm btn-danger text-nowrap" id="bulkDeleteBtn" disabled>
+                            <i class="bi bi-trash-fill me-1"></i> Delete Selected
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -186,7 +206,7 @@
                             </thead>
                         <tbody>
                             {% for item in items %}
-                            <tr>
+                            <tr class="data-row" data-filter="{% if manage_type == 'course' %}{{ item.department }}{% elif manage_type == 'subject' %}{{ item.class_id }}{% endif %}">
                                 <td class="ps-4">
                                     <input class="form-check-input item-checkbox" type="checkbox" name="selected_ids" value="{{ item.id }}">
                                 </td>
@@ -242,7 +262,13 @@
 
         if(selectAll) {
             selectAll.addEventListener('change', function() {
-                checkboxes.forEach(cb => cb.checked = this.checked);
+                const isChecked = this.checked;
+                checkboxes.forEach(cb => {
+                    const row = cb.closest('tr');
+                    if(row.style.display !== 'none') {
+                        cb.checked = isChecked;
+                    }
+                });
                 updateBtnState();
             });
         }
@@ -250,10 +276,40 @@
         checkboxes.forEach(cb => {
             cb.addEventListener('change', function() {
                 if(!this.checked) selectAll.checked = false;
-                if(Array.from(checkboxes).every(c => c.checked)) selectAll.checked = true;
+                
+                // only check visible rows for selectAll logic
+                const visibleCheckboxes = Array.from(checkboxes).filter(c => c.closest('tr').style.display !== 'none');
+                if(visibleCheckboxes.length > 0 && visibleCheckboxes.every(c => c.checked)) selectAll.checked = true;
+                
                 updateBtnState();
             });
         });
+        
+        const filterDropdown = document.getElementById('tableFilter');
+        if(filterDropdown) {
+            filterDropdown.addEventListener('change', function() {
+                const val = this.value;
+                document.querySelectorAll('.data-row').forEach(row => {
+                    if(val === 'ALL') {
+                        row.style.display = '';
+                    } else {
+                        const rowFilterData = row.getAttribute('data-filter') || '';
+                        if(rowFilterData.includes(val)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                            // uncheck hidden rows
+                            const cb = row.querySelector('.item-checkbox');
+                            if(cb && cb.checked) {
+                                cb.checked = false;
+                            }
+                        }
+                    }
+                });
+                updateBtnState();
+                if(selectAll) selectAll.checked = false;
+            });
+        }
     });
 </script>
 {% endblock %}
