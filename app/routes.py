@@ -253,6 +253,68 @@ def logout():
 # ==========================================
 # MANAGEMENT ROUTES
 # ==========================================
+@main_bp.route('/bulk_import/<manage_type>', methods=['POST'])
+def bulk_import(manage_type):
+    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
+    inst_code = session['institute_code']
+    
+    if 'file' not in request.files:
+        flash('No file uploaded.', 'danger')
+        return redirect(request.referrer or url_for('main.admin_dash'))
+        
+    file = request.files['file']
+    if file.filename == '':
+        flash('No selected file.', 'danger')
+        return redirect(request.referrer or url_for('main.admin_dash'))
+        
+    if not (file.filename.endswith('.csv') or file.filename.endswith('.xlsx')):
+        flash('Only .csv and .xlsx files are allowed.', 'danger')
+        return redirect(request.referrer or url_for('main.admin_dash'))
+
+    success_count = 0
+    error_count = 0
+    
+    try:
+        data = []
+        if file.filename.endswith('.csv'):
+            stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+            csv_input = csv.DictReader(stream)
+            for row in csv_input:
+                data.append({k.strip(): v.strip() if v else '' for k, v in row.items()})
+        else:
+            wb = openpyxl.load_workbook(filename=io.BytesIO(file.read()))
+            sheet = wb.active
+            headers = [cell.value for cell in sheet[1]]
+            for row in sheet.iter_rows(min_row=2, values_only=True):
+                if any(row):
+                    data.append(dict(zip(headers, [str(v).strip() if v is not None else '' for v in row])))
+                    
+        for row in data:
+            try:
+                if manage_type == 'course':
+                    c = Course(institute_code=inst_code, class_id=row['class_id'], department=row['department'], semester=row['semester'], division=row['division'])
+                    db.session.add(c)
+                elif manage_type == 'teacher':
+                    t = Teacher(institute_code=inst_code, teacher_id=row['teacher_id'], name=row['name'], email=row['email'], departments=row['departments'], max_hours=int(row['max_hours']), available_days=row['available_days'])
+                    db.session.add(t)
+                elif manage_type == 'subject':
+                    s = Subject(institute_code=inst_code, subject_code=row['subject_code'], subject_name=row['subject_name'], class_id=row['class_id'], teacher_id=row['teacher_id'], subject_type=row.get('subject_type', 'Theory'), required_hours=int(row.get('required_hours', 1)), total_course_hours=int(row.get('total_course_hours', 50)), session_length=int(row.get('session_length', 1)))
+                    db.session.add(s)
+                db.session.commit()
+                success_count += 1
+            except Exception as e:
+                db.session.rollback()
+                error_count += 1
+                
+        flash(f'Batch Upload Complete! Successfully added: {success_count}. Failed/Duplicates: {error_count}.', 'info')
+    except Exception as e:
+        flash(f'Error processing file: {str(e)}', 'danger')
+        
+    if manage_type == 'course': return redirect(url_for('main.manage_courses'))
+    elif manage_type == 'teacher': return redirect(url_for('main.manage_teachers'))
+    elif manage_type == 'subject': return redirect(url_for('main.manage_subjects'))
+    return redirect(url_for('main.admin_dash'))
+
 @main_bp.route('/manage_courses', methods=['GET', 'POST'])
 def manage_courses():
     if 'admin_id' not in session: return redirect(url_for('main.login_page'))
