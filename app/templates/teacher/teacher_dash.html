@@ -68,12 +68,13 @@
             <div class="card-header bg-white pt-4 pb-3 d-flex justify-content-between align-items-center border-0">
                 <h5 class="fw-bold text-success mb-0 d-flex align-items-center"><i class="bi bi-calendar-week me-2"></i> My Schedule</h5>
                 <div>
+                    <button class="btn btn-sm btn-danger me-2 fw-bold px-3 shadow-sm" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Export PDF</button>
                     <button class="btn btn-sm btn-success me-1 fw-bold px-3" onclick="toggleView('today')">Today</button>
                     <button class="btn btn-sm btn-outline-success fw-bold px-3" onclick="toggleView('week')">Weekly</button>
                 </div>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive" id="timetable-content">
                     <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
                         <thead class="table-light">
                             <tr>
@@ -142,8 +143,40 @@
         </div>
     </div>
 </div>
+
+<!-- html2pdf Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
+    function exportToPDF() {
+        const element = document.getElementById('timetable-content');
+        
+        // Temporarily show all days for PDF
+        const rows = document.querySelectorAll('.schedule-row');
+        rows.forEach(row => row.classList.remove('d-none'));
+        
+        const opt = {
+            margin:       0.5,
+            filename:     'Teacher_Timetable.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        // Generate PDF
+        html2pdf().set(opt).from(element).save().then(() => {
+            // Restore view
+            const todayStr = "{{ today_str }}";
+            const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            if (validDays.includes(todayStr)) {
+                toggleView('today');
+            } else {
+                toggleView('week');
+            }
+        });
+    }
+
     function toggleView(view) {
+
         const todayStr = "{{ today_str }}";
         const rows = document.querySelectorAll('.schedule-row');
         

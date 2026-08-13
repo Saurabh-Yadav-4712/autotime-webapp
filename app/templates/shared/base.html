@@ -76,21 +76,40 @@
     <!-- Main Content Area -->
     <div class="container-fluid px-2 px-md-4 fade-in flex-grow-1 mb-5">
         
-        <!-- Yahan Flash Messages (Alerts) aayenge -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show mt-3 shadow-sm custom-alert" role="alert">
-                        {% if category == 'success' %}<i class="bi bi-check-circle-fill me-2"></i>{% endif %}
-                        {% if category == 'danger' %}<i class="bi bi-exclamation-triangle-fill me-2"></i>{% endif %}
-                        {% if category == 'warning' %}<i class="bi bi-exclamation-circle-fill me-2"></i>{% endif %}
-                        {% if category == 'info' %}<i class="bi bi-info-circle-fill me-2"></i>{% endif %}
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <!-- Toast Notifications Container -->
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% set toast_class = 'text-bg-primary' %}
+                        {% set icon = 'bi-info-circle-fill' %}
+                        {% if category == 'success' %}
+                            {% set toast_class = 'text-bg-success' %}
+                            {% set icon = 'bi-check-circle-fill' %}
+                        {% elif category == 'danger' %}
+                            {% set toast_class = 'text-bg-danger' %}
+                            {% set icon = 'bi-x-circle-fill' %}
+                        {% elif category == 'warning' %}
+                            {% set toast_class = 'text-bg-warning' %}
+                            {% set icon = 'bi-exclamation-triangle-fill' %}
+                        {% elif category == 'info' %}
+                            {% set toast_class = 'text-bg-info' %}
+                            {% set icon = 'bi-info-circle-fill' %}
+                        {% endif %}
+                        
+                        <div class="toast align-items-center {{ toast_class }} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+                            <div class="d-flex">
+                                <div class="toast-body d-flex align-items-center fw-medium">
+                                    <i class="bi {{ icon }} me-2 fs-5"></i>
+                                    {{ message }}
+                                </div>
+                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
 
         {% block content %}
         <!-- Yahan par dusre pages ka content automatically aayega -->
@@ -179,6 +198,19 @@
                 });
             });
         }
+        
+        // Toast Initialization Logic
+        function initToasts() {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            var toastList = toastElList.map(function(toastEl) {
+                // Return existing instance or create a new one
+                return bootstrap.Toast.getInstance(toastEl) || new bootstrap.Toast(toastEl, { autohide: true, delay: 4000 });
+            });
+            toastList.forEach(toast => toast.show());
+        }
+
+        document.addEventListener('DOMContentLoaded', initToasts);
+        document.addEventListener('turbo:load', initToasts);
     </script>
 </body>
 </html>
