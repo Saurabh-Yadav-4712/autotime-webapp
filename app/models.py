@@ -1,4 +1,5 @@
-from app.extensions import db
+from flask_sqlalchemy import SQLAlchemy
+db = SQLAlchemy()
 from datetime import datetime
 
 # ==========================================

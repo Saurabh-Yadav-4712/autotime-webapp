@@ -90,3 +90,62 @@ def send_otp_email(to_email, otp, context="Authentication"):
         print(f"Failed to send email: {e}")
         print(f"[DEV MODE fallback] OTP for {to_email} is {otp}")
         return False
+
+
+def get_dynamic_time_slots(inst_code):
+    # Get settings from DB
+    settings = Settings.query.filter_by(institute_code=inst_code).all()
+    s = {st.key: st.value for st in settings}
+    
+    # Fallback default values (agar admin ne settings save nahi ki)
+    total_lectures = int(s.get('total_lectures', 4))
+    start_time_str = s.get('start_time', '08:00')
+    lec_duration = int(s.get('lecture_duration', 45))
+    break_duration = int(s.get('break_time', 30))
+    lunch_after = int(s.get('lunch_after_lecture', 2))
+
+    time_slots = []
+    # Convert string to datetime object for calculation
+    current_time = datetime.strptime(start_time_str, '%H:%M')
+
+    for i in range(1, total_lectures + 1):
+        end_time = current_time + timedelta(minutes=lec_duration)
+        
+        # Format time to "08:00 AM" style
+        start_str = current_time.strftime('%I:%M %p')
+        end_str = end_time.strftime('%I:%M %p')
+        
+        time_slots.append((start_str, end_str))
+        
+        current_time = end_time
+        
+        # Add Lunch Break duration after the specified lecture
+        if i == lunch_after:
+            current_time = current_time + timedelta(minutes=break_duration)
+            
+    return time_slots
+
+def trim_time_slots(schedule, time_slots, lunch_after):
+    max_slot_index = -1
+    for day, slots in schedule.items():
+        for i, slot in enumerate(time_slots):
+            if slot[0] in slots:
+                max_slot_index = max(max_slot_index, i)
+    
+    if max_slot_index != -1:
+        # Keep at least up to lunch_after so break UI doesn't crash
+        cutoff = max(max_slot_index + 1, lunch_after)
+        return time_slots[:cutoff]
+    return time_slots
+
+def get_val(r, *keys):
+    for k in keys:
+        if k in r and r[k] is not None and str(r[k]).strip() != '': return str(r[k]).strip()
+    for k in keys:
+        target = str(k).lower().replace(' ', '').replace('_', '').replace('/', '')
+        for rk in r.keys():
+            if rk is not None:
+                if str(rk).lower().replace(' ', '').replace('_', '').replace('/', '') == target:
+                    if r[rk] is not None and str(r[rk]).strip() != '':
+                        return str(r[rk]).strip()
+    return ''
