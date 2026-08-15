@@ -62,6 +62,17 @@
                     </label>
                 </div>
                 {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
+                
+                {% if session.get('admin_id') %}
+                <a href="/notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                    <i class="bi bi-bell-fill"></i>
+                </a>
+                {% elif session.get('teacher_id') %}
+                <a href="/teacher_notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                    <i class="bi bi-bell-fill"></i>
+                </a>
+                {% endif %}
+                
                 <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
                     <i class="bi bi-gear-fill"></i>
                 </a>
