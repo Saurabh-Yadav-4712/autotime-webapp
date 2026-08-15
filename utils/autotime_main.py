@@ -42,6 +42,9 @@ def compact_day(class_timetable, teacher_timetable, time_slots, days):
                     # Cannot shift blocks easily in a simple pass, skip if session_length > 1
                     if sub.session_length > 1: continue
                     
+                    # Do not attempt to shift common subjects independently!
+                    if ',' in sub.class_id: continue
+                    
                     # Check if teacher is free at target_slot
                     if target_slot[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}):
                         # Shift!
@@ -91,7 +94,8 @@ def engine_generate_timetable(inst_code):
         # Allocate Common Subjects
         for sub in common_subjects:
             assigned_hours = 0
-            target_classes = [cid.strip() for cid in sub.class_id.split(',')]
+            target_classes = [cid.strip() for cid in sub.class_id.split(',') if cid.strip() in class_timetable]
+            if not target_classes: continue
             teacher = teacher_dict.get(sub.teacher_id)
             
             while assigned_hours < sub.required_hours:
@@ -171,6 +175,9 @@ def engine_generate_timetable(inst_code):
             best_warnings = warnings
             
     # Save Best Timetable with Block Merging
+    if best_timetable is None:
+        return False, ["Generation failed completely. Please check your data."]
+        
     records_to_add = []
     for c_id, days_data in best_timetable.items():
         for day, slots_data in days_data.items():
