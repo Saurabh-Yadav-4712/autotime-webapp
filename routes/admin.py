@@ -1,9 +1,9 @@
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import db
-from app.models import *
-from app.utils import *
+from models import db
+from models import *
+from utils.helpers import *
 import json
 import random
 import os
@@ -15,8 +15,8 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import string
 
-from app.routes import main_bp
-from app.utils import get_dynamic_time_slots, trim_time_slots, get_val
+from routes.blueprint import main_bp
+from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/admin_dash')
 def admin_dash():
@@ -408,211 +408,8 @@ def generate_timetable():
         
     inst_code = session['institute_code']
     
-    # 🧹 1. Clear existing timetable for this institute (Fresh Start)
-    Timetable.query.filter_by(institute_code=inst_code).delete()
-    db.session.commit()
-    
-    # 📥 2. Fetch all required Data
-    subjects = Subject.query.filter_by(institute_code=inst_code).all()
-    teachers = Teacher.query.filter_by(institute_code=inst_code).all()
-    courses = Course.query.filter_by(institute_code=inst_code).all()
-    
-    # Dictionary for quick Teacher lookups
-    teacher_dict = {t.teacher_id: t for t in teachers}
-    
-    # Get Time Slots (Assuming your get_dynamic_time_slots function is present)
-    time_slots = get_dynamic_time_slots(inst_code) 
-    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    
-    # 🧠 3. Initialize Tracking States (To prevent Clashes)
-    # Track which class is busy at what time
-    class_timetable = {c.class_id: {day: {} for day in days} for c in courses}
-    # Track which teacher is busy at what time
-    teacher_timetable = {t.teacher_id: {day: {} for day in days} for t in teachers}
-    # Track maximum hours given to a teacher
-    teacher_hours = {t.teacher_id: 0 for t in teachers}
-    
-    # ⚔️ Phase Separation
-    common_subjects = []
-    normal_subjects = []
-    
-    for sub in subjects:
-        if ',' in sub.class_id:
-            common_subjects.append(sub)  # e.g. "FYCS, FYIT, FYBMS"
-        else:
-            normal_subjects.append(sub)
-
-    # 🚀 PHASE 1: Process Common Subjects (Highest Priority)
-    import random
-    random.shuffle(common_subjects)
-    for sub in common_subjects:
-        # Split and clean class IDs
-        target_classes = [c.strip() for c in sub.class_id.split(',')]
-        assigned_hours = 0
-        teacher = teacher_dict.get(sub.teacher_id)
-        
-        while assigned_hours < sub.required_hours:
-            scheduled_this_round = False
-            # Randomness + Balanced Load
-            random.shuffle(days)
-            days.sort(key=lambda d: max(len(class_timetable.get(c, {}).get(d, {})) for c in target_classes))
-            
-            for day in days:
-                if assigned_hours >= sub.required_hours: break
-                
-                # Constraint: Preferred Days for Subject
-                if sub.preferred_days and day not in sub.preferred_days: continue
-                
-                # Constraint: Is teacher available on this day?
-                if teacher and day not in teacher.available_days: continue
-                
-                # Check for contiguous blocks based on session_length
-                valid_indices = list(range(len(time_slots) - sub.session_length + 1))
-                
-                for idx in valid_indices:
-                    slots_to_check = time_slots[idx : idx + sub.session_length]
-                    
-                    classes_free = all(s[0] not in class_timetable.get(c, {}).get(day, {}) for c in target_classes for s in slots_to_check)
-                    teacher_free = all(s[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}) for s in slots_to_check)
-                    hours_ok = teacher_hours.get(sub.teacher_id, 0) + sub.session_length <= teacher.max_hours if teacher else True
-                    
-                    if classes_free and teacher_free and hours_ok:
-                        # ✅ ASSIGN TO ALL CLASSES SIMULTANEOUSLY
-                        for s in slots_to_check:
-                            for c in target_classes:
-                                if c in class_timetable:
-                                    class_timetable[c][day][s[0]] = (sub, s[1])
-                            teacher_timetable[sub.teacher_id][day][s[0]] = (sub, s[1])
-                            
-                        if teacher: teacher_hours[sub.teacher_id] += sub.session_length
-                        assigned_hours += sub.session_length
-                        scheduled_this_round = True
-                        break # Move to next day (Horizontal distribution)
-                        
-            if not scheduled_this_round: break # Stuck
-
-    # 🚀 PHASE 2: Process Normal Subjects
-    random.shuffle(normal_subjects)
-    for sub in normal_subjects:
-        assigned_hours = 0
-        target_class = sub.class_id
-        teacher = teacher_dict.get(sub.teacher_id)
-        
-        if target_class not in class_timetable: continue
-        
-        while assigned_hours < sub.required_hours:
-            scheduled_this_round = False
-            # Randomness + Balanced Load
-            random.shuffle(days)
-            days.sort(key=lambda d: len(class_timetable[target_class][d]))
-            
-            for day in days:
-                if assigned_hours >= sub.required_hours: break
-                
-                # Constraint: Preferred Days for Subject
-                if sub.preferred_days and day not in sub.preferred_days: continue
-                
-                # Constraint: Is teacher available on this day?
-                if teacher and day not in teacher.available_days: continue
-                
-                valid_indices = list(range(len(time_slots) - sub.session_length + 1))
-                
-                for idx in valid_indices:
-                    slots_to_check = time_slots[idx : idx + sub.session_length]
-                    
-                    # CLASH DETECTION
-                    class_free = all(s[0] not in class_timetable[target_class][day] for s in slots_to_check)
-                    teacher_free = all(s[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}) for s in slots_to_check)
-                    hours_ok = teacher_hours.get(sub.teacher_id, 0) + sub.session_length <= teacher.max_hours if teacher else True
-                    
-                    if class_free and teacher_free and hours_ok:
-                        # ✅ ASSIGN LECTURE
-                        for s in slots_to_check:
-                            class_timetable[target_class][day][s[0]] = (sub, s[1])
-                            teacher_timetable[sub.teacher_id][day][s[0]] = (sub, s[1])
-                            
-                        if teacher: teacher_hours[sub.teacher_id] += sub.session_length
-                        assigned_hours += sub.session_length
-                        scheduled_this_round = True
-                        break # Move to next day (Horizontal distribution)
-                        
-            if not scheduled_this_round: break # Stuck
-    # Removed Phase 3 (Aggressive Compaction) because it broke session_length blocks.
-
-    # 🚀 PHASE 4: Cross-Day Gap Elimination (Move isolated lectures to other days)
-    for c_id in class_timetable.keys():
-        for _ in range(3): # Multiple passes to resolve cascading gaps
-            for day in days:
-                slots_data = class_timetable[c_id].get(day, {})
-                if not slots_data: continue
-                
-                filled_indices = [i for i, slot in enumerate(time_slots) if slot[0] in slots_data]
-                if not filled_indices: continue
-                
-                if max(filled_indices) >= len(filled_indices):
-                    # Gap detected! Find the lectures placed AFTER the gap
-                    sorted_filled = sorted(filled_indices)
-                    for i, idx in enumerate(sorted_filled):
-                        if idx > i: # This lecture is separated by a gap
-                            st_time = time_slots[idx][0]
-                            sub_data = class_timetable[c_id][day][st_time]
-                            sub = sub_data[0]
-                            
-                            # Do not attempt to move common subjects or block subjects (session_length > 1)
-                            if ',' in sub.class_id or sub.session_length > 1: continue
-                            
-                            moved = False
-                            for other_day in days:
-                                if other_day == day: continue
-                                
-                                # Find first empty slot on other_day
-                                other_slots_data = class_timetable[c_id].get(other_day, {})
-                                target_st, target_end = None, None
-                                for slot in time_slots:
-                                    if slot[0] not in other_slots_data:
-                                        target_st, target_end = slot[0], slot[1]
-                                        break
-                                        
-                                if target_st and target_st not in teacher_timetable.get(sub.teacher_id, {}).get(other_day, {}):
-                                    # Move successful!
-                                    del class_timetable[c_id][day][st_time]
-                                    del teacher_timetable[sub.teacher_id][day][st_time]
-                                    
-                                    class_timetable[c_id][other_day][target_st] = (sub, target_end)
-                                    teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(other_day, {})[target_st] = (sub, target_end)
-                                    moved = True
-                                    break
-                            
-                            if moved:
-                                break # Restart pass for this class since timetable mutated
-
-    # 💾 4. Save the Final Generated Output to Database
-    records_to_add = []
-    for c_id, days_data in class_timetable.items():
-        for day, slots_data in days_data.items():
-            for start_time, sub_data in slots_data.items():
-                
-                sub = sub_data[0]
-                end_time = sub_data[1]
-                
-                teacher = teacher_dict.get(sub.teacher_id)
-                t_name = teacher.name if teacher else sub.teacher_id
-                
-                # Create Database Entry
-                new_entry = Timetable(
-                    institute_code=inst_code,
-                    class_id=c_id,
-                    day_name=day,
-                    start_time=start_time,
-                    end_time=end_time,
-                    subject_name=sub.subject_name,
-                    teacher_name=t_name,
-                    is_proxy=False  # Proxy is always False during master generation
-                )
-                records_to_add.append(new_entry)
-                
-    db.session.bulk_save_objects(records_to_add)
-    db.session.commit()
+    from utils.autotime_main import engine_generate_timetable
+    engine_generate_timetable(inst_code)
     
     flash('⚡ Timetable Generated Successfully! Zero Clashes Detected.', 'success')
     return redirect(url_for('main.admin_dash'))
@@ -852,3 +649,52 @@ def reject_teacher_request(req_id):
     db.session.commit()
     flash('Teacher update request rejected.', 'info')
     return redirect(url_for('main.admin_dash'))
+from models import AcademicCalendar, Notification
+from datetime import datetime
+from utils.autotime_main import auto_allocate_proxy
+
+@main_bp.route('/manage_calendar', methods=['GET', 'POST'])
+def manage_calendar():
+    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
+    inst_code = session['institute_code']
+    
+    if request.method == 'POST':
+        date_str = request.form.get('date')
+        event_name = request.form.get('event_name')
+        department = request.form.get('department', 'All') # 'All' or specific dept
+        is_holiday = request.form.get('is_holiday') == 'on'
+        
+        try:
+            event_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            new_event = AcademicCalendar(
+                institute_code=inst_code,
+                date=event_date,
+                event_name=event_name,
+                department=department,
+                is_holiday=is_holiday
+            )
+            db.session.add(new_event)
+            db.session.commit()
+            
+            # Auto-Allocate Proxies for missing lectures caused by this event
+            if is_holiday:
+                auto_allocate_proxy(inst_code, event_date)
+            
+            flash('Event added successfully! Proxy Engine ran for affected lectures.', 'success')
+        except Exception as e:
+            flash(f'Error adding event: {str(e)}', 'danger')
+            
+        return redirect(url_for('main.manage_calendar'))
+        
+    events = AcademicCalendar.query.filter_by(institute_code=inst_code).order_by(AcademicCalendar.date).all()
+    # Fetch unique departments from Courses
+    depts = [r.department for r in db.session.query(Course.department).filter_by(institute_code=inst_code).distinct()]
+    return render_template('admin/manage_calendar.html', events=events, depts=depts)
+
+@main_bp.route('/notifications')
+def admin_notifications():
+    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
+    inst_code = session['institute_code']
+    
+    notifs = Notification.query.filter_by(institute_code=inst_code, user_type='admin').order_by(Notification.created_at.desc()).all()
+    return render_template('admin/notifications.html', notifications=notifs)

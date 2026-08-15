@@ -1,9 +1,9 @@
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import db
-from app.models import *
-from app.utils import *
+from models import db
+from models import *
+from utils.helpers import *
 import json
 import random
 import os
@@ -15,8 +15,8 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import string
 
-from app.routes import main_bp
-from app.utils import get_dynamic_time_slots, trim_time_slots, get_val
+from routes.blueprint import main_bp
+from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/student_portal')
 def student_portal():

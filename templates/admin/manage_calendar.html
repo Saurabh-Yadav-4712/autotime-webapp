@@ -1,0 +1,78 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>📅 Academic Calendar & Event Management</h2>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Add Event / Workshop</h5>
+            <form method="POST">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="date" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Event Name</label>
+                        <input type="text" name="event_name" class="form-control" placeholder="e.g. Science Fair" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Participating Department</label>
+                        <select name="department" class="form-select">
+                            <option value="All">All Departments (College Wide)</option>
+                            {% for d in depts %}
+                            <option value="{{ d }}">{{ d }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="is_holiday" id="holidayCheck" checked>
+                            <label class="form-check-label" for="holidayCheck">
+                                Cancel Lectures
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Add Event & Run Proxy Engine</button>
+            </form>
+        </div>
+    </div>
+
+    <h4>Upcoming Events</h4>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Event Name</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td>{{ event.date.strftime('%d %b %Y') }}</td>
+                    <td>{{ event.event_name }}</td>
+                    <td><span class="badge bg-secondary">{{ event.department }}</span></td>
+                    <td>
+                        {% if event.is_holiday %}
+                        <span class="badge bg-danger">Lectures Cancelled</span>
+                        {% else %}
+                        <span class="badge bg-info">Lectures Continue</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center">No upcoming events.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,9 +1,9 @@
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import db
-from app.models import *
-from app.utils import *
+from models import db
+from models import *
+from utils.helpers import *
 import json
 import random
 import os
@@ -15,8 +15,8 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import string
 
-from app.routes import main_bp
-from app.utils import get_dynamic_time_slots, trim_time_slots, get_val
+from routes.blueprint import main_bp
+from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/teacher_portal')
 def teacher_portal():
@@ -309,3 +309,12 @@ def get_classes(inst_code):
     courses = Course.query.filter_by(institute_code=inst_code).all()
     classes = [c.class_id for c in courses]
     return jsonify({'classes': classes})
+from models import Notification
+@main_bp.route('/teacher_notifications')
+def teacher_notifications():
+    if 'teacher_id' not in session: return redirect(url_for('main.login_teacher'))
+    inst_code = session['institute_code']
+    t_id = session['teacher_id']
+    
+    notifs = Notification.query.filter_by(institute_code=inst_code, user_type='teacher', user_id=t_id).order_by(Notification.created_at.desc()).all()
+    return render_template('teacher/notifications.html', notifications=notifs)
