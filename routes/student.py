@@ -135,6 +135,8 @@ def student_dash():
         schedule[entry.day_name][entry.start_time] = entry
 
     inst = Institute.query.filter_by(institute_code=inst_code).first()
+    inst_name = inst.name if inst else "Institute"
+    today_str = datetime.now().strftime('%a')
+    time_slots = trim_time_slots(schedule, time_slots, lunch_after)
     
-    flash('Password successfully reset! Please login.', 'success')
-    return redirect(url_for('main.login_page'))
+    return render_template('student/student_dash.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, s_name=s_name, class_id=class_id, today_str=today_str, inst_name=inst_name)
