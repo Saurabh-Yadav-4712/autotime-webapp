@@ -28,6 +28,19 @@ def create_app():
     with app.app_context():
         import models
         db.create_all()
+        
+        from sqlalchemy import text
+        try:
+            db.session.execute(text('ALTER TABLE subject ADD COLUMN completed_hours INTEGER DEFAULT 0'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            
+        try:
+            db.session.execute(text('ALTER TABLE timetable ADD COLUMN specific_date DATE'))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # Register all routes via the shared blueprint
     app.register_blueprint(main_bp)
