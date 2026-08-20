@@ -215,13 +215,15 @@ def engine_generate_timetable(inst_code):
                 teacher = teacher_dict.get(sub.teacher_id)
                 t_name = teacher.name if teacher else sub.teacher_id
                 
+                disp_name = f"{sub.subject_name} (Practical)" if sub.subject_type and sub.subject_type.lower() == 'practical' else sub.subject_name
+                
                 new_entry = Timetable(
                     institute_code=inst_code,
                     class_id=c_id,
                     day_name=day,
                     start_time=start_time,
                     end_time=end_time,
-                    subject_name=sub.subject_name,
+                    subject_name=disp_name,
                     teacher_name=t_name,
                     is_proxy=False
                 )
@@ -233,22 +235,36 @@ def engine_generate_timetable(inst_code):
     return True, best_warnings
 
 def auto_allocate_proxy(inst_code, target_date):
-    # Determine the day of the week for the target_date
     day_name = target_date.strftime('%a')
     
     # Check for Teacher Leaves on this date
     leaves = TeacherLeave.query.filter_by(institute_code=inst_code, date=target_date, status='Approved').all()
     leave_teacher_ids = [l.teacher_id for l in leaves]
-    if not leave_teacher_ids: return # Nothing to proxy
+    if not leave_teacher_ids: return
     
-    time_slots = get_dynamic_time_slots(inst_code)
     all_teachers = Teacher.query.filter_by(institute_code=inst_code).all()
+    # Cache class to dept mapping
+    all_courses = Course.query.filter_by(institute_code=inst_code).all()
+    class_dept_map = {c.class_id: c.department for c in all_courses}
     
+    # Cache subject mappings
+    all_subjects = Subject.query.filter_by(institute_code=inst_code).all()
+    teacher_classes = {t.name: set() for t in all_teachers}
+    teacher_subjects = {t.name: set() for t in all_teachers}
+    for sub in all_subjects:
+        if sub.teacher_id:
+            teacher_name = next((t.name for t in all_teachers if t.teacher_id == sub.teacher_id), None)
+            if teacher_name:
+                teacher_subjects[teacher_name].add(sub.subject_name)
+                for cid in sub.class_id.split(','):
+                    teacher_classes[teacher_name].add(cid.strip())
+
     for t_id in leave_teacher_ids:
-        teacher = Teacher.query.filter_by(institute_code=inst_code, teacher_id=t_id).first()
-        t_name = teacher.name if teacher else t_id
+        teacher = next((t for t in all_teachers if t.teacher_id == t_id), None)
+        if not teacher: continue
+        t_name = teacher.name
         
-        # Find all lectures this teacher was supposed to take today (from master timetable)
+        # Missed lectures today
         missed_lectures = Timetable.query.filter_by(
             institute_code=inst_code, 
             teacher_name=t_name, 
@@ -257,60 +273,53 @@ def auto_allocate_proxy(inst_code, target_date):
         ).all()
         
         for lec in missed_lectures:
-            # We need to find a mutual gap (class free + another teacher free) for THIS lecture
-            # Let's search the next 7 days
-            assigned = False
-            for offset in range(1, 8):
-                search_date = target_date + timedelta(days=offset)
-                search_day = search_date.strftime('%a')
+            st, et = lec.start_time, lec.end_time
+            class_dept = class_dept_map.get(lec.class_id, "")
+            
+            # Find free teachers at this exact time slot today
+            available_proxies = []
+            for proxy_t in all_teachers:
+                if proxy_t.teacher_id in leave_teacher_ids: continue
+                if day_name not in proxy_t.available_days: continue
                 
-                if search_day == 'Sun': continue
+                # Check if proxy_t is busy at this slot
+                # (Check master timetable AND existing proxy assignments for today)
+                is_busy = Timetable.query.filter_by(institute_code=inst_code, teacher_name=proxy_t.name, day_name=day_name, start_time=st).filter((Timetable.specific_date == None) | (Timetable.specific_date == target_date)).first()
                 
-                # Fetch class timetable for search_date (including overrides)
-                # To simplify, we just check the master timetable for the class on that day
-                class_master = Timetable.query.filter_by(institute_code=inst_code, class_id=lec.class_id, day_name=search_day, specific_date=None).all()
-                class_busy_slots = {c.start_time for c in class_master}
-                
-                for slot in time_slots:
-                    st, et = slot[0], slot[1]
-                    if st not in class_busy_slots:
-                        # Class is free. Can we find ANY teacher from the same department?
-                        sub = Subject.query.filter_by(institute_code=inst_code, subject_name=lec.subject_name).first()
-                        dept = Course.query.filter_by(institute_code=inst_code, class_id=lec.class_id).first().department
+                if not is_busy:
+                    # Calculate priority score
+                    score = 0
+                    if lec.subject_name in teacher_subjects.get(proxy_t.name, set()):
+                        score += 5 # Teaches same subject
+                    if lec.class_id in teacher_classes.get(proxy_t.name, set()):
+                        score += 3 # Teaches same class
+                    if proxy_t.departments == class_dept:
+                        score += 1 # Same department
                         
-                        # Find a teacher who is available
-                        for proxy_t in all_teachers:
-                            if proxy_t.teacher_id == t_id or search_day not in proxy_t.available_days: continue
-                            
-                            proxy_master = Timetable.query.filter_by(institute_code=inst_code, teacher_name=proxy_t.name, day_name=search_day, specific_date=None).all()
-                            if not any(pm.start_time == st for pm in proxy_master):
-                                # Found a gap! Assign proxy
-                                proxy_entry = Timetable(
-                                    institute_code=inst_code,
-                                    class_id=lec.class_id,
-                                    day_name=search_day,
-                                    start_time=st,
-                                    end_time=et,
-                                    subject_name=lec.subject_name,
-                                    teacher_name=proxy_t.name,
-                                    is_proxy=True,
-                                    specific_date=search_date
-                                )
-                                db.session.add(proxy_entry)
-                                
-                                # Send Notification to Proxy Teacher
-                                msg = f"You have been assigned a proxy lecture for {lec.subject_name} ({lec.class_id}) on {search_date.strftime('%d %b %Y')} at {st}."
-                                notif = Notification(institute_code=inst_code, user_type='teacher', user_id=proxy_t.teacher_id, message=msg)
-                                db.session.add(notif)
-                                
-                                # Notification to Admin
-                                msg_admin = f"Auto-Proxy assigned: {proxy_t.name} will cover {lec.subject_name} for class {lec.class_id} on {search_date.strftime('%d %b %Y')}."
-                                notif_admin = Notification(institute_code=inst_code, user_type='admin', message=msg_admin)
-                                db.session.add(notif_admin)
-                                
-                                assigned = True
-                                break
-                        if assigned: break
-                if assigned: break
+                    available_proxies.append((score, proxy_t))
+            
+            if available_proxies:
+                # Sort by score descending
+                available_proxies.sort(key=lambda x: x[0], reverse=True)
+                best_proxy = available_proxies[0][1]
                 
+                proxy_entry = Timetable(
+                    institute_code=inst_code,
+                    class_id=lec.class_id,
+                    day_name=day_name,
+                    start_time=st,
+                    end_time=et,
+                    subject_name=lec.subject_name,
+                    teacher_name=best_proxy.name,
+                    is_proxy=True,
+                    specific_date=target_date
+                )
+                db.session.add(proxy_entry)
+                
+                msg = f"PROXY ALERT: You have been assigned a proxy lecture for {lec.subject_name} ({lec.class_id}) on {target_date.strftime('%d %b %Y')} at {st}."
+                db.session.add(Notification(institute_code=inst_code, user_type='teacher', user_id=best_proxy.teacher_id, message=msg))
+                
+                msg_admin = f"Auto-Proxy assigned: {best_proxy.name} will cover {lec.subject_name} for class {lec.class_id} on {target_date.strftime('%d %b %Y')} at {st}."
+                db.session.add(Notification(institute_code=inst_code, user_type='admin', message=msg_admin))
+
     db.session.commit()

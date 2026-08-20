@@ -237,7 +237,7 @@ def manage_subjects():
         db.session.add(Subject(
             institute_code=inst_code, subject_code=request.form['subject_code'],
             subject_name=request.form['subject_name'], class_id=",".join(class_ids),
-            teacher_id=request.form['teacher_id'], total_course_hours=50,
+            teacher_id=request.form['teacher_id'], total_course_hours=int(request.form.get('total_course_hours') or 50),
             required_hours=int(request.form["required_hours"]),
             subject_type=request.form['subject_type'], session_length=session_len
         ))
@@ -248,7 +248,9 @@ def manage_subjects():
     subjects = Subject.query.filter_by(institute_code=inst_code).all()
     courses = Course.query.filter_by(institute_code=inst_code).all()
     teachers = Teacher.query.filter_by(institute_code=inst_code).all()
-    return render_template('admin/manage_master.html', manage_type='subject', items=subjects, courses=courses, teachers=teachers)
+    weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
+    weeks_per_semester = int(weeks_setting.value) if weeks_setting else 15
+    return render_template('admin/manage_master.html', manage_type='subject', items=subjects, courses=courses, teachers=teachers, weeks_per_semester=weeks_per_semester)
 
 @main_bp.route('/edit_course/<int:id>', methods=['GET', 'POST'])
 @login_required_admin
@@ -294,12 +296,11 @@ def edit_subject(id):
         class_ids = request.form.getlist('class_id')
         if class_ids: subject.class_id = ",".join(class_ids)
         subject.teacher_id = request.form['teacher_id']
-        weeks_setting = Settings.query.filter_by(institute_code=session['institute_code'], key='weeks_per_semester').first()
-        weeks = int(weeks_setting.value) if weeks_setting else 15
+        subject.total_course_hours = int(request.form.get('total_course_hours') or 50)
+        subject.required_hours = int(request.form["required_hours"])
+        subject.subject_type = request.form['subject_type']
         
         session_len = int(request.form.get('session_length', 1))
-        
-        
         subject.session_length = session_len
         subject.required_hours = int(request.form["required_hours"])
         subject.subject_type = request.form['subject_type']
@@ -309,7 +310,9 @@ def edit_subject(id):
     
     courses = Course.query.filter_by(institute_code=session['institute_code']).all()
     teachers = Teacher.query.filter_by(institute_code=session['institute_code']).all()
-    return render_template('admin/edit_master.html', item=subject, edit_type='subject', courses=courses, teachers=teachers)
+    all_settings = Settings.query.filter_by(institute_code=session['institute_code']).all()
+    settings_dict = {s.key: s.value for s in all_settings}
+    return render_template('admin/edit_master.html', item=subject, edit_type='subject', courses=courses, teachers=teachers, settings=settings_dict)
 
 @main_bp.route('/delete/<type>/<int:id>')
 @login_required_admin
@@ -614,7 +617,7 @@ def college_settings():
 
     if request.method == 'POST':
         # Yahan humne 'lunch_after_lecture' add kar diya hai
-        keys = ['total_lectures', 'start_time', 'lecture_duration', 'break_time', 'lunch_after_lecture']
+        keys = ['total_lectures', 'start_time', 'lecture_duration', 'break_time', 'lunch_after_lecture', 'weeks_per_semester']
         for key in keys:
             val = request.form.get(key)
             if val:

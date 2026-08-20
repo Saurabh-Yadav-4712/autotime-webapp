@@ -30,17 +30,21 @@
                     </div>
                     
                     <div class="row mb-4 g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Lecture Duration (Mins)</label>
                             <input type="number" class="form-control" name="lecture_duration" placeholder="e.g. 45" value="{{ settings.get('lecture_duration', '') }}" min="1" required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold">Lunch Break (Mins)</label>
                             <input type="number" class="form-control" name="break_time" placeholder="e.g. 30" value="{{ settings.get('break_time', '') }}" min="0" required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-bold text-primary">Lunch After Lecture No.</label>
                             <input type="number" class="form-control border-primary" name="lunch_after_lecture" placeholder="e.g. 3" value="{{ settings.get('lunch_after_lecture', '') }}" min="1" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold text-success">Weeks per Semester</label>
+                            <input type="number" class="form-control border-success" name="weeks_per_semester" placeholder="e.g. 15" value="{{ settings.get('weeks_per_semester', '15') }}" min="1" required>
                         </div>
                     </div>
 
