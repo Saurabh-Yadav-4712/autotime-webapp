@@ -202,11 +202,36 @@ def update_profile():
         current_email = user.email
 
     if user:
-        user.name = new_name
-        db.session.commit()
+        if role == 'teacher':
+            if new_name != user.name or new_email != current_email:
+                # Create a TeacherUpdateRequest instead of direct update
+                req = TeacherUpdateRequest(
+                    institute_code=user.institute_code,
+                    teacher_id=user.teacher_id,
+                    new_name=new_name if new_name != user.name else None,
+                    new_email=new_email if new_email != current_email else None
+                )
+                db.session.add(req)
+                
+                # Notify admin
+                notif = Notification(
+                    institute_code=user.institute_code,
+                    user_type='admin',
+                    message=f"Teacher {user.name} requested a profile update."
+                )
+                db.session.add(notif)
+                db.session.commit()
+                flash('Profile update request sent to admin for approval.', 'success')
+                return redirect(url_for('main.settings'))
+            else:
+                flash('No changes made.', 'info')
+                return redirect(url_for('main.settings'))
+        else:
+            user.name = new_name
+            db.session.commit()
 
-    # If email changed, trigger OTP flow
-    if new_email != current_email:
+    # If email changed (for Admin/Student), trigger OTP flow
+    if new_email != current_email and role != 'teacher':
         # Check uniqueness across models
         if Institute.query.filter_by(admin_email=new_email).first() or \
            Teacher.query.filter_by(email=new_email).first() or \

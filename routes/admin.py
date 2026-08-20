@@ -5,6 +5,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
 from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
 from utils.helpers import generate_institute_code, generate_and_store_otp, verify_session_otp, send_otp_email, clear_session_otp, get_dynamic_time_slots, trim_time_slots, get_val
+import csv
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+import io
+from io import BytesIO
 from datetime import datetime, timedelta
 
 from routes.blueprint import main_bp
