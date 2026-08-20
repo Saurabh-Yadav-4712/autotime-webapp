@@ -84,6 +84,9 @@ def engine_generate_timetable(inst_code):
                                 if adj_after: c_score += 20
                                 if has_earlier and not adj_before: c_score -= 100
                                 if has_later and not adj_after: c_score -= 100
+                                
+                                already_on_day = any(sub_data[0].id == sub.id for sub_data in class_day.values())
+                                if already_on_day: c_score -= 200
                             
                             if c_score > best_c_score:
                                 best_c_score = c_score
@@ -140,16 +143,13 @@ def engine_generate_timetable(inst_code):
                             adj_before = (idx > 0 and time_slots[idx-1][0] in class_day)
                             adj_after = (end_idx < len(time_slots) and time_slots[end_idx][0] in class_day)
                             
-                            if adj_before:
-                                prev_sub = class_day[time_slots[idx-1][0]][0]
-                                if prev_sub.id == sub.id:
-                                    c_score += 50
-                                else:
-                                    c_score += 20
-                            
+                            if adj_before: c_score += 20
                             if adj_after: c_score += 20
                             if has_earlier and not adj_before: c_score -= 100
                             if has_later and not adj_after: c_score -= 100
+                                
+                            already_on_day = any(sub_data[0].id == sub.id for sub_data in class_day.values())
+                            if already_on_day: c_score -= 200
                                 
                             t_day = teacher_timetable.get(sub.teacher_id, {}).get(day, {})
                             if idx > 0 and time_slots[idx-1][0] in t_day:
