@@ -23,37 +23,36 @@ def compact_day(class_timetable, teacher_timetable, time_slots, days):
             slots_data = days_data.get(day, {})
             if not slots_data: continue
             
-            filled_indices = sorted([i for i, slot in enumerate(time_slots) if slot[0] in slots_data])
-            if not filled_indices: continue
-            
-            # If there are gaps, try to shift later lectures up
-            for i in range(1, len(filled_indices)):
-                curr_idx = filled_indices[i]
-                prev_idx = filled_indices[i-1]
-                if curr_idx > prev_idx + 1:
-                    # Gap exists. Can we shift curr_idx up to prev_idx + 1?
-                    target_idx = prev_idx + 1
-                    target_slot = time_slots[target_idx]
-                    curr_slot = time_slots[curr_idx]
-                    
-                    sub_data = slots_data[curr_slot[0]]
-                    sub = sub_data[0]
-                    
-                    # Cannot shift blocks easily in a simple pass, skip if session_length > 1
-                    if sub.session_length > 1: continue
-                    
-                    # Do not attempt to shift common subjects independently!
-                    if ',' in sub.class_id: continue
-                    
-                    # Check if teacher is free at target_slot
-                    if target_slot[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}):
-                        # Shift!
-                        del class_timetable[c_id][day][curr_slot[0]]
-                        del teacher_timetable[sub.teacher_id][day][curr_slot[0]]
+            # Find gaps and try to pull later lectures up
+            for target_idx in range(len(time_slots)):
+                target_slot = time_slots[target_idx]
+                
+                if target_slot[0] not in slots_data:
+                    # target_slot is a gap, look for later slots to pull here
+                    for curr_idx in range(target_idx + 1, len(time_slots)):
+                        curr_slot = time_slots[curr_idx]
                         
-                        class_timetable[c_id][day][target_slot[0]] = (sub, target_slot[1])
-                        teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[target_slot[0]] = (sub, target_slot[1])
-                        filled_indices[i] = target_idx # Update for next iteration
+                        if curr_slot[0] in slots_data:
+                            sub_data = slots_data[curr_slot[0]]
+                            sub = sub_data[0]
+                            
+                            # Cannot shift blocks easily in a simple pass, skip if session_length > 1
+                            if sub.session_length > 1: continue
+                            
+                            # Do not attempt to shift common subjects independently!
+                            if ',' in sub.class_id: continue
+                            
+                            # Check if teacher is free at target_slot
+                            if target_slot[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}):
+                                # Shift!
+                                del class_timetable[c_id][day][curr_slot[0]]
+                                del teacher_timetable[sub.teacher_id][day][curr_slot[0]]
+                                
+                                class_timetable[c_id][day][target_slot[0]] = (sub, target_slot[1])
+                                teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[target_slot[0]] = (sub, target_slot[1])
+                                
+                                # Break out of inner loop since we filled the target gap
+                                break
 
 def engine_generate_timetable(inst_code):
     # Clear master timetable only

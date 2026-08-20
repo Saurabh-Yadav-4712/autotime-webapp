@@ -84,9 +84,7 @@
                                     <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 shadow-sm border border-secondary border-opacity-25" 
                                             style="padding: 0.1rem 0.3rem;"
                                             data-bs-toggle="modal" data-bs-target="#editTimetableModal"
-                                            onclick="document.getElementById('edit_entry_id').value='{{ entry.id }}'; 
-                                                     document.getElementById('edit_subject').value='{{ entry.subject_name }}'; 
-                                                     document.getElementById('edit_teacher').value='{{ entry.teacher_name }}';">
+                                            onclick="openEditModal('{{ entry.id }}', '{{ day }}', '{{ slot[0] }}', '{{ entry.teacher_name }}', '{{ entry.subject_name }}');">
                                         <i class="bi bi-pencil-square text-primary" style="font-size: 0.75rem;"></i>
                                     </button>
                                     {% endif %}
@@ -130,24 +128,18 @@
                     <input type="hidden" name="class_id" value="{{ selected_class }}">
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Subject</label>
-                        <select class="form-select" name="new_subject" id="edit_subject" required>
-                            <option value="" disabled>Select Subject...</option>
-                            {% for sub in subjects %}
-                            <option value="{{ sub.subject_name }}">{{ sub.subject_name }}</option>
-                            {% endfor %}
+                        <label class="form-label fw-bold">Teacher</label>
+                        <select class="form-select" name="new_teacher" id="edit_teacher" required onchange="updateSubjects()">
+                            <option value="" disabled selected>Loading...</option>
                         </select>
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Select a free teacher first. Busy teachers cannot be selected.</small>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Teacher</label>
-                        <select class="form-select" name="new_teacher" id="edit_teacher" required>
-                            <option value="" disabled>Select Teacher...</option>
-                            {% for teacher in teachers %}
-                            <option value="{{ teacher.name }}">{{ teacher.name }}</option>
-                            {% endfor %}
+                        <label class="form-label fw-bold">Subject</label>
+                        <select class="form-select" name="new_subject" id="edit_subject" required disabled>
+                            <option value="" disabled selected>Select Teacher First...</option>
                         </select>
-                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>If the selected teacher is busy at this time, the system will reject the change.</small>
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-0">

@@ -1,6 +1,6 @@
 from utils.decorators import login_required_admin
 from flask import current_app
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
 from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
@@ -448,6 +448,52 @@ def view_timetable():
         subjects = []
     
     return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
+
+@main_bp.route('/api/get_slot_data', methods=['GET'])
+@login_required_admin
+def get_slot_data():
+    inst_code = session.get('institute_code')
+    day = request.args.get('day')
+    start_time = request.args.get('start_time')
+    class_id = request.args.get('class_id')
+    
+    if not all([inst_code, day, start_time, class_id]):
+        return jsonify({"error": "Missing parameters"}), 400
+        
+    teachers = Teacher.query.filter_by(institute_code=inst_code).all()
+    result = {"free": [], "busy": []}
+    
+    for t in teachers:
+        # Check if busy
+        busy_entry = Timetable.query.filter_by(
+            institute_code=inst_code,
+            day_name=day,
+            start_time=start_time,
+            teacher_name=t.name
+        ).first()
+        
+        # Get subjects for this specific class
+        # subject class_id can be comma separated, so we check if class_id in it
+        subs = Subject.query.filter(
+            Subject.institute_code == inst_code,
+            Subject.teacher_id == t.teacher_id,
+            Subject.class_id.like(f"%{class_id}%")
+        ).all()
+        
+        sub_names = [s.subject_name for s in subs]
+        
+        t_data = {
+            "name": t.name,
+            "subjects": sub_names,
+            "busy_class": busy_entry.class_id if busy_entry else None
+        }
+        
+        if busy_entry:
+            result["busy"].append(t_data)
+        else:
+            result["free"].append(t_data)
+            
+    return jsonify(result)
 
 @main_bp.route('/edit_timetable_slot', methods=['POST'])
 @login_required_admin
