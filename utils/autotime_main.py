@@ -5,15 +5,26 @@ from datetime import datetime, timedelta
 
 def score_timetable(class_timetable, time_slots):
     score = 0
-    # Penalty for gaps
     for c_id, days_data in class_timetable.items():
-        for day, slots_data in days_data.items():
-            if not slots_data: continue
-            filled_indices = [i for i, slot in enumerate(time_slots) if slot[0] in slots_data]
-            if filled_indices:
-                span = max(filled_indices) - min(filled_indices) + 1
-                gaps = span - len(filled_indices)
-                score -= (gaps * 5) # heavy penalty for gaps
+        daily_counts = []
+        for day, slots in days_data.items():
+            count = len(slots)
+            daily_counts.append(count)
+            if not slots: continue
+            
+            # Find min and max index
+            indices = [[s[0] for s in time_slots].index(k) for k in slots.keys()]
+            if indices:
+                span = max(indices) - min(indices) + 1
+                gaps = span - len(indices)
+                score -= (gaps * 50) # Extremely heavy penalty for mid-day gaps
+        
+        # Penalize uneven distribution of lectures across days
+        if daily_counts:
+            avg = sum(daily_counts) / len(daily_counts)
+            variance = sum((x - avg) ** 2 for x in daily_counts)
+            score -= variance
+            
     return score
 
 def compact_day(class_timetable, teacher_timetable, time_slots, days):
@@ -83,16 +94,21 @@ def engine_generate_timetable(inst_code):
         else:
             normal_subjects.append(s)
             
-    # Sort Big-Rocks-First
-    normal_subjects.sort(key=lambda x: (-x.session_length, -x.required_hours))
-    
     best_timetable = None
     best_teacher_timetable = None
     best_score = -99999
     best_warnings = []
     
-    ITERATIONS = 100
+    ITERATIONS = 500
     for iteration in range(ITERATIONS):
+        # Shuffle subjects to explore different placement orders, then stable sort
+        import random
+        random.shuffle(normal_subjects)
+        normal_subjects.sort(key=lambda x: (-x.session_length, -x.required_hours))
+        
+        random.shuffle(common_subjects)
+        common_subjects.sort(key=lambda x: (-x.session_length, -x.required_hours))
+        
         class_timetable = {c.class_id: {day: {} for day in days} for c in courses}
         teacher_timetable = {t.teacher_id: {day: {} for day in days} for t in teachers}
         teacher_hours = {t.teacher_id: 0 for t in teachers}
