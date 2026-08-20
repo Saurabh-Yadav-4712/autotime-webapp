@@ -179,7 +179,7 @@ def bulk_import(manage_type):
                         weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
                         weeks = int(weeks_setting.value) if weeks_setting else 15
                         import math
-                        req_hrs = math.ceil(int(tot_hrs) / (weeks * int(sess_len)))
+                        req_hrs = math.ceil(int(tot_hrs) / weeks)
                         
                     if not scode: raise ValueError("subject_code missing")
                     s = Subject(institute_code=inst_code, subject_code=scode, subject_name=sname, class_id=cid, teacher_id=tid, subject_type=stype, required_hours=req_hrs, total_course_hours=int(tot_hrs), session_length=int(sess_len))
@@ -269,7 +269,7 @@ def manage_subjects():
             institute_code=inst_code, subject_code=request.form['subject_code'],
             subject_name=request.form['subject_name'], class_id=",".join(class_ids),
             teacher_id=request.form['teacher_id'], total_course_hours=total_hours,
-            required_hours=math.ceil(total_hours / (weeks * session_len)),
+            required_hours=math.ceil(total_hours / weeks),
             subject_type=request.form['subject_type'], session_length=session_len
         ))
         db.session.commit()
@@ -332,7 +332,7 @@ def edit_subject(id):
         import math
         subject.total_course_hours = total_hours
         subject.session_length = session_len
-        subject.required_hours = math.ceil(total_hours / (weeks * session_len))
+        subject.required_hours = math.ceil(total_hours / weeks)
         subject.subject_type = request.form['subject_type']
         db.session.commit()
         flash('Subject updated!', 'success')
