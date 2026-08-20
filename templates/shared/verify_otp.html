@@ -18,6 +18,16 @@
                     <input type="text" name="otp" class="form-control text-center fs-4 letter-spacing-custom" required maxlength="6" pattern="\d{6}" placeholder="------">
                 </div>
             </div>
+            
+            {% if require_password %}
+            <div class="mb-4">
+                <label class="form-label text-center d-block">Set New Password</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" name="new_password" class="form-control text-center fs-5" required minlength="6" placeholder="Enter new password">
+                </div>
+            </div>
+            {% endif %}
 
             <button type="submit" class="btn btn-primary w-100 py-2">{{ btn_text | default('Verify') }}</button>
         </form>

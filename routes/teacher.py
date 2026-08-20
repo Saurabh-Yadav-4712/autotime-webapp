@@ -112,7 +112,7 @@ def verify_teacher_otp():
             flash(msg, 'danger')
             return redirect(url_for('main.verify_teacher_otp'))
             
-    return render_template('shared/verify_otp.html', title='Verify Teacher Account', submit_url='/verify_teacher_otp')
+    return render_template('shared/verify_otp.html', title='Verify Teacher Account', submit_url='/verify_teacher_otp', require_password=True)
 
 @main_bp.route('/login_teacher', methods=['GET', 'POST'])
 def login_teacher():
