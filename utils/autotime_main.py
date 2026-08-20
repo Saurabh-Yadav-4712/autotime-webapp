@@ -17,42 +17,50 @@ def score_timetable(class_timetable, time_slots):
     return score
 
 def compact_day(class_timetable, teacher_timetable, time_slots, days):
-    # Smart Gap Shift-Up (Day Compaction)
-    for c_id, days_data in class_timetable.items():
-        for day in days:
-            slots_data = days_data.get(day, {})
-            if not slots_data: continue
-            
-            # Find gaps and try to pull later lectures up
-            for target_idx in range(len(time_slots)):
-                target_slot = time_slots[target_idx]
+    # Bubble Compaction: Continuously shift lectures and blocks UP into gaps
+    made_changes = True
+    while made_changes:
+        made_changes = False
+        for c_id, days_data in class_timetable.items():
+            for day in days:
+                slots_data = days_data.get(day, {})
+                if not slots_data: continue
                 
-                if target_slot[0] not in slots_data:
-                    # target_slot is a gap, look for later slots to pull here
-                    for curr_idx in range(target_idx + 1, len(time_slots)):
-                        curr_slot = time_slots[curr_idx]
+                for i in range(len(time_slots) - 1):
+                    slot1 = time_slots[i]
+                    slot2 = time_slots[i+1]
+                    
+                    if slot1[0] not in slots_data and slot2[0] in slots_data:
+                        # slot1 is gap, slot2 is filled. Try to pull slot2 up to slot1
+                        sub_data = slots_data[slot2[0]]
+                        sub = sub_data[0]
                         
-                        if curr_slot[0] in slots_data:
-                            sub_data = slots_data[curr_slot[0]]
-                            sub = sub_data[0]
+                        if ',' in sub.class_id: continue # Do not shift common subjects independently
+                        
+                        # Check if teacher is free at slot1
+                        if slot1[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}):
+                            # Identify the full block
+                            block_slots = []
+                            for j in range(i+1, len(time_slots)):
+                                if time_slots[j][0] in slots_data and slots_data[time_slots[j][0]][0].id == sub.id:
+                                    block_slots.append(time_slots[j])
+                                else:
+                                    break
                             
-                            # Cannot shift blocks easily in a simple pass, skip if session_length > 1
-                            if sub.session_length > 1: continue
-                            
-                            # Do not attempt to shift common subjects independently!
-                            if ',' in sub.class_id: continue
-                            
-                            # Check if teacher is free at target_slot
-                            if target_slot[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}):
-                                # Shift!
-                                del class_timetable[c_id][day][curr_slot[0]]
-                                del teacher_timetable[sub.teacher_id][day][curr_slot[0]]
+                            # Shift the block up by 1 slot
+                            for j, bs in enumerate(block_slots):
+                                dest_slot = time_slots[i + j]
                                 
-                                class_timetable[c_id][day][target_slot[0]] = (sub, target_slot[1])
-                                teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[target_slot[0]] = (sub, target_slot[1])
+                                del class_timetable[c_id][day][bs[0]]
+                                del teacher_timetable[sub.teacher_id][day][bs[0]]
                                 
-                                # Break out of inner loop since we filled the target gap
-                                break
+                                class_timetable[c_id][day][dest_slot[0]] = (sub, dest_slot[1])
+                                teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[dest_slot[0]] = (sub, dest_slot[1])
+                                
+                            made_changes = True
+                            break
+                if made_changes: break
+            if made_changes: break
 
 def engine_generate_timetable(inst_code):
     # Clear master timetable only
@@ -83,7 +91,7 @@ def engine_generate_timetable(inst_code):
     best_score = -99999
     best_warnings = []
     
-    ITERATIONS = 5
+    ITERATIONS = 100
     for iteration in range(ITERATIONS):
         class_timetable = {c.class_id: {day: {} for day in days} for c in courses}
         teacher_timetable = {t.teacher_id: {day: {} for day in days} for t in teachers}
@@ -126,49 +134,43 @@ def engine_generate_timetable(inst_code):
                 if not scheduled_this_round: 
                     break 
 
-        # Allocate Normal Subjects (Horizontal/Time-Centric Scheduling)
-        remaining_hours = {sub.id: sub.required_hours for sub in normal_subjects}
-        
-        # We iterate day by day, slot by slot, trying to fill all classes at the same time
-        shuffled_days = days.copy()
-        random.shuffle(shuffled_days)
-        for day in shuffled_days:
-            for idx, slot in enumerate(time_slots):
-                shuffled_courses = courses.copy()
-                random.shuffle(shuffled_courses)
+        # Allocate Normal Subjects
+        for sub in normal_subjects:
+            assigned_hours = 0
+            target_class = sub.class_id
+            teacher = teacher_dict.get(sub.teacher_id)
+            if target_class not in class_timetable: continue
+            
+            while assigned_hours < sub.required_hours:
+                scheduled_this_round = False
+                shuffled_days = days.copy()
+                random.shuffle(shuffled_days)
                 
-                for c in shuffled_courses:
-                    target_class = c.class_id
-                    if slot[0] in class_timetable[target_class][day]:
-                        continue # Slot already filled by common subject or previous multi-hour block
-                        
-                    available_subs = [s for s in normal_subjects if s.class_id == target_class and remaining_hours[s.id] > 0]
-                    random.shuffle(available_subs)
+                for day in shuffled_days:
+                    if assigned_hours >= sub.required_hours: break
+                    if sub.preferred_days and day not in sub.preferred_days: continue
+                    if teacher and day not in teacher.available_days: continue
                     
-                    for sub in available_subs:
-                        teacher = teacher_dict.get(sub.teacher_id)
-                        if teacher and day not in teacher.available_days: continue
-                        if sub.preferred_days and day not in sub.preferred_days: continue
-                        if teacher and teacher_hours.get(sub.teacher_id, 0) + sub.session_length > teacher.max_hours: continue
-                        
-                        if idx + sub.session_length > len(time_slots): continue
-                        
+                    valid_indices = list(range(len(time_slots) - sub.session_length + 1))
+                    for idx in valid_indices:
                         slots_to_check = time_slots[idx : idx + sub.session_length]
                         class_free = all(s[0] not in class_timetable[target_class][day] for s in slots_to_check)
                         teacher_free = all(s[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}) for s in slots_to_check)
+                        hours_ok = teacher_hours.get(sub.teacher_id, 0) + sub.session_length <= teacher.max_hours if teacher else True
                         
-                        if class_free and teacher_free:
+                        if class_free and teacher_free and hours_ok:
                             for s in slots_to_check:
                                 class_timetable[target_class][day][s[0]] = (sub, s[1])
                                 teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[s[0]] = (sub, s[1])
-                            if teacher: teacher_hours[sub.teacher_id] += sub.session_length
-                            remaining_hours[sub.id] -= sub.session_length
-                            break # Move to next class for this time slot
                             
-        # Check warnings for unscheduled hours
-        for sub in normal_subjects:
-            if remaining_hours[sub.id] > 0:
-                warnings.append(f"Unscheduled {remaining_hours[sub.id]} hours for {sub.subject_name} ({sub.class_id}). Check teacher max hours or class density.")
+                            if teacher: teacher_hours[sub.teacher_id] += sub.session_length
+                            assigned_hours += sub.session_length
+                            scheduled_this_round = True
+                            break
+                if not scheduled_this_round: 
+                    warnings.append(f"Unscheduled {sub.required_hours - assigned_hours} hours for {sub.subject_name} ({target_class}). Check teacher max hours or class density.")
+                    break
+                    
         # Post-Processing
         compact_day(class_timetable, teacher_timetable, time_slots, days)
         
