@@ -170,7 +170,7 @@
         const classId = encodeURIComponent("{{ selected_class }}");
         const encodedStartTime = encodeURIComponent(startTime);
         
-        fetch(/api/get_slot_data?day= + dayName + &start_time= + encodedStartTime + &class_id= + classId)
+        fetch('/api/get_slot_data?day=' + dayName + '&start_time=' + encodedStartTime + '&class_id=' + classId)
             .then(response => response.json())
             .then(data => {
                 teacherSelect.innerHTML = '<option value="" disabled selected>Select Teacher...</option>';
