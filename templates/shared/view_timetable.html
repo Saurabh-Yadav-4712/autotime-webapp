@@ -152,3 +152,97 @@
 </div>
 {% endif %}
 {% endblock %}
+ 
+ {% block scripts %}
+<script>
+    let teacherSubjectsMap = {};
+
+    function openEditModal(entryId, dayName, startTime, currentTeacher, currentSubject) {
+        document.getElementById('edit_entry_id').value = entryId;
+        
+        const teacherSelect = document.getElementById('edit_teacher');
+        const subjectSelect = document.getElementById('edit_subject');
+        
+        teacherSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+        subjectSelect.innerHTML = '<option value="" disabled selected>Select Teacher First...</option>';
+        subjectSelect.disabled = true;
+        
+        const classId = encodeURIComponent("{{ selected_class }}");
+        const encodedStartTime = encodeURIComponent(startTime);
+        
+        fetch(/api/get_slot_data?day= + dayName + &start_time= + encodedStartTime + &class_id= + classId)
+            .then(response => response.json())
+            .then(data => {
+                teacherSelect.innerHTML = '<option value="" disabled selected>Select Teacher...</option>';
+                teacherSubjectsMap = {};
+                
+                if(data.free && data.free.length > 0) {
+                    const freeGroup = document.createElement('optgroup');
+                    freeGroup.label = "Available Teachers";
+                    data.free.forEach(t => {
+                        teacherSubjectsMap[t.name] = t.subjects;
+                        const opt = document.createElement('option');
+                        opt.value = t.name;
+                        opt.textContent = t.name;
+                        if(t.name === currentTeacher) opt.selected = true;
+                        freeGroup.appendChild(opt);
+                    });
+                    teacherSelect.appendChild(freeGroup);
+                }
+                
+                if(data.busy && data.busy.length > 0) {
+                    const busyGroup = document.createElement('optgroup');
+                    busyGroup.label = "Busy Teachers";
+                    data.busy.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.name;
+                        opt.textContent = t.name + " (Assigned to " + t.busy_class + ". Free them first)";
+                        opt.disabled = true;
+                        if(t.name === currentTeacher) {
+                            opt.disabled = false;
+                            opt.selected = true;
+                            teacherSubjectsMap[t.name] = t.subjects;
+                        }
+                        busyGroup.appendChild(opt);
+                    });
+                    teacherSelect.appendChild(busyGroup);
+                }
+                
+                updateSubjects(currentSubject);
+            })
+            .catch(err => {
+                console.error(err);
+                teacherSelect.innerHTML = '<option value="" disabled>Error loading data</option>';
+            });
+    }
+
+    function updateSubjects(preSelectSubject = null) {
+        const teacherSelect = document.getElementById('edit_teacher');
+        const subjectSelect = document.getElementById('edit_subject');
+        const selectedTeacher = teacherSelect.value;
+        
+        if (!selectedTeacher) {
+            subjectSelect.innerHTML = '<option value="" disabled selected>Select Teacher First...</option>';
+            subjectSelect.disabled = true;
+            return;
+        }
+        
+        const subjects = teacherSubjectsMap[selectedTeacher] || [];
+        subjectSelect.innerHTML = '';
+        subjectSelect.disabled = false;
+        
+        if (subjects.length === 0) {
+            subjectSelect.innerHTML = '<option value="" disabled selected>No subjects assigned for this class</option>';
+            subjectSelect.disabled = true;
+        } else {
+            subjects.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub;
+                opt.textContent = sub;
+                if (sub === preSelectSubject) opt.selected = true;
+                subjectSelect.appendChild(opt);
+            });
+        }
+    }
+</script>
+{% endblock %}

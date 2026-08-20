@@ -126,43 +126,49 @@ def engine_generate_timetable(inst_code):
                 if not scheduled_this_round: 
                     break 
 
-        # Allocate Normal Subjects
-        for sub in normal_subjects:
-            assigned_hours = 0
-            target_class = sub.class_id
-            teacher = teacher_dict.get(sub.teacher_id)
-            if target_class not in class_timetable: continue
-            
-            while assigned_hours < sub.required_hours:
-                scheduled_this_round = False
-                shuffled_days = days.copy()
-                random.shuffle(shuffled_days)
+        # Allocate Normal Subjects (Horizontal/Time-Centric Scheduling)
+        remaining_hours = {sub.id: sub.required_hours for sub in normal_subjects}
+        
+        # We iterate day by day, slot by slot, trying to fill all classes at the same time
+        shuffled_days = days.copy()
+        random.shuffle(shuffled_days)
+        for day in shuffled_days:
+            for idx, slot in enumerate(time_slots):
+                shuffled_courses = courses.copy()
+                random.shuffle(shuffled_courses)
                 
-                for day in shuffled_days:
-                    if assigned_hours >= sub.required_hours: break
-                    if sub.preferred_days and day not in sub.preferred_days: continue
-                    if teacher and day not in teacher.available_days: continue
+                for c in shuffled_courses:
+                    target_class = c.class_id
+                    if slot[0] in class_timetable[target_class][day]:
+                        continue # Slot already filled by common subject or previous multi-hour block
+                        
+                    available_subs = [s for s in normal_subjects if s.class_id == target_class and remaining_hours[s.id] > 0]
+                    random.shuffle(available_subs)
                     
-                    valid_indices = list(range(len(time_slots) - sub.session_length + 1))
-                    for idx in valid_indices:
+                    for sub in available_subs:
+                        teacher = teacher_dict.get(sub.teacher_id)
+                        if teacher and day not in teacher.available_days: continue
+                        if sub.preferred_days and day not in sub.preferred_days: continue
+                        if teacher and teacher_hours.get(sub.teacher_id, 0) + sub.session_length > teacher.max_hours: continue
+                        
+                        if idx + sub.session_length > len(time_slots): continue
+                        
                         slots_to_check = time_slots[idx : idx + sub.session_length]
                         class_free = all(s[0] not in class_timetable[target_class][day] for s in slots_to_check)
                         teacher_free = all(s[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}) for s in slots_to_check)
-                        hours_ok = teacher_hours.get(sub.teacher_id, 0) + sub.session_length <= teacher.max_hours if teacher else True
                         
-                        if class_free and teacher_free and hours_ok:
+                        if class_free and teacher_free:
                             for s in slots_to_check:
                                 class_timetable[target_class][day][s[0]] = (sub, s[1])
                                 teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[s[0]] = (sub, s[1])
-                            
                             if teacher: teacher_hours[sub.teacher_id] += sub.session_length
-                            assigned_hours += sub.session_length
-                            scheduled_this_round = True
-                            break
-                if not scheduled_this_round: 
-                    warnings.append(f"Unscheduled {sub.required_hours - assigned_hours} hours for {sub.subject_name} ({target_class}). Check teacher max hours or class density.")
-                    break
-                    
+                            remaining_hours[sub.id] -= sub.session_length
+                            break # Move to next class for this time slot
+                            
+        # Check warnings for unscheduled hours
+        for sub in normal_subjects:
+            if remaining_hours[sub.id] > 0:
+                warnings.append(f"Unscheduled {remaining_hours[sub.id]} hours for {sub.subject_name} ({sub.class_id}). Check teacher max hours or class density.")
         # Post-Processing
         compact_day(class_timetable, teacher_timetable, time_slots, days)
         
