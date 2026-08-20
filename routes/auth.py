@@ -120,6 +120,8 @@ def login_admin():
         
     admin = Institute.query.filter_by(admin_username=username).first()
     if admin and check_password_hash(admin.admin_password, password):
+        session.pop('teacher_id', None)
+        session.pop('student_id', None)
         session['admin_id'] = admin.id
         session['institute_code'] = admin.institute_code
         flash(f'Welcome back, {admin.name}!', 'success')

@@ -97,6 +97,8 @@ def login_student():
         
     student = Student.query.filter_by(email=request.form['email']).first()
     if student and check_password_hash(student.password, request.form['password']):
+        session.pop('admin_id', None)
+        session.pop('teacher_id', None)
         session['student_id'] = student.id
         session['institute_code'] = student.institute_code
         session['student_name'] = student.name

@@ -121,6 +121,8 @@ def login_teacher():
         
     teacher = Teacher.query.filter_by(email=request.form['email']).first()
     if teacher and teacher.password and check_password_hash(teacher.password, request.form['password']):
+        session.pop('admin_id', None)
+        session.pop('student_id', None)
         session['teacher_id'] = teacher.teacher_id
         session['institute_code'] = teacher.institute_code
         session['teacher_name'] = teacher.name
