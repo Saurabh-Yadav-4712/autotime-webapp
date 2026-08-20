@@ -71,13 +71,19 @@ def engine_generate_timetable(inst_code):
                         
                         if classes_free and teacher_free and hours_ok:
                             c_score = 0
-                            # Score candidate (average across all target classes)
                             for c in target_classes:
-                                # Mock the scoring for a common subject
-                                # To keep it fast, basic scoring
                                 class_day = class_timetable[c][day]
-                                if idx > 0 and time_slots[idx-1][0] in class_day: c_score += 20
-                                if idx > 0 and any(time_slots[i][0] in class_day for i in range(idx)): c_score -= 100
+                                has_earlier = any(time_slots[i][0] in class_day for i in range(idx))
+                                end_idx = idx + sub.session_length
+                                has_later = any(time_slots[i][0] in class_day for i in range(end_idx, len(time_slots)))
+                                
+                                adj_before = (idx > 0 and time_slots[idx-1][0] in class_day)
+                                adj_after = (end_idx < len(time_slots) and time_slots[end_idx][0] in class_day)
+                                
+                                if adj_before: c_score += 20
+                                if adj_after: c_score += 20
+                                if has_earlier and not adj_before: c_score -= 100
+                                if has_later and not adj_after: c_score -= 100
                             
                             if c_score > best_c_score:
                                 best_c_score = c_score
@@ -127,19 +133,23 @@ def engine_generate_timetable(inst_code):
                             class_day = class_timetable[target_class][day]
                             c_score = 0
                             
-                            # Adjacency
-                            if idx > 0 and time_slots[idx-1][0] in class_day:
+                            has_earlier = any(time_slots[i][0] in class_day for i in range(idx))
+                            end_idx = idx + sub.session_length
+                            has_later = any(time_slots[i][0] in class_day for i in range(end_idx, len(time_slots)))
+                            
+                            adj_before = (idx > 0 and time_slots[idx-1][0] in class_day)
+                            adj_after = (end_idx < len(time_slots) and time_slots[end_idx][0] in class_day)
+                            
+                            if adj_before:
                                 prev_sub = class_day[time_slots[idx-1][0]][0]
                                 if prev_sub.id == sub.id:
                                     c_score += 50
                                 else:
                                     c_score += 20
-                            elif idx > 0 and any(time_slots[i][0] in class_day for i in range(idx)):
-                                c_score -= 100 # Gap created
                             
-                            end_idx = idx + sub.session_length
-                            if end_idx < len(time_slots) and time_slots[end_idx][0] in class_day:
-                                c_score += 20
+                            if adj_after: c_score += 20
+                            if has_earlier and not adj_before: c_score -= 100
+                            if has_later and not adj_after: c_score -= 100
                                 
                             t_day = teacher_timetable.get(sub.teacher_id, {}).get(day, {})
                             if idx > 0 and time_slots[idx-1][0] in t_day:
@@ -166,7 +176,69 @@ def engine_generate_timetable(inst_code):
                     warnings.append(f"Unscheduled {remaining} hours for {sub.subject_name} ({target_class}).")
                     break
         
-        # Scoring Algorithm (Replacing compact_day logic entirely with high-quality scoring)
+        # Safe Local Optimizer (Simulated Annealing/Hill Climbing)
+        def calc_temp_score(ct):
+            s = 0
+            for cid, ddata in ct.items():
+                for d, slts in ddata.items():
+                    if not slts: continue
+                    idx_list = [[ts[0] for ts in time_slots].index(k) for k in slts.keys()]
+                    span = max(idx_list) - min(idx_list) + 1
+                    gaps = span - len(idx_list)
+                    s -= (gaps * 100)
+            return s
+            
+        made_changes = True
+        passes = 0
+        while made_changes and passes < 5:
+            made_changes = False
+            passes += 1
+            for c_id, days_data in class_timetable.items():
+                for day, slots in days_data.items():
+                    if not slots: continue
+                    indices = sorted([[s[0] for s in time_slots].index(k) for k in slots.keys()])
+                    span = max(indices) - min(indices) + 1
+                    if span == len(indices): continue
+                    
+                    for src_idx in indices:
+                        src_time = time_slots[src_idx][0]
+                        sub_data = slots[src_time]
+                        sub = sub_data[0]
+                        
+                        if ',' in sub.class_id: continue
+                        if sub.session_length > 1: continue
+                        
+                        for dest_idx in range(len(time_slots)):
+                            if dest_idx in indices: continue
+                            dest_time = time_slots[dest_idx][0]
+                            
+                            if dest_time in teacher_timetable.get(sub.teacher_id, {}).get(day, {}): continue
+                                
+                            current_score = calc_temp_score(class_timetable)
+                            
+                            del class_timetable[c_id][day][src_time]
+                            del teacher_timetable[sub.teacher_id][day][src_time]
+                            
+                            class_timetable[c_id][day][dest_time] = sub_data
+                            teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[dest_time] = sub_data
+                            
+                            new_score = calc_temp_score(class_timetable)
+                            
+                            if new_score > current_score:
+                                made_changes = True
+                                break
+                            else:
+                                del class_timetable[c_id][day][dest_time]
+                                del teacher_timetable[sub.teacher_id][day][dest_time]
+                                
+                                class_timetable[c_id][day][src_time] = sub_data
+                                teacher_timetable[sub.teacher_id][day][src_time] = sub_data
+                                
+                        if made_changes: break
+                    if made_changes: break
+                if made_changes: break
+        
+        # Scoring Algorithm
         score = 0
         score -= unscheduled_hours_total * 5000
         
