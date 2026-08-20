@@ -20,6 +20,7 @@
     <!-- Turbo for SPA -->
     <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='loader.css') }}">
     
     <!-- Password Visibility Toggle Logic -->
     <script>
@@ -46,6 +47,12 @@
     </script>
 </head>
 <body class="d-flex flex-column min-vh-100">
+
+    <!-- Global Loader -->
+    <div id="global-loader">
+        <div class="loader-spinner"></div>
+        <h5 class="fw-bold text-muted">Processing...</h5>
+    </div>
 
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm d-print-none">
@@ -166,6 +173,17 @@
         
         document.addEventListener('DOMContentLoaded', syncThemeToggle);
         document.addEventListener('turbo:load', syncThemeToggle);
+
+        // Global Loader Logic
+        window.addEventListener('turbo:before-visit', () => {
+            const loader = document.getElementById('global-loader');
+            if (loader) loader.classList.add('active');
+        });
+
+        window.addEventListener('turbo:load', () => {
+            const loader = document.getElementById('global-loader');
+            if (loader) loader.classList.remove('active');
+        });
 
         // Button Inline Loader Logic
         if (!window.loaderInitialized) {

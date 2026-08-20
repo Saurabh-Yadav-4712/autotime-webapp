@@ -1,26 +1,18 @@
+from utils.decorators import login_required_admin
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
-from models import *
-from utils.helpers import *
-import json
-import random
-import os
-import io
-import csv
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from io import BytesIO
+from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
+from utils.helpers import generate_institute_code, generate_and_store_otp, verify_session_otp, send_otp_email, clear_session_otp, get_dynamic_time_slots, trim_time_slots, get_val
 from datetime import datetime, timedelta
-import string
 
 from routes.blueprint import main_bp
 from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/admin_dash')
+@login_required_admin
 def admin_dash():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     
     # Calculate Analytics
@@ -99,8 +91,8 @@ def admin_dash():
     return render_template('admin/admin_dash.html', admin=admin, c_count=c_count, t_count=t_count, s_count=s_count, generated=generated, free_teachers=free_teachers_count, faculty_workload=faculty_workload, syllabus_tracking_grouped=syllabus_tracking_grouped, weeks_per_semester=weeks_per_semester, pending_requests=pending_requests)
 
 @main_bp.route('/bulk_import/<manage_type>', methods=['POST'])
+@login_required_admin
 def bulk_import(manage_type):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     
     if 'file' not in request.files:
@@ -204,8 +196,8 @@ def bulk_import(manage_type):
     return redirect(url_for('main.admin_dash'))
 
 @main_bp.route('/manage_courses', methods=['GET', 'POST'])
+@login_required_admin
 def manage_courses():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -222,8 +214,8 @@ def manage_courses():
     return render_template('admin/manage_master.html', manage_type='course', items=courses)
 
 @main_bp.route('/manage_teachers', methods=['GET', 'POST'])
+@login_required_admin
 def manage_teachers():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -252,8 +244,8 @@ def manage_teachers():
     return render_template('admin/manage_master.html', manage_type='teacher', items=teachers, depts=unique_depts)
 
 @main_bp.route('/manage_subjects', methods=['GET', 'POST'])
+@login_required_admin
 def manage_subjects():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -285,8 +277,8 @@ def manage_subjects():
     return render_template('admin/manage_master.html', manage_type='subject', items=subjects, courses=courses, teachers=teachers)
 
 @main_bp.route('/edit_course/<int:id>', methods=['GET', 'POST'])
+@login_required_admin
 def edit_course(id):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     course = Course.query.get_or_404(id)
     if request.method == 'POST':
         course.class_id = request.form['class_id']
@@ -299,8 +291,8 @@ def edit_course(id):
     return render_template('admin/edit_master.html', item=course, edit_type='course')
 
 @main_bp.route('/edit_teacher/<int:id>', methods=['GET', 'POST'])
+@login_required_admin
 def edit_teacher(id):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     teacher = Teacher.query.get_or_404(id)
     if request.method == 'POST':
         teacher.teacher_id = request.form['teacher_id']
@@ -319,8 +311,8 @@ def edit_teacher(id):
     return render_template('admin/edit_master.html', item=teacher, edit_type='teacher', unique_depts=depts)
 
 @main_bp.route('/edit_subject/<int:id>', methods=['GET', 'POST'])
+@login_required_admin
 def edit_subject(id):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     subject = Subject.query.get_or_404(id)
     if request.method == 'POST':
         subject.subject_code = request.form['subject_code']
@@ -346,8 +338,8 @@ def edit_subject(id):
     return render_template('admin/edit_master.html', item=subject, edit_type='subject', courses=courses, teachers=teachers)
 
 @main_bp.route('/delete/<type>/<int:id>')
+@login_required_admin
 def delete_item(type, id):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     
     if type == 'course':
         item = Course.query.get_or_404(id)
@@ -367,8 +359,8 @@ def delete_item(type, id):
     return redirect(url_for('main.' + route))
 
 @main_bp.route('/bulk_delete/<type>', methods=['POST'])
+@login_required_admin
 def bulk_delete_items(type):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     selected_ids = request.form.getlist('selected_ids')
     
@@ -415,8 +407,8 @@ def generate_timetable():
     return redirect(url_for('main.admin_dash'))
 
 @main_bp.route('/view_timetable')
+@login_required_admin
 def view_timetable():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     
     courses = Course.query.filter_by(institute_code=inst_code).all()
@@ -453,8 +445,8 @@ def view_timetable():
     return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
 
 @main_bp.route('/edit_timetable_slot', methods=['POST'])
+@login_required_admin
 def edit_timetable_slot():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     
     entry_id = request.form.get('entry_id')
     new_subject = request.form.get('new_subject')
@@ -491,8 +483,8 @@ def edit_timetable_slot():
     return redirect(url_for('main.view_timetable', class_id=entry.class_id))
 
 @main_bp.route('/export_timetables')
+@login_required_admin
 def export_timetables():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     
     # Fetch Classes
@@ -596,8 +588,8 @@ def export_timetables():
     return send_file(output, download_name="AutoTime_Master_Schedule.xlsx", as_attachment=True)
 
 @main_bp.route('/college_settings', methods=['GET', 'POST'])
+@login_required_admin
 def college_settings():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -623,8 +615,8 @@ def college_settings():
     return render_template('admin/college_settings.html', settings=settings_dict)
 
 @main_bp.route('/admin/requests/approve/<int:req_id>', methods=['POST'])
+@login_required_admin
 def approve_teacher_request(req_id):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     req = TeacherUpdateRequest.query.get_or_404(req_id)
     if req.institute_code != session.get('institute_code'): return "Unauthorized", 403
     
@@ -640,8 +632,8 @@ def approve_teacher_request(req_id):
     return redirect(url_for('main.admin_dash'))
 
 @main_bp.route('/admin/requests/reject/<int:req_id>', methods=['POST'])
+@login_required_admin
 def reject_teacher_request(req_id):
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     req = TeacherUpdateRequest.query.get_or_404(req_id)
     if req.institute_code != session.get('institute_code'): return "Unauthorized", 403
     
@@ -654,8 +646,8 @@ from datetime import datetime
 from utils.autotime_main import auto_allocate_proxy
 
 @main_bp.route('/manage_calendar', methods=['GET', 'POST'])
+@login_required_admin
 def manage_calendar():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     
     if request.method == 'POST':
@@ -692,8 +684,8 @@ def manage_calendar():
     return render_template('admin/manage_calendar.html', events=events, depts=depts)
 
 @main_bp.route('/notifications')
+@login_required_admin
 def admin_notifications():
-    if 'admin_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     
     notifs = Notification.query.filter_by(institute_code=inst_code, user_type='admin').order_by(Notification.created_at.desc()).all()

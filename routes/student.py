@@ -1,19 +1,11 @@
+from utils.decorators import login_required_student
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
-from models import *
-from utils.helpers import *
-import json
-import random
-import os
-import io
-import csv
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from io import BytesIO
+from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
+from utils.helpers import generate_institute_code, generate_and_store_otp, verify_session_otp, send_otp_email, clear_session_otp, get_dynamic_time_slots, trim_time_slots, get_val
 from datetime import datetime, timedelta
-import string
 
 from routes.blueprint import main_bp
 from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
@@ -116,8 +108,8 @@ def login_student():
     return redirect(url_for('main.login_page'))
 
 @main_bp.route('/student_dash')
+@login_required_student
 def student_dash():
-    if 'student_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     class_id = session['student_class']
     s_name = session['student_name']

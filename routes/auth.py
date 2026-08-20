@@ -4,16 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
 from models import *
 from utils.helpers import *
-import json
-import random
-import os
-import io
-import csv
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from io import BytesIO
 from datetime import datetime, timedelta
-import string
 
 from routes.blueprint import main_bp
 from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
@@ -29,11 +20,14 @@ def login_page():
 @main_bp.route('/register_institute', methods=['GET', 'POST'])
 def register_institute():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
-        college_name = request.form['college_name'].strip()
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        college_name = request.form.get('college_name', '').strip()
+        password = request.form.get('password', '')
 
+        if not username or not email or not college_name or not password:
+            flash('All fields are required!', 'danger')
+            return redirect(url_for('main.register_institute'))
         if Institute.query.filter_by(admin_username=username).first():
             flash('Username already exists.', 'danger')
             return redirect(url_for('main.register_institute'))
@@ -117,8 +111,15 @@ def login_admin():
     if request.method == 'GET':
         return redirect(url_for('main.login_page'))
         
-    admin = Institute.query.filter_by(admin_username=request.form['username']).first()
-    if admin and check_password_hash(admin.admin_password, request.form['password']):
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+
+    if not username or not password:
+        flash('Username and password are required!', 'danger')
+        return redirect(url_for('main.login_page'))
+        
+    admin = Institute.query.filter_by(admin_username=username).first()
+    if admin and check_password_hash(admin.admin_password, password):
         session['admin_id'] = admin.id
         session['institute_code'] = admin.institute_code
         flash(f'Welcome back, {admin.name}!', 'success')

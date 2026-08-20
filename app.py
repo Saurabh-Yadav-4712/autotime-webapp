@@ -8,7 +8,7 @@ import routes.admin
 import routes.student
 import routes.teacher
 
-def create_app():
+def create_app(test_config=None):
     # Configure Flask to find templates and static files in the root directory
     app = Flask(__name__, 
                 template_folder='templates',
@@ -16,11 +16,14 @@ def create_app():
                 
     app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key-for-dev')
 
-    db_url = os.environ.get("DATABASE_URL", "sqlite:///autotime.db")
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    if test_config is None:
+        db_url = os.environ.get("DATABASE_URL", "sqlite:///autotime.db")
+        if db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    else:
+        app.config.update(test_config)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
@@ -29,18 +32,7 @@ def create_app():
         import models
         db.create_all()
         
-        from sqlalchemy import text
-        try:
-            db.session.execute(text('ALTER TABLE subject ADD COLUMN completed_hours INTEGER DEFAULT 0'))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
-            
-        try:
-            db.session.execute(text('ALTER TABLE timetable ADD COLUMN specific_date DATE'))
-            db.session.commit()
-        except Exception:
-            db.session.rollback()
+
 
     # Register all routes via the shared blueprint
     app.register_blueprint(main_bp)
