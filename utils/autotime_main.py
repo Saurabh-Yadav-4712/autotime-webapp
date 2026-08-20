@@ -175,7 +175,6 @@ def engine_generate_timetable(inst_code):
                     unscheduled_hours_total += remaining
                     warnings.append(f"Unscheduled {remaining} hours for {sub.subject_name} ({target_class}).")
                     break
-        
         # Safe Local Optimizer (Simulated Annealing/Hill Climbing)
         def calc_temp_score(ct):
             s = 0
@@ -205,21 +204,33 @@ def engine_generate_timetable(inst_code):
                         sub_data = slots[src_time]
                         sub = sub_data[0]
                         
-                        if ',' in sub.class_id: continue
                         if sub.session_length > 1: continue
+                        
+                        is_common = ',' in sub.class_id
+                        target_classes = [cid.strip() for cid in sub.class_id.split(',')] if is_common else [c_id]
                         
                         for dest_idx in range(len(time_slots)):
                             if dest_idx in indices: continue
                             dest_time = time_slots[dest_idx][0]
                             
                             if dest_time in teacher_timetable.get(sub.teacher_id, {}).get(day, {}): continue
+                            
+                            all_free = True
+                            for tc in target_classes:
+                                if tc not in class_timetable: continue
+                                if dest_time in class_timetable[tc][day]:
+                                    all_free = False
+                                    break
+                            if not all_free: continue
                                 
                             current_score = calc_temp_score(class_timetable)
                             
-                            del class_timetable[c_id][day][src_time]
+                            for tc in target_classes:
+                                if tc not in class_timetable: continue
+                                del class_timetable[tc][day][src_time]
+                                class_timetable[tc][day][dest_time] = sub_data
+                                
                             del teacher_timetable[sub.teacher_id][day][src_time]
-                            
-                            class_timetable[c_id][day][dest_time] = sub_data
                             teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[dest_time] = sub_data
                             
                             new_score = calc_temp_score(class_timetable)
@@ -228,15 +239,19 @@ def engine_generate_timetable(inst_code):
                                 made_changes = True
                                 break
                             else:
-                                del class_timetable[c_id][day][dest_time]
+                                for tc in target_classes:
+                                    if tc not in class_timetable: continue
+                                    del class_timetable[tc][day][dest_time]
+                                    class_timetable[tc][day][src_time] = sub_data
+                                    
                                 del teacher_timetable[sub.teacher_id][day][dest_time]
-                                
-                                class_timetable[c_id][day][src_time] = sub_data
                                 teacher_timetable[sub.teacher_id][day][src_time] = sub_data
                                 
                         if made_changes: break
                     if made_changes: break
                 if made_changes: break
+
+
         
         # Scoring Algorithm
         score = 0
