@@ -63,37 +63,13 @@ def admin_dash():
             'free_hours': free_hrs
         })
 
-    import math
+    
     subjects = Subject.query.filter_by(institute_code=inst_code).all()
     all_courses = Course.query.filter_by(institute_code=inst_code).all()
     
-    # Create mapping of class_id to department
-    class_dept_map = {c.class_id: c.department for c in all_courses}
-    
-    weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
-    weeks_per_semester = int(weeks_setting.value) if weeks_setting else 15
-    
-    syllabus_tracking_grouped = {}
-    for s in subjects:
-        # Attempt to determine department from first class_id mapping
-        first_class = s.class_id.split(',')[0].strip() if s.class_id else ""
-        dept = class_dept_map.get(first_class, "General/Unassigned")
-        
-        if dept not in syllabus_tracking_grouped:
-            syllabus_tracking_grouped[dept] = []
-            
-        syllabus_tracking_grouped[dept].append({
-            'name': s.subject_name,
-            'code': s.subject_code,
-            'teacher': s.teacher_id,
-            'total_hrs': s.total_course_hours,
-            'weekly_hrs': s.required_hours,
-            'weeks_needed': math.ceil(s.total_course_hours / s.required_hours) if s.required_hours > 0 else 0
-        })
-
     pending_requests = TeacherUpdateRequest.query.filter_by(institute_code=inst_code, status='Pending').all()
     admin = Institute.query.get(session['admin_id'])
-    return render_template('admin/admin_dash.html', admin=admin, c_count=c_count, t_count=t_count, s_count=s_count, generated=generated, free_teachers=free_teachers_count, faculty_workload=faculty_workload, syllabus_tracking_grouped=syllabus_tracking_grouped, weeks_per_semester=weeks_per_semester, pending_requests=pending_requests)
+    return render_template('admin/admin_dash.html', admin=admin, c_count=c_count, t_count=t_count, s_count=s_count, generated=generated, free_teachers=free_teachers_count, faculty_workload=faculty_workload, pending_requests=pending_requests)
 
 @main_bp.route('/bulk_import/<manage_type>', methods=['POST'])
 @login_required_admin
@@ -173,16 +149,9 @@ def bulk_import(manage_type):
                     tot_hrs = get_val(row, 'total_course_hours', 'totalcoursehours', 'totalhours') or 50
                     sess_len = get_val(row, 'session_length', 'sessionlength') or 1
                     
-                    if req_hrs_raw:
-                        req_hrs = int(req_hrs_raw)
-                    else:
-                        weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
-                        weeks = int(weeks_setting.value) if weeks_setting else 15
-                        import math
-                        req_hrs = math.ceil(int(tot_hrs) / weeks)
-                        
+                    req_hrs = int(req_hrs_raw) if req_hrs_raw else 4
                     if not scode: raise ValueError("subject_code missing")
-                    s = Subject(institute_code=inst_code, subject_code=scode, subject_name=sname, class_id=cid, teacher_id=tid, subject_type=stype, required_hours=req_hrs, total_course_hours=int(tot_hrs), session_length=int(sess_len))
+                    s = Subject(institute_code=inst_code, subject_code=scode, subject_name=sname, class_id=cid, teacher_id=tid, subject_type=stype, required_hours=req_hrs, total_course_hours=50, session_length=int(sess_len))
                     db.session.add(s)
                 db.session.commit()
                 success_count += 1
@@ -261,15 +230,15 @@ def manage_subjects():
 
         weeks_setting = Settings.query.filter_by(institute_code=inst_code, key='weeks_per_semester').first()
         weeks = int(weeks_setting.value) if weeks_setting else 15
-        total_hours = int(request.form['total_course_hours'])
+        
         session_len = int(request.form.get('session_length', 1))
-        import math
+        
         
         db.session.add(Subject(
             institute_code=inst_code, subject_code=request.form['subject_code'],
             subject_name=request.form['subject_name'], class_id=",".join(class_ids),
-            teacher_id=request.form['teacher_id'], total_course_hours=total_hours,
-            required_hours=math.ceil(total_hours / weeks),
+            teacher_id=request.form['teacher_id'], total_course_hours=50,
+            required_hours=int(request.form["required_hours"]),
             subject_type=request.form['subject_type'], session_length=session_len
         ))
         db.session.commit()
@@ -327,12 +296,12 @@ def edit_subject(id):
         subject.teacher_id = request.form['teacher_id']
         weeks_setting = Settings.query.filter_by(institute_code=session['institute_code'], key='weeks_per_semester').first()
         weeks = int(weeks_setting.value) if weeks_setting else 15
-        total_hours = int(request.form['total_course_hours'])
+        
         session_len = int(request.form.get('session_length', 1))
-        import math
-        subject.total_course_hours = total_hours
+        
+        
         subject.session_length = session_len
-        subject.required_hours = math.ceil(total_hours / weeks)
+        subject.required_hours = int(request.form["required_hours"])
         subject.subject_type = request.form['subject_type']
         db.session.commit()
         flash('Subject updated!', 'success')
@@ -645,7 +614,7 @@ def college_settings():
 
     if request.method == 'POST':
         # Yahan humne 'lunch_after_lecture' add kar diya hai
-        keys = ['total_lectures', 'start_time', 'lecture_duration', 'break_time', 'lunch_after_lecture', 'weeks_per_semester']
+        keys = ['total_lectures', 'start_time', 'lecture_duration', 'break_time', 'lunch_after_lecture']
         for key in keys:
             val = request.form.get(key)
             if val:

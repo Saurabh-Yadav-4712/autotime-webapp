@@ -83,7 +83,7 @@
                                     <option value="Practical" {% if item.subject_type == 'Practical' %}selected{% endif %}>Practical</option>
                                 </select>
                             </div>
-                            <div class="col-4 mb-3"><label class="form-label">Total Course Hrs</label><input type="number" class="form-control" name="total_course_hours" value="{{ item.total_course_hours }}" min="1" required></div>
+                            <div class="col-4 mb-3"><label class="form-label">Weekly Lectures</label><input type="number" class="form-control" name="required_hours" value="{{ item.required_hours }}" min="1" required></div>
                             <div class="col-4 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" value="{{ item.session_length }}" min="1" required></div>
                         </div>
                     {% endif %}

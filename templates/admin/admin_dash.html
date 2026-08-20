@@ -210,75 +210,10 @@
 </div>
 {% endif %}
 
-{% if syllabus_tracking_grouped %}
-<!-- Syllabus Tracking Analytics -->
-<div class="card border-0 mb-4 p-4 shadow-sm">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
-        <h5 class="fw-bold text-success mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Syllabus Completion Tracking</h5>
-        <div class="d-flex align-items-center gap-2">
-            <select id="deptSelector" class="form-select form-select-sm" onchange="filterDept()">
-                <option value="all">All Departments</option>
-                {% for dept in syllabus_tracking_grouped.keys() %}
-                <option value="{{ dept|replace(' ', '_') }}">{{ dept }}</option>
-                {% endfor %}
-            </select>
-            <span class="badge bg-success bg-opacity-25 text-success border border-success fs-6 text-nowrap">Target: {{ weeks_per_semester }} Weeks</span>
-        </div>
-    </div>
-    <p class="text-muted small mb-3">Estimated completion based on total course hours.</p>
-    
-    <div id="syllabusContainers">
-        {% for dept, subjects in syllabus_tracking_grouped.items() %}
-        <div class="mb-4 dept-container" data-dept="{{ dept|replace(' ', '_') }}">
-            <h6 class="fw-bold text-dark bg-light p-2 rounded border-start border-4 border-success">{{ dept }} Department</h6>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Subject</th>
-                            <th>Teacher</th>
-                            <th>Total Course Hrs</th>
-                            <th>Scheduled Hrs/Week</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in subjects %}
-                        <tr>
-                            <td class="fw-bold">{{ s.name }} <small class="text-muted">({{ s.code }})</small></td>
-                            <td>{{ s.teacher }}</td>
-                            <td class="fw-bold text-primary">{{ s.total_hrs }}</td>
-                            <td class="fw-bold text-success">{{ s.weekly_hrs }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-            </table>
-        </div>
-    </div>
-    {% endfor %}
-    </div> <!-- Close syllabusContainers -->
-</div>
-{% endif %}
-
 {% if generated %}
 <div class="mt-4 p-3 bg-success bg-opacity-10 border border-success rounded-3 text-center">
     <h5 class="text-success mb-1 fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Timetable is LIVE!</h5>
     <p class="small mb-0 text-success">Students and Teachers can view their schedules from their respective portals.</p>
 </div>
 {% endif %}
-
-{% block scripts %}
-<script>
-    function filterDept() {
-        const val = document.getElementById('deptSelector').value;
-        const containers = document.querySelectorAll('.dept-container');
-        containers.forEach(c => {
-            if (val === 'all' || c.getAttribute('data-dept') === val) {
-                c.style.display = 'block';
-            } else {
-                c.style.display = 'none';
-            }
-        });
-    }
-</script>
-{% endblock %}
 {% endblock %}
