@@ -379,9 +379,12 @@ def generate_timetable():
     inst_code = session['institute_code']
     
     from utils.timetable_adapter import engine_generate_timetable
-    engine_generate_timetable(inst_code)
+    success, msgs = engine_generate_timetable(inst_code)
     
-    flash('⚡ Timetable Generated Successfully! Zero Clashes Detected.', 'success')
+    if not success:
+        flash(f'Failed to generate: {msgs[0]}', 'danger')
+    else:
+        flash('⚡ Timetable Generated Successfully! Zero Clashes Detected.', 'success')
     return redirect(url_for('main.admin_dash'))
 
 @main_bp.route('/view_timetable')

@@ -159,6 +159,8 @@ class TimetableEngine:
                 success, result_units, msg = self._solve(units, state, depth + 1)
                 if success:
                     return True, result_units, ""
+                if "timed out" in msg:
+                    return False, [], msg
                 
             self.stats["backtracks"] += 1
                     
