@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -54,7 +56,7 @@ def send_otp_email(to_email, otp, context="Authentication"):
     sender_password = os.environ.get("SMTP_PASSWORD")
 
     if not sender_email or not sender_password:
-        print(f"[DEV MODE] SMTP not configured. OTP for {to_email} is {otp}")
+        logger.warning(f"SMTP not configured. Email to {to_email} bypassed.")
         return False
 
     msg = MIMEMultipart('alternative')
@@ -88,8 +90,8 @@ def send_otp_email(to_email, otp, context="Authentication"):
             server.send_message(msg)
         return True
     except Exception as e:
-        print(f"Failed to send email: {e}")
-        print(f"[DEV MODE fallback] OTP for {to_email} is {otp}")
+        logger.error(f"Failed to send email to {to_email}: {e}")
+        logger.warning(f"Fallback executed. Email to {to_email} bypassed.")
         return False
 
 

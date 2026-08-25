@@ -35,7 +35,7 @@ def register_institute():
             flash('Email already registered.', 'danger')
             return redirect(url_for('main.register_institute'))
         
-        # Save temp data and send OTP
+        # Stage registration payload pending OTP verification
         otp = generate_and_store_otp('reg')
         session['reg_data'] = {
             'type': 'institute',

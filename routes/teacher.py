@@ -1,3 +1,4 @@
+from utils.timetable_helpers import build_timetable_view_model
 from utils.decorators import login_required_teacher
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
@@ -64,7 +65,7 @@ def activate_teacher():
         # 6-Digit OTP Generate karo
         otp = generate_and_store_otp('activation')
         
-        # Session me temporary save karo verify karne ke liye
+        # Stage activation payload pending OTP verification
         session['activation_email'] = email
         session['activation_inst_code'] = inst_code
         session['activation_otp'] = otp
@@ -97,7 +98,7 @@ def verify_teacher_otp():
             
             teacher = Teacher.query.filter_by(email=email, institute_code=inst_code).first()
             if teacher:
-                # Password hash karke save karo
+                # Hash and persist password
                 teacher.password = generate_password_hash(new_password)
                 db.session.commit()
                 
@@ -195,10 +196,8 @@ def teacher_view_class():
                 
     time_slots = trim_time_slots(schedule, time_slots, lunch_after)
 
-    # We can reuse the student_portal template or view_timetable for a read-only view. 
-    # Let's render a custom small view or just pass it to view_timetable context since it handles schedule rendering nicely.
-    # Actually, we can just use the student_portal template but modify it slightly or just pass it as is.
-    return render_template('student/student_portal.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, inst_code=inst_code, class_id=class_id, teacher_view=True)
+    days_data = build_timetable_view_model(schedule, days, time_slots)
+    return render_template('student/student_portal.html', schedule=schedule, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, inst_code=inst_code, class_id=class_id, teacher_view=True)
 
 @main_bp.route('/apply_leave', methods=['GET', 'POST'])
 def apply_leave():

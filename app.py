@@ -14,7 +14,9 @@ def create_app(test_config=None):
                 template_folder='templates',
                 static_folder='static')
                 
-    app.secret_key = os.environ.get('SECRET_KEY', 'default-secret-key-for-dev')
+    app.secret_key = os.environ.get('SECRET_KEY')
+    if not app.secret_key:
+        raise ValueError('No SECRET_KEY set for Flask application')
 
     if test_config is None:
         db_url = os.environ.get("DATABASE_URL", "sqlite:///autotime.db")

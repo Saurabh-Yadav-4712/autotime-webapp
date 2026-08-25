@@ -294,3 +294,33 @@ h1, h2, h3, h4, h5, h6 {
     box-shadow: 0 0 10px var(--primary);
     border-radius: 0 2px 2px 0;
 }
+
+/* Timetable Specific Utilities */
+.timetable-container {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.timetable-container table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--surface);
+    border-bottom: 2px solid var(--border);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.timetable-container table tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: var(--bg-color) !important;
+    border-right: 2px solid var(--border);
+}
+.timetable-container table thead th:first-child {
+    z-index: 11;
+    left: 0;
+}
+@media (max-width: 768px) {
+    .timetable-container {
+        max-height: none;
+    }
+}
