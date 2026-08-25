@@ -29,8 +29,8 @@ class TimetableEngine:
         self.teacher_deps = collections.defaultdict(list)
         self.class_deps = collections.defaultdict(list)
         
-        self.max_generation_seconds = 10.0
-        self.max_optimization_seconds = 5.0
+        self.max_generation_seconds = 4.0
+        self.max_optimization_seconds = 2.0
         self.max_optimization_iterations = 3
         
         self.start_time = 0.0
