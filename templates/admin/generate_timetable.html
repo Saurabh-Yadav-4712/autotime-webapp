@@ -59,8 +59,12 @@
                                 <strong><span id="res-opt-time">0</span>s</strong>
                             </li>
                             <li class="list-group-item bg-transparent d-flex justify-content-between">
-                                <span class="text-muted">Total Internal Gap Score</span>
-                                <strong id="res-gap">0</strong>
+                                <span class="text-muted">Class Internal Gaps</span>
+                                <strong id="res-class-gap">—</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span class="text-muted">Teacher Internal Gaps</span>
+                                <strong id="res-teacher-gap">—</strong>
                             </li>
                         </ul>
                     </div>
@@ -167,13 +171,12 @@
                 
                 // Populate stats
                 const stats = data.stats || {};
-                document.getElementById('res-sessions').textContent = (stats.total_units || 0); // Need to get this from backend if not there, or omit.
-                document.getElementById('res-gen-time').textContent = (stats.feasibility_time || 0).toFixed(2);
-                document.getElementById('res-opt-time').textContent = (stats.optimization_time || 0).toFixed(2);
+                document.getElementById('res-sessions').textContent = (stats.total_sessions !== undefined ? stats.total_sessions : '—');
+                document.getElementById('res-gen-time').textContent = (stats.feasibility_time !== undefined ? stats.feasibility_time.toFixed(2) : '—');
+                document.getElementById('res-opt-time').textContent = (stats.optimization_time !== undefined ? stats.optimization_time.toFixed(2) : '—');
                 
-                if (data.diagnostics && data.diagnostics.gap_score) {
-                    document.getElementById('res-gap').textContent = data.diagnostics.gap_score;
-                }
+                document.getElementById('res-class-gap').textContent = (stats.class_internal_gaps !== undefined ? stats.class_internal_gaps : '—');
+                document.getElementById('res-teacher-gap').textContent = (stats.teacher_internal_gaps !== undefined ? stats.teacher_internal_gaps : '—');
             } else {
                 document.getElementById('generation-failure').classList.remove('d-none');
                 
