@@ -1,16 +1,20 @@
-from models import db, Timetable, Subject, Teacher, Course, Notification, AcademicCalendar, TeacherLeave
+from models import db, Timetable, Subject, Teacher, Course, Notification, AcademicCalendar, TeacherLeave, GenerationHistory, Institute
 from utils.helpers import get_dynamic_time_slots
 import random
 from datetime import datetime, timedelta
 
 def engine_generate_timetable(inst_code):
-    from models import Timetable, Subject, Teacher, Course, db
+    from models import Timetable, Subject, Teacher, Course, db, GenerationHistory, Institute
     from utils.helpers import get_dynamic_time_slots
     from utils.scheduler import TimeSlot, SessionOccurrence, GlobalState, TimetableEngine, TimetableValidator
     import random
+    import json
     
     Timetable.query.filter_by(institute_code=inst_code, specific_date=None).delete()
     db.session.commit()
+    
+    institute = Institute.query.filter_by(institute_code=inst_code).first()
+    institute_id = institute.id if institute else 0
     
     subjects = Subject.query.filter_by(institute_code=inst_code).all()
     teachers = Teacher.query.filter_by(institute_code=inst_code).all()
@@ -63,40 +67,69 @@ def engine_generate_timetable(inst_code):
             units.append(unit)
             
     engine = TimetableEngine(time_slots=time_slots, days=days)
-    success, scheduled_units, msg, _ = engine.generate(units, state)
+    success, scheduled_units, msg, stats, diag = engine.generate(units, state)
     
-    if not success:
-        return False, [msg]
-        
-    # Validate
-    is_valid, errors = TimetableValidator.audit(scheduled_units, time_slots)
-    if not is_valid:
-        return False, errors
-        
-    # Convert back to Timetable models
-    records_to_add = []
-    for unit in scheduled_units:
-        disp_name = f"{unit.subject_name} (Practical)" if unit.is_practical else unit.subject_name
-        teacher = teacher_dict.get(unit.teacher_id)
-        t_name = teacher.name if teacher else unit.teacher_id
-        
-        for c_id in unit.target_classes:
-            new_entry = Timetable(
-                institute_code=inst_code,
-                class_id=c_id,
-                day_name=unit.assigned_slot.day,
-                start_time=unit.assigned_slot.start_time,
-                end_time=unit.assigned_slot.end_time,
-                subject_name=disp_name,
-                teacher_name=t_name,
-                is_proxy=False
+    if success:
+        # Validate
+        is_valid, errors = TimetableValidator.audit(scheduled_units, time_slots)
+        if not is_valid:
+            success = False
+            msg = f"Validation failed: {errors[0]}"
+            from utils.scheduler.diagnostics import GenerationDiagnostics
+            diag = GenerationDiagnostics(
+                status="FAILED",
+                reason_code="VALIDATION_FAILED",
+                primary_bottleneck=msg
             )
-            records_to_add.append(new_entry)
             
-    db.session.bulk_save_objects(records_to_add)
+    if success:
+        records_to_add = []
+        for unit in scheduled_units:
+            disp_name = f"{unit.subject_name} (Practical)" if unit.is_practical else unit.subject_name
+            teacher = teacher_dict.get(unit.teacher_id)
+            t_name = teacher.name if teacher else unit.teacher_id
+            
+            for c_id in unit.target_classes:
+                new_entry = Timetable(
+                    institute_id=institute_id,
+                    institute_code=inst_code,
+                    class_id=c_id,
+                    day_name=unit.assigned_slot.day,
+                    start_time=unit.assigned_slot.start_time,
+                    end_time=unit.assigned_slot.end_time,
+                    subject_name=disp_name,
+                    teacher_name=t_name,
+                    is_proxy=False
+                )
+                records_to_add.append(new_entry)
+                
+        db.session.bulk_save_objects(records_to_add)
+        
+    # Record to GenerationHistory
+    gap_score = engine._calculate_global_gap_score(state) if success else None
+    history = GenerationHistory(
+        institute_id=institute_id,
+        institute_code=inst_code,
+        status="SUCCESS" if success else "FAILED",
+        sessions_count=len(scheduled_units) if scheduled_units else 0,
+        generation_time=stats.get("feasibility_time", 0),
+        optimization_time=stats.get("optimization_time", 0),
+        gap_score=gap_score,
+        primary_failure_reason=diag.primary_bottleneck if diag else None,
+        diagnostics_json=json.dumps(diag.to_dict()) if diag else None
+    )
+    db.session.add(history)
     db.session.commit()
     
-    return True, [msg]
+    result = {
+        "success": success,
+        "status": "SUCCESS" if success else "FAILED",
+        "message": msg,
+        "stats": stats,
+        "diagnostics": diag.to_dict() if diag else None
+    }
+    
+    return result
 
 def auto_allocate_proxy(inst_code, target_date):
     day_name = target_date.strftime('%a')

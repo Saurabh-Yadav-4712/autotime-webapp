@@ -17,9 +17,9 @@ def test_shared_teacher_multi_course():
     ]
     
     engine = TimetableEngine(time_slots=slots, days=days)
-    success, sched, msg, stats = engine.generate(units, state)
+    success, sched, msg, stats, diag = engine.generate(units, state)
     
-    assert success is True
+    assert success == True, "Failed to schedule shared teacher across 3 courses"
     assert len(sched) == 5
     
     print("\n--- Scheduler Regression Stats ---")

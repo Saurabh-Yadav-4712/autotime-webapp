@@ -1,0 +1,251 @@
+{% extends 'shared/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+            <h2 class="fw-bold text-main mb-0">Generate Timetable</h2>
+            <a href="/admin_dash" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+        </div>
+
+        <!-- Initial UI -->
+        <div class="card border-0 shadow-sm mb-4" id="generation-controls">
+            <div class="card-body p-4 text-center">
+                <div class="mb-4">
+                    <i class="bi bi-magic display-1 text-warning"></i>
+                </div>
+                <h4 class="fw-bold mb-3">Ready to Generate Timetable</h4>
+                <p class="text-muted mb-4">The engine will analyze teacher capacities, apply constraints, and attempt to build an optimized timetable. This may take up to 10 seconds.</p>
+                <button id="start-btn" class="btn btn-warning btn-lg px-5 shadow-sm rounded-pill fw-bold" onclick="startGeneration()">
+                    <i class="bi bi-lightning-charge me-1"></i> Start Generation
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress UI (Hidden by default) -->
+        <div class="card border-0 shadow-sm mb-4 d-none" id="generation-progress">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4 text-center text-primary">Generation In Progress</h5>
+                
+                <div class="d-flex flex-column gap-3 max-w-md mx-auto" style="max-width: 400px; margin: 0 auto;">
+                    <div id="step-loading" class="d-flex align-items-center text-muted fw-bold">
+                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status" id="spinner-loading"></div>
+                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-loading"></i>
+                        Loading academic data...
+                    </div>
+                    
+                    <div id="step-feasibility" class="d-flex align-items-center text-muted fw-bold">
+                        <div class="spinner-border spinner-border-sm text-primary me-3 d-none" role="status" id="spinner-feasibility"></div>
+                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-feasibility"></i>
+                        Checking feasibility and capacities...
+                    </div>
+                    
+                    <div id="step-search" class="d-flex align-items-center text-muted fw-bold">
+                        <div class="spinner-border spinner-border-sm text-primary me-3 d-none" role="status" id="spinner-search"></div>
+                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-search"></i>
+                        Searching for feasible assignments...
+                    </div>
+                    
+                    <div id="step-optimize" class="d-flex align-items-center text-muted fw-bold">
+                        <div class="spinner-border spinner-border-sm text-primary me-3 d-none" role="status" id="spinner-optimize"></div>
+                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-optimize"></i>
+                        Global Gap Optimization...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Result (Hidden by default) -->
+        <div class="card border-0 shadow-sm border-top border-success border-4 d-none" id="generation-success">
+            <div class="card-body p-4 text-center">
+                <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
+                <h3 class="fw-bold text-success mb-2">Timetable Generated Successfully</h3>
+                
+                <div class="row g-3 mt-4 text-start justify-content-center">
+                    <div class="col-md-5">
+                        <ul class="list-group list-group-flush bg-transparent">
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span class="text-muted">Total Sessions</span>
+                                <strong id="res-sessions">0</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span class="text-muted">Generation Time</span>
+                                <strong><span id="res-gen-time">0</span>s</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span class="text-muted">Optimization Time</span>
+                                <strong><span id="res-opt-time">0</span>s</strong>
+                            </li>
+                            <li class="list-group-item bg-transparent d-flex justify-content-between">
+                                <span class="text-muted">Total Internal Gap Score</span>
+                                <strong id="res-gap">0</strong>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <a href="/view_timetable" class="btn btn-primary px-4 fw-bold me-2">View Timetable</a>
+                    <a href="/generation_history" class="btn btn-outline-secondary px-4 fw-bold">View History</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Failure Result (Hidden by default) -->
+        <div class="card border-0 shadow-sm border-top border-danger border-4 d-none" id="generation-failure">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="bi bi-x-circle-fill text-danger display-1 mb-3"></i>
+                    <h3 class="fw-bold text-danger">Timetable Could Not Be Generated</h3>
+                </div>
+                
+                <div class="bg-danger bg-opacity-10 p-4 rounded-3 mb-4">
+                    <h5 class="fw-bold text-danger mb-3">Primary Bottleneck</h5>
+                    <p class="fs-5 mb-0 fw-medium" id="fail-bottleneck"></p>
+                </div>
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-muted text-uppercase mb-3">Capacity Details</h6>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Required Capacity</span>
+                                    <strong class="text-dark" id="fail-req">N/A</strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Available Capacity</span>
+                                    <strong class="text-dark" id="fail-avail">N/A</strong>
+                                </div>
+                                <hr>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-danger fw-bold">Shortage</span>
+                                    <strong class="text-danger" id="fail-shortage">N/A</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body">
+                                <h6 class="fw-bold text-muted text-uppercase mb-3">Suggested Actions</h6>
+                                <ul class="mb-0" id="fail-suggestions">
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-outline-danger px-4 fw-bold" onclick="resetUI()">Try Again</button>
+                    <a href="/manage_teachers" class="btn btn-outline-secondary px-4 fw-bold ms-2">Manage Capacity</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function resetUI() {
+        document.getElementById('generation-controls').classList.remove('d-none');
+        document.getElementById('generation-progress').classList.add('d-none');
+        document.getElementById('generation-success').classList.add('d-none');
+        document.getElementById('generation-failure').classList.add('d-none');
+        
+        ['loading', 'feasibility', 'search', 'optimize'].forEach(step => {
+            document.getElementById(`step-${step}`).classList.replace('text-dark', 'text-muted');
+            document.getElementById(`spinner-${step}`).classList.add('d-none');
+            document.getElementById(`check-${step}`).classList.add('d-none');
+        });
+    }
+
+    async function startGeneration() {
+        document.getElementById('generation-controls').classList.add('d-none');
+        document.getElementById('generation-progress').classList.remove('d-none');
+        
+        // Simulating the synchronous phases slightly in UI so user knows what's happening
+        // Since it's a CPU-bound POST request, we just set it to 'Search' phase visually while we await.
+        
+        const setPhase = (step) => {
+            document.getElementById(`step-${step}`).classList.replace('text-muted', 'text-dark');
+            document.getElementById(`spinner-${step}`).classList.remove('d-none');
+        }
+        
+        const completePhase = (step) => {
+            document.getElementById(`spinner-${step}`).classList.add('d-none');
+            document.getElementById(`check-${step}`).classList.remove('d-none');
+        }
+
+        setPhase('loading');
+        await new Promise(r => setTimeout(r, 400));
+        completePhase('loading');
+        
+        setPhase('feasibility');
+        await new Promise(r => setTimeout(r, 400));
+        completePhase('feasibility');
+        
+        setPhase('search');
+        
+        try {
+            const response = await fetch('/api/generate_timetable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            const data = await response.json();
+            
+            completePhase('search');
+            setPhase('optimize');
+            await new Promise(r => setTimeout(r, 300));
+            completePhase('optimize');
+            
+            document.getElementById('generation-progress').classList.add('d-none');
+            
+            if (data.success) {
+                document.getElementById('generation-success').classList.remove('d-none');
+                
+                // Populate stats
+                const stats = data.stats || {};
+                document.getElementById('res-sessions').textContent = (stats.total_units || 0); // Need to get this from backend if not there, or omit.
+                document.getElementById('res-gen-time').textContent = (stats.feasibility_time || 0).toFixed(2);
+                document.getElementById('res-opt-time').textContent = (stats.optimization_time || 0).toFixed(2);
+                
+                if (data.diagnostics && data.diagnostics.gap_score) {
+                    document.getElementById('res-gap').textContent = data.diagnostics.gap_score;
+                }
+            } else {
+                document.getElementById('generation-failure').classList.remove('d-none');
+                
+                const diag = data.diagnostics || {};
+                document.getElementById('fail-bottleneck').textContent = diag.primary_bottleneck || data.message || "Unknown error";
+                
+                document.getElementById('fail-req').textContent = diag.required_capacity || 'N/A';
+                document.getElementById('fail-avail').textContent = diag.available_capacity || 'N/A';
+                document.getElementById('fail-shortage').textContent = diag.shortage || 'N/A';
+                
+                const suggEl = document.getElementById('fail-suggestions');
+                suggEl.innerHTML = '';
+                if (diag.suggestions && diag.suggestions.length > 0) {
+                    diag.suggestions.forEach(s => {
+                        const li = document.createElement('li');
+                        li.textContent = s;
+                        suggEl.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = "Check academic data constraints.";
+                    suggEl.appendChild(li);
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error generating timetable:', error);
+            document.getElementById('generation-progress').classList.add('d-none');
+            document.getElementById('generation-failure').classList.remove('d-none');
+            document.getElementById('fail-bottleneck').textContent = "Server error or connection lost.";
+        }
+    }
+</script>
+{% endblock %}

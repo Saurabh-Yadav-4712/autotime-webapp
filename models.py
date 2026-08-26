@@ -123,3 +123,17 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class GenerationHistory(db.Model):
+    __tablename__ = 'generation_history'
+    id = db.Column(db.Integer, primary_key=True)
+    institute_id = db.Column(db.Integer, db.ForeignKey("institute.id", ondelete="CASCADE"), nullable=False)
+    institute_code = db.Column(db.String(20), nullable=False) # Kept as legacy/user-facing identifier
+    status = db.Column(db.String(20), nullable=False) # SUCCESS, FAILED
+    sessions_count = db.Column(db.Integer, nullable=False, default=0)
+    generation_time = db.Column(db.Float, nullable=True)
+    optimization_time = db.Column(db.Float, nullable=True)
+    gap_score = db.Column(db.Integer, nullable=True)
+    primary_failure_reason = db.Column(db.String(255), nullable=True)
+    diagnostics_json = db.Column(db.Text, nullable=True) # Optional JSON payload for detailed UI if needed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+

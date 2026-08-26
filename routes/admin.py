@@ -4,7 +4,7 @@ from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
-from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
+from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification, GenerationHistory
 from utils.helpers import generate_institute_code, generate_and_store_otp, verify_session_otp, send_otp_email, clear_session_otp, get_dynamic_time_slots, trim_time_slots, get_val
 import csv
 import openpyxl
@@ -368,24 +368,31 @@ def bulk_delete_items(type):
         
     return redirect(url_for('main.' + route))
 
-@main_bp.route('/generate_timetable', methods=['GET', 'POST'])
+@main_bp.route('/generate_timetable', methods=['GET'])
+@login_required_admin
 def generate_timetable():
-    if request.method == 'GET':
-        return redirect(url_for('main.admin_dash'))
-        
-    if 'admin_id' not in session:
-        return redirect(url_for('main.login_page'))
-        
+    admin = Institute.query.get(session['admin_id'])
     inst_code = session['institute_code']
     
+    # Render the interactive generation UI
+    return render_template('admin/generate_timetable.html', admin=admin)
+
+@main_bp.route('/api/generate_timetable', methods=['POST'])
+@login_required_admin
+def api_generate_timetable():
+    inst_code = session['institute_code']
     from utils.timetable_adapter import engine_generate_timetable
-    success, msgs = engine_generate_timetable(inst_code)
     
-    if not success:
-        flash(f'Failed to generate: {msgs[0]}', 'danger')
-    else:
-        flash('⚡ Timetable Generated Successfully! Zero Clashes Detected.', 'success')
-    return redirect(url_for('main.admin_dash'))
+    result = engine_generate_timetable(inst_code)
+    return jsonify(result)
+
+@main_bp.route('/generation_history')
+@login_required_admin
+def generation_history():
+    admin = Institute.query.get(session['admin_id'])
+    inst_code = session['institute_code']
+    history = GenerationHistory.query.filter_by(institute_code=inst_code).order_by(GenerationHistory.created_at.desc()).limit(50).all()
+    return render_template('admin/generation_history.html', admin=admin, history=history)
 
 @main_bp.route('/view_timetable')
 @login_required_admin

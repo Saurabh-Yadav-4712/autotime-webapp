@@ -4,6 +4,8 @@ from typing import List, Tuple, Dict, Set
 import collections
 
 from utils.scheduler.core import TimeSlot, SessionOccurrence, GlobalState
+from utils.scheduler.diagnostics import GenerationDiagnostics, ReasonCodes
+
 
 class TimetableEngine:
     def __init__(self, time_slots: List[TimeSlot], days: List[str], max_iterations=1000, seed=None):
@@ -124,17 +126,85 @@ class TimetableEngine:
                 
         return True, pruned_history
 
+    def _presolve(self, units: List[SessionOccurrence], state: GlobalState) -> 'GenerationDiagnostics':
+        teacher_req = collections.defaultdict(int)
+        class_req = collections.defaultdict(int)
+        
+        for u in units:
+            if u.teacher_id:
+                teacher_req[u.teacher_id] += u.duration
+            for c in u.target_classes:
+                class_req[c] += u.duration
+                
+        total_slots = len(self.time_slots) * len(self.days)
+        
+        for t_id, req in teacher_req.items():
+            max_h = state.teacher_max_hours.get(t_id, total_slots)
+            if req > max_h:
+                return GenerationDiagnostics(
+                    status="FAILED",
+                    reason_code=ReasonCodes.INSUFFICIENT_TEACHER_CAPACITY,
+                    primary_bottleneck=f"Teacher: {t_id}",
+                    affected_teachers=[t_id],
+                    required_capacity=req,
+                    available_capacity=max_h,
+                    shortage=req - max_h,
+                    suggestions=["Increase teacher maximum hours", "Assign another teacher to some subjects", "Reduce weekly requirement"]
+                )
+                
+        for c_id, req in class_req.items():
+            if req > total_slots:
+                return GenerationDiagnostics(
+                    status="FAILED",
+                    reason_code=ReasonCodes.INSUFFICIENT_CLASS_CAPACITY,
+                    primary_bottleneck=f"Class: {c_id}",
+                    affected_courses=[c_id],
+                    required_capacity=req,
+                    available_capacity=total_slots,
+                    shortage=req - total_slots,
+                    suggestions=["Reduce total weekly hours for this class"]
+                )
+                
+        return None
+
     def _solve(self, units: List[SessionOccurrence], state: GlobalState, depth: int) -> Tuple[bool, List[SessionOccurrence], str]:
         if time.time() - self.start_time > self.max_generation_seconds:
             return False, [], "Generation timed out while searching for a feasible timetable."
             
+        unassigned = [u for u in units if not u.assigned_slot]
+        if not unassigned:
+            return True, units, ""
+            
+        depth = len(units) - len(unassigned)
         if depth > self.stats["max_depth"]:
             self.stats["max_depth"] = depth
             
-        if depth >= len(units):
-            return True, units, ""
+        best_unit = None
+        best_score = None
+        
+        for u in unassigned:
+            domain = self.domains[u.id]
+            if not domain:
+                msg = f"Failed at {u.subject_name}. Teacher: {u.teacher_id}. No valid slots left."
+                return False, [], msg
+                
+            if len(domain) == 1:
+                regret = 9999
+            else:
+                scores = [self._evaluate_candidate(u, state, d, i, units) for d, i in domain]
+                scores.sort(reverse=True)
+                regret = scores[0] - scores[1]
+                
+            scarcity = 0
+            if u.is_practical: scarcity += 50
+            if len(u.target_classes) > 1: scarcity += 50
             
-        unit = units[depth]
+            u_score = (len(domain), -regret, -scarcity)
+            if best_score is None or u_score < best_score:
+                best_score = u_score
+                best_unit = u
+                
+        unit = best_unit
         candidates = list(self.domains[unit.id])
         
         if not candidates:
@@ -272,9 +342,16 @@ class TimetableEngine:
                 return False, f"Missing assignment for {u.subject_name}"
         return True, "Valid"
 
-    def generate(self, units: List[SessionOccurrence], state: GlobalState) -> Tuple[bool, List[SessionOccurrence], str, dict]:
+    def generate(self, units: List[SessionOccurrence], state: GlobalState) -> Tuple[bool, List[SessionOccurrence], str, dict, 'GenerationDiagnostics']:
         t_start = time.time()
         self.start_time = t_start
+        
+        # Presolve Phase
+        diag = self._presolve(units, state)
+        if diag:
+            self.stats["total_time"] = time.time() - t_start
+            return False, [], diag.reason_code, self.stats, diag
+
         
         # Initialize domains and dependencies
         for u in units:
@@ -291,7 +368,13 @@ class TimetableEngine:
         
         if not success:
             self.stats["total_time"] = time.time() - t_start
-            return False, sched, msg, self.stats
+            diag = GenerationDiagnostics(
+                status="FAILED",
+                reason_code=ReasonCodes.SEARCH_TIMEOUT if "timed out" in msg else ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
+                primary_bottleneck=msg,
+                suggestions=["Loosen constraints", "Increase teacher maximum hours"]
+            )
+            return False, sched, msg, self.stats, diag
             
         # Optimization phase
         t_opt = time.time()
@@ -306,6 +389,12 @@ class TimetableEngine:
         self.stats["total_time"] = time.time() - t_start
         
         if not v_ok:
-            return False, sched, f"Validation failed: {v_msg}", self.stats
+            diag = GenerationDiagnostics(
+                status="FAILED",
+                reason_code="VALIDATION_FAILED",
+                primary_bottleneck=v_msg,
+                suggestions=["Check internal scheduler logic"]
+            )
+            return False, sched, f"Validation failed: {v_msg}", self.stats, diag
             
-        return True, sched, "Generation successful.", self.stats
+        return True, sched, "Generation successful.", self.stats, None

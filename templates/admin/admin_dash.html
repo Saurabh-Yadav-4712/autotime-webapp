@@ -5,13 +5,6 @@
     <div class="d-flex align-items-center gap-2">
         <!-- Desktop Buttons -->
         <div class="d-none d-md-flex gap-2">
-            <form action="/generate_timetable" method="POST" class="m-0">
-                <button type="submit" class="btn btn-warning shadow-sm" 
-                        {% if c_count == 0 or t_count == 0 or s_count == 0 %}disabled{% endif %} 
-                        onclick="return confirm('This will overwrite any existing timetable. Proceed?');">
-                    <i class="bi bi-magic me-1"></i> <span class="fw-bold">Generate Timetable</span>
-                </button>
-            </form>
             <a href="/college_settings" class="btn btn-outline-secondary"><i class="bi bi-sliders me-1"></i> Institute Config</a>
             <a href="/view_timetable" class="btn btn-outline-primary"><i class="bi bi-calendar-grid-31 me-1"></i> View Timetable</a>
         </div>
@@ -22,16 +15,6 @@
                 <i class="bi bi-lightning-charge me-1"></i> Actions
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="adminActionsDropdown">
-                <li>
-                    <form action="/generate_timetable" method="POST" class="m-0 px-3 py-1">
-                        <button type="submit" class="btn btn-warning w-100 shadow-sm" 
-                                {% if c_count == 0 or t_count == 0 or s_count == 0 %}disabled{% endif %} 
-                                onclick="return confirm('This will overwrite any existing timetable. Proceed?');">
-                            <i class="bi bi-magic me-1"></i> Generate
-                        </button>
-                    </form>
-                </li>
-                <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="/view_timetable"><i class="bi bi-calendar-grid-31 me-2 text-primary"></i>View Timetable</a></li>
                 <li><a class="dropdown-item" href="/college_settings"><i class="bi bi-sliders me-2 text-secondary"></i>Institute Config</a></li>
             </ul>
@@ -144,9 +127,9 @@
             <div class="text-primary mb-3">
                 <i class="bi bi-book display-4"></i>
             </div>
-            <h5 class="fw-bold">Manage Courses</h5>
+            <h5 class="fw-bold">Manage Classes</h5>
             <p class="text-muted small mb-4">Add or edit classes and departments.</p>
-            <a href="/manage_courses" class="btn btn-outline-primary w-100 mt-auto">Go to Courses</a>
+            <a href="/manage_classes" class="btn btn-outline-primary w-100 mt-auto">Go to Classes</a>
         </div>
     </div>
     <div class="col-md-4">
