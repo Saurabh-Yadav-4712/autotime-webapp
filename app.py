@@ -2,6 +2,8 @@ import os
 from flask import Flask
 from models import db
 from routes.blueprint import main_bp
+from datetime import timezone
+from zoneinfo import ZoneInfo
 
 import routes.auth
 import routes.admin
@@ -38,6 +40,17 @@ def create_app(test_config=None):
 
     # Register all routes via the shared blueprint
     app.register_blueprint(main_bp)
+
+    @app.template_filter('ist_datetime')
+    def format_ist_datetime(value):
+        if value is None:
+            return ""
+        # If naive, assume UTC
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        # Convert to Asia/Kolkata
+        ist_time = value.astimezone(ZoneInfo("Asia/Kolkata"))
+        return ist_time.strftime("%d %b %Y, %I:%M %p")
 
     return app
 

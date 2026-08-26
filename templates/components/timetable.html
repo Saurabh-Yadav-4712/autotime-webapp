@@ -67,13 +67,29 @@
                             <div class="badge bg-danger mt-2">PROXY</div>
                         </td>
                     {% elif slot_data.status == 'internal_gap' %}
-                        <td class="cell-internal-gap p-3" style="background-color: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
+                        <td class="cell-internal-gap p-3 position-relative" style="background-color: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
+                            {% if editable and role == 'admin' %}
+                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1" 
+                                    data-bs-toggle="modal" data-bs-target="#manualSlotModal"
+                                    onclick="openManualSlotModal('{{ day_data.day }}', '{{ slot_data.start_time }}');"
+                                    aria-label="Assign Slot">
+                                <i class="bi bi-plus-lg text-primary" style="font-size: 0.75rem;" aria-hidden="true" title="Assign Slot"></i>
+                            </button>
+                            {% endif %}
                             <span class="visually-hidden">Internal free period</span>
                             <small class="text-warning fw-bold d-block"><i class="bi bi-exclamation-triangle me-1"></i>Free (Gap)</small>
                         </td>
                     {% else %}
                         {# Default to edge free #}
-                        <td class="cell-edge-free p-3 text-muted bg-light" style="border: 1px dashed var(--border);">
+                        <td class="cell-edge-free p-3 text-muted bg-light position-relative" style="border: 1px dashed var(--border);">
+                            {% if editable and role == 'admin' %}
+                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1" 
+                                    data-bs-toggle="modal" data-bs-target="#manualSlotModal"
+                                    onclick="openManualSlotModal('{{ day_data.day }}', '{{ slot_data.start_time }}');"
+                                    aria-label="Assign Slot">
+                                <i class="bi bi-plus-lg text-primary" style="font-size: 0.75rem;" aria-hidden="true" title="Assign Slot"></i>
+                            </button>
+                            {% endif %}
                             <span class="visually-hidden">Free period</span>
                             <small class="opacity-50">Free</small>
                         </td>

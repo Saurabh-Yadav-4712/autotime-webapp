@@ -394,6 +394,15 @@ def generation_history():
     history = GenerationHistory.query.filter_by(institute_code=inst_code).order_by(GenerationHistory.created_at.desc()).limit(50).all()
     return render_template('admin/generation_history.html', admin=admin, history=history)
 
+@main_bp.route('/clear_history', methods=['POST'])
+@login_required_admin
+def clear_history():
+    inst_code = session['institute_code']
+    GenerationHistory.query.filter_by(institute_code=inst_code).delete()
+    db.session.commit()
+    flash('Generation history cleared successfully.', 'success')
+    return redirect(url_for('main.generation_history'))
+
 @main_bp.route('/view_timetable')
 @login_required_admin
 def view_timetable():
@@ -516,6 +525,78 @@ def edit_timetable_slot():
     db.session.commit()
     flash('Timetable slot updated successfully!', 'success')
     return redirect(url_for('main.view_timetable', class_id=entry.class_id))
+
+@main_bp.route('/manual_assign_slot', methods=['POST'])
+@login_required_admin
+def manual_assign_slot():
+    inst_code = session['institute_code']
+    class_id = request.form.get('class_id')
+    day_name = request.form.get('day_name')
+    start_time = request.form.get('start_time')
+    assign_type = request.form.get('assign_type') # 'lecture' or 'event'
+    
+    if not all([class_id, day_name, start_time, assign_type]):
+        flash('Missing required fields for assignment.', 'danger')
+        return redirect(url_for('main.view_timetable', class_id=class_id))
+        
+    end_time = None
+    # Figure out end time from dynamic slots
+    slots = get_dynamic_time_slots(inst_code)
+    for s in slots:
+        if s[0] == start_time:
+            end_time = s[1]
+            break
+            
+    if not end_time:
+        flash('Invalid start time.', 'danger')
+        return redirect(url_for('main.view_timetable', class_id=class_id))
+
+    subject_name = ""
+    teacher_name = ""
+    is_proxy = False
+    
+    if assign_type == 'lecture':
+        subject_name = request.form.get('new_subject')
+        teacher_name = request.form.get('new_teacher')
+        if not subject_name or not teacher_name:
+            flash('Teacher and Subject are required for lecture assignment.', 'danger')
+            return redirect(url_for('main.view_timetable', class_id=class_id))
+            
+        # Validate teacher conflict
+        clash = Timetable.query.filter_by(
+            institute_code=inst_code,
+            day_name=day_name,
+            start_time=start_time,
+            teacher_name=teacher_name
+        ).first()
+        
+        if clash:
+            flash(f'Cannot assign {teacher_name}. They are already assigned to Class {clash.class_id} at this time!', 'danger')
+            return redirect(url_for('main.view_timetable', class_id=class_id))
+            
+    elif assign_type == 'event':
+        subject_name = request.form.get('event_name')
+        teacher_name = "Event/Workshop"
+        if not subject_name:
+            flash('Event name is required.', 'danger')
+            return redirect(url_for('main.view_timetable', class_id=class_id))
+
+    # Add the entry
+    new_entry = Timetable(
+        institute_code=inst_code,
+        class_id=class_id,
+        day_name=day_name,
+        start_time=start_time,
+        end_time=end_time,
+        subject_name=subject_name,
+        teacher_name=teacher_name,
+        is_proxy=is_proxy
+    )
+    db.session.add(new_entry)
+    db.session.commit()
+    
+    flash('Timetable slot assigned successfully!', 'success')
+    return redirect(url_for('main.view_timetable', class_id=class_id))
 
 @main_bp.route('/export_timetables')
 @login_required_admin

@@ -97,7 +97,17 @@
                                     {% endif %}
                                 </td>
                             {% else %}
-                                <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
+                                <td class="text-muted bg-light position-relative" style="border: 1px dashed var(--border);">
+                                    {% if session.get('admin_id') %}
+                                    <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 shadow-sm border border-secondary border-opacity-25" 
+                                            style="padding: 0.1rem 0.3rem;"
+                                            data-bs-toggle="modal" data-bs-target="#manualSlotModal"
+                                            onclick="openManualSlotModal('{{ day }}', '{{ slot[0] }}');">
+                                        <i class="bi bi-plus-lg text-primary" style="font-size: 0.75rem;" title="Assign Free Slot"></i>
+                                    </button>
+                                    {% endif %}
+                                    <small class="opacity-50">Free</small>
+                                </td>
                             {% endif %}
                             
                         {% endfor %}
@@ -145,6 +155,61 @@
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary fw-bold">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Manual Slot Assign Modal -->
+<div class="modal fade" id="manualSlotModal" tabindex="-1" aria-labelledby="manualSlotModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white border-0">
+                <h5 class="modal-title fw-bold" id="manualSlotModalLabel"><i class="bi bi-plus-circle me-2"></i>Assign Timetable Slot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/manual_assign_slot" method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="class_id" value="{{ selected_class }}">
+                    <input type="hidden" name="day_name" id="manual_day">
+                    <input type="hidden" name="start_time" id="manual_start">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Assignment Type</label>
+                        <select class="form-select" name="assign_type" id="manual_type" required onchange="toggleManualType()">
+                            <option value="lecture" selected>Lecture / Proxy</option>
+                            <option value="event">Event / Workshop</option>
+                        </select>
+                    </div>
+                    
+                    <div id="manual_lecture_fields">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Teacher</label>
+                            <select class="form-select" name="new_teacher" id="manual_teacher" onchange="updateManualSubjects()">
+                                <option value="" disabled selected>Loading...</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Subject</label>
+                            <select class="form-select" name="new_subject" id="manual_subject" disabled>
+                                <option value="" disabled selected>Select Teacher First...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="manual_event_fields" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Event Name</label>
+                            <input type="text" class="form-control" name="event_name" placeholder="e.g. Workshop, Seminar">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success fw-bold">Assign Slot</button>
                 </div>
             </form>
         </div>
@@ -240,6 +305,103 @@
                 opt.value = sub;
                 opt.textContent = sub;
                 if (sub === preSelectSubject) opt.selected = true;
+                subjectSelect.appendChild(opt);
+            });
+        }
+    }
+
+    function toggleManualType() {
+        const type = document.getElementById('manual_type').value;
+        if (type === 'lecture') {
+            document.getElementById('manual_lecture_fields').classList.remove('d-none');
+            document.getElementById('manual_event_fields').classList.add('d-none');
+            document.getElementById('manual_teacher').required = true;
+            document.getElementById('manual_subject').required = true;
+            document.getElementsByName('event_name')[0].required = false;
+        } else {
+            document.getElementById('manual_lecture_fields').classList.add('d-none');
+            document.getElementById('manual_event_fields').classList.remove('d-none');
+            document.getElementById('manual_teacher').required = false;
+            document.getElementById('manual_subject').required = false;
+            document.getElementsByName('event_name')[0].required = true;
+        }
+    }
+
+    function openManualSlotModal(dayName, startTime) {
+        document.getElementById('manual_day').value = dayName;
+        document.getElementById('manual_start').value = startTime;
+        
+        const teacherSelect = document.getElementById('manual_teacher');
+        const subjectSelect = document.getElementById('manual_subject');
+        
+        teacherSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+        subjectSelect.innerHTML = '<option value="" disabled selected>Select Teacher First...</option>';
+        subjectSelect.disabled = true;
+        
+        const classId = encodeURIComponent("{{ selected_class }}");
+        const encodedStartTime = encodeURIComponent(startTime);
+        
+        fetch('/api/get_slot_data?day=' + dayName + '&start_time=' + encodedStartTime + '&class_id=' + classId)
+            .then(response => response.json())
+            .then(data => {
+                teacherSelect.innerHTML = '<option value="" disabled selected>Select Teacher...</option>';
+                teacherSubjectsMap = {};
+                
+                if(data.free && data.free.length > 0) {
+                    const freeGroup = document.createElement('optgroup');
+                    freeGroup.label = "Available Teachers";
+                    data.free.forEach(t => {
+                        teacherSubjectsMap[t.name] = t.subjects;
+                        const opt = document.createElement('option');
+                        opt.value = t.name;
+                        opt.textContent = t.name;
+                        freeGroup.appendChild(opt);
+                    });
+                    teacherSelect.appendChild(freeGroup);
+                }
+                
+                if(data.busy && data.busy.length > 0) {
+                    const busyGroup = document.createElement('optgroup');
+                    busyGroup.label = "Busy Teachers";
+                    data.busy.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.name;
+                        opt.textContent = t.name + " (Busy)";
+                        opt.disabled = true;
+                        busyGroup.appendChild(opt);
+                    });
+                    teacherSelect.appendChild(busyGroup);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                teacherSelect.innerHTML = '<option value="" disabled>Error loading data</option>';
+            });
+    }
+
+    function updateManualSubjects() {
+        const teacherSelect = document.getElementById('manual_teacher');
+        const subjectSelect = document.getElementById('manual_subject');
+        const selectedTeacher = teacherSelect.value;
+        
+        if (!selectedTeacher) {
+            subjectSelect.innerHTML = '<option value="" disabled selected>Select Teacher First...</option>';
+            subjectSelect.disabled = true;
+            return;
+        }
+        
+        const subjects = teacherSubjectsMap[selectedTeacher] || [];
+        subjectSelect.innerHTML = '';
+        subjectSelect.disabled = false;
+        
+        if (subjects.length === 0) {
+            subjectSelect.innerHTML = '<option value="" disabled selected>No subjects assigned for this class</option>';
+            subjectSelect.disabled = true;
+        } else {
+            subjects.forEach(sub => {
+                const opt = document.createElement('option');
+                opt.value = sub;
+                opt.textContent = sub;
                 subjectSelect.appendChild(opt);
             });
         }

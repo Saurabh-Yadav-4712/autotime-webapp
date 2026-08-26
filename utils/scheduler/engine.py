@@ -306,12 +306,13 @@ class TimetableEngine:
                 teacher_gaps += (indices[-1] - indices[0] + 1 - len(indices))
         return class_gaps, teacher_gaps
 
-    def _calculate_global_score(self, state: GlobalState) -> Tuple[int, int, int]:
+    def _calculate_global_score(self, state: GlobalState) -> Tuple[int, int, int, int]:
         c_gaps, t_gaps = self._calculate_exact_gaps(state)
         bal = self._calculate_class_balance(state)
-        return (c_gaps, bal, t_gaps)
+        leading = self._calculate_leading_free_periods(state)
+        return (c_gaps, bal, t_gaps, leading)
 
-    def _calculate_local_score(self, teacher_id: str, target_classes: List[str], state: GlobalState) -> Tuple[int, int, int]:
+    def _calculate_local_score(self, teacher_id: str, target_classes: List[str], state: GlobalState) -> Tuple[int, int, int, int]:
         c_gaps = 0
         t_gaps = 0
         if teacher_id and teacher_id in state.teacher_busy:
@@ -326,7 +327,18 @@ class TimetableEngine:
                     indices = sorted(list(slots))
                     c_gaps += (indices[-1] - indices[0] + 1 - len(indices))
         bal = self._calculate_class_balance(state, target_classes)
-        return (c_gaps, bal, t_gaps)
+        leading = self._calculate_leading_free_periods(state, target_classes)
+        return (c_gaps, bal, t_gaps, leading)
+
+    def _calculate_leading_free_periods(self, state: GlobalState, target_classes: List[str] = None) -> int:
+        penalty = 0
+        c_ids = target_classes if target_classes else list(state.class_busy.keys())
+        for c_id in c_ids:
+            if c_id in state.class_busy:
+                for day, slots in state.class_busy[c_id].items():
+                    if slots:
+                        penalty += min(slots)
+        return penalty
 
     def _optimize(self, units: List[SessionOccurrence], state: GlobalState):
         opt_start = time.time()
@@ -458,7 +470,8 @@ class TimetableEngine:
                                             indices = sorted(list(slots))
                                             c_gaps += (indices[-1] - indices[0] + 1 - len(indices))
                                 bal = self._calculate_class_balance(state, list(affected_classes))
-                                return (c_gaps, bal, t_gaps)
+                                leading = self._calculate_leading_free_periods(state, list(affected_classes))
+                                return (c_gaps, bal, t_gaps, leading)
 
                             old_subset_score = _score_subset()
 
