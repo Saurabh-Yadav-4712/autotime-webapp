@@ -84,7 +84,7 @@
         
         /* Modern Abstract Python/Scheduling Background */
         .auth-bg {
-            background-color: #f8fafc;
+            background-color: var(--bg-color);
             background-image: 
                 linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
@@ -172,6 +172,11 @@
                 <li>
                     <a href="/manage_teachers" class="nav-link sidebar-link {% if 'teacher' in request.path %}active{% endif %}">
                         <i class="bi bi-person-badge me-2"></i> Teachers
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/leave_requests" class="nav-link sidebar-link {% if 'leave' in request.path %}active{% endif %}">
+                        <i class="bi bi-envelope-paper me-2"></i> Leave Requests
                     </a>
                 </li>
                 
@@ -406,6 +411,7 @@
             <li><a href="/manage_courses" class="nav-link sidebar-link"><i class="bi bi-journal-bookmark me-2"></i> Classes</a></li>
             <li><a href="/manage_subjects" class="nav-link sidebar-link"><i class="bi bi-book me-2"></i> Subjects</a></li>
             <li><a href="/manage_teachers" class="nav-link sidebar-link"><i class="bi bi-person-badge me-2"></i> Teachers</a></li>
+            <li><a href="/admin/leave_requests" class="nav-link sidebar-link"><i class="bi bi-envelope-paper me-2"></i> Leave Requests</a></li>
             <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Timetable</small></li>
             <li><a href="/generate_timetable" class="nav-link sidebar-link"><i class="bi bi-magic me-2"></i> Generate</a></li>
             <li><a href="/view_timetable" class="nav-link sidebar-link"><i class="bi bi-calendar-grid-31 me-2"></i> View</a></li>
