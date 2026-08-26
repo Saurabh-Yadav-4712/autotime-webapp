@@ -114,7 +114,7 @@ class TeacherLeave(db.Model):
     teacher_id = db.Column(db.String(20), nullable=False)
     date = db.Column(db.Date, nullable=False)
     start_time = db.Column(db.String(20), nullable=True) # Used for specific-period leave
-    status = db.Column(db.String(20), default='Approved') # Pending, Approved, Rejected
+    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
