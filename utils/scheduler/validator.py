@@ -8,7 +8,7 @@ class TimetableValidator:
     """
     
     @staticmethod
-    def audit(units: List[SessionOccurrence], time_slots: List[TimeSlot]) -> Tuple[bool, List[str]]:
+    def audit(units: List[SessionOccurrence], time_slots: List[TimeSlot], teacher_available_days: dict = None) -> Tuple[bool, List[str]]:
         errors = []
         
         teacher_schedule = {} # teacher_id -> day -> set of indices
@@ -31,10 +31,15 @@ class TimetableValidator:
                     errors.append(f"Hard Constraint Violation: {unit.subject_name} exceeds day bounds.")
                     continue
                     
-                # Check teacher double-booking
+                # Check teacher double-booking and availability
                 if unit.teacher_id:
                     if idx in teacher_schedule.get(unit.teacher_id, {}).get(day, set()):
                         errors.append(f"Hard Constraint Violation: Teacher {unit.teacher_id} is double-booked on {day} at slot index {idx}.")
+                        
+                    if teacher_available_days and unit.teacher_id in teacher_available_days:
+                        if day not in teacher_available_days[unit.teacher_id]:
+                            errors.append(f"Hard Constraint Violation: Teacher {unit.teacher_id} is assigned on {day} but is not available.")
+                            
                     teacher_schedule.setdefault(unit.teacher_id, {}).setdefault(day, set()).add(idx)
                     
                 # Check class double-booking

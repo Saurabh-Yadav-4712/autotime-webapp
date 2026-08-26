@@ -1,0 +1,120 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold text-primary mb-1 d-flex align-items-center"><i class="bi bi-person-lines-fill me-2"></i> Leave Requests</h2>
+            <small class="text-muted">Manage teacher leave applications and auto-proxy</small>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Pending Requests</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if pending_leaves %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4 py-3">Teacher</th>
+                            <th class="py-3">Date</th>
+                            <th class="py-3">Time/Slot</th>
+                            <th class="py-3 text-end px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave, teacher in pending_leaves %}
+                        <tr>
+                            <td class="px-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle bg-primary text-white me-3 d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width: 40px; height: 40px; border-radius: 50%;">
+                                        {{ teacher.name[:2].upper() }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark">{{ teacher.name }}</div>
+                                        <div class="small text-muted">{{ teacher.departments }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border"><i class="bi bi-calendar me-1"></i> {{ leave.date.strftime('%d %b %Y') }}</span>
+                            </td>
+                            <td>
+                                {% if leave.start_time %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i> {{ leave.start_time }}</span>
+                                {% else %}
+                                <span class="badge bg-info text-dark">Full Day</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end px-4">
+                                <div class="btn-group shadow-sm">
+                                    <form action="/admin/approve_leave/{{ leave.id }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success fw-bold" onclick="return confirm('Approve leave? Auto-Proxy will attempt to assign replacements automatically.');">
+                                            <i class="bi bi-check-circle me-1"></i> Approve
+                                        </button>
+                                    </form>
+                                    <form action="/admin/reject_leave/{{ leave.id }}" method="POST" class="d-inline ms-1">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger fw-bold" onclick="return confirm('Reject this leave request?');">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-5 text-center">
+                <div class="display-1 text-muted mb-3 opacity-25"><i class="bi bi-inbox"></i></div>
+                <h5 class="fw-bold text-dark">No Pending Requests</h5>
+                <p class="text-muted">You're all caught up!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3">
+            <h5 class="mb-0 fw-bold text-muted"><i class="bi bi-clock-history me-2"></i>Recent History (Last 30 Days)</h5>
+        </div>
+        <div class="card-body p-0">
+            {% if history_leaves %}
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light text-muted small">
+                        <tr>
+                            <th class="px-4 py-3">Teacher</th>
+                            <th class="py-3">Date</th>
+                            <th class="py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave, teacher in history_leaves %}
+                        <tr>
+                            <td class="px-4">
+                                <div class="fw-bold text-dark">{{ teacher.name }}</div>
+                            </td>
+                            <td>{{ leave.date.strftime('%d %b %Y') }}</td>
+                            <td>
+                                {% if leave.status == 'Approved' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="bi bi-check me-1"></i> Approved</span>
+                                {% elif leave.status == 'Rejected' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25"><i class="bi bi-x me-1"></i> Rejected</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-4 text-center text-muted small">No recent leave history.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

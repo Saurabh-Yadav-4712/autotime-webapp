@@ -15,6 +15,13 @@ from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 def student_portal():
     inst_code = request.args.get('inst_code')
     class_id = request.args.get('class_id')
+    selected_date_str = request.args.get('date')
+    selected_date = None
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
     
     schedule = {}
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -33,7 +40,8 @@ def student_portal():
         s = {st.key: st.value for st in settings}
         lunch_after = int(s.get('lunch_after_lecture', 2))
         
-        entries = Timetable.query.filter_by(institute_code=inst_code, class_id=class_id).all()
+        from utils.timetable_adapter import get_effective_timetable
+        entries = get_effective_timetable(inst_code, {'class_id': class_id}, selected_date)
         for day in days:
             schedule[day] = {}
             for entry in entries:
@@ -43,7 +51,7 @@ def student_portal():
         time_slots = trim_time_slots(schedule, time_slots, lunch_after)
 
     days_data = build_timetable_view_model(schedule, days, time_slots)
-    return render_template('student/student_portal.html', schedule=schedule, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, inst_code=inst_code, class_id=class_id)
+    return render_template('student/student_portal.html', schedule=schedule, selected_date=selected_date_str, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, inst_code=inst_code, class_id=class_id)
 
 @main_bp.route('/register_student', methods=['GET', 'POST'])
 def register_student():
@@ -118,6 +126,14 @@ def student_dash():
     class_id = session['student_class']
     s_name = session['student_name']
     
+    selected_date_str = request.args.get('date')
+    selected_date = None
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    
     time_slots = get_dynamic_time_slots(inst_code)
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     settings = Settings.query.filter_by(institute_code=inst_code).all()
@@ -125,7 +141,8 @@ def student_dash():
     lunch_after = int(s.get('lunch_after_lecture', 2))
     
     schedule = {day: {} for day in days}
-    entries = Timetable.query.filter_by(institute_code=inst_code, class_id=class_id).all()
+    from utils.timetable_adapter import get_effective_timetable
+    entries = get_effective_timetable(inst_code, {'class_id': class_id}, selected_date)
     
     for entry in entries:
         schedule[entry.day_name][entry.start_time] = entry
@@ -135,4 +152,4 @@ def student_dash():
     today_str = datetime.now().strftime('%a')
     time_slots = trim_time_slots(schedule, time_slots, lunch_after)
     
-    return render_template('student/student_dash.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, s_name=s_name, class_id=class_id, today_str=today_str, inst_name=inst_name)
+    return render_template('student/student_dash.html', schedule=schedule, selected_date=selected_date_str, days=days, time_slots=time_slots, lunch_after=lunch_after, s_name=s_name, class_id=class_id, today_str=today_str, inst_name=inst_name)

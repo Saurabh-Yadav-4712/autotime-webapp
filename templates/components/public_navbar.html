@@ -1,0 +1,45 @@
+<!-- Public Navbar -->
+<nav class="navbar navbar-expand-lg custom-navbar mb-0 shadow-sm sticky-top bg-surface">
+    <div class="container-fluid px-3 px-md-5">
+        <a class="navbar-brand fw-bold text-main d-flex align-items-center gap-2" href="/" data-turbo="false">
+            <i class="bi bi-clock-history text-primary fs-4"></i>
+            <span>AutoTime</span>
+        </a>
+        
+        <!-- Mobile Toggle Button -->
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#publicNavbarContent" aria-controls="publicNavbarContent" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-list fs-2 text-main"></i>
+        </button>
+
+        <!-- Navbar Links -->
+        <div class="collapse navbar-collapse" id="publicNavbarContent">
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-2 gap-lg-4 fw-semibold">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.path == '/' %}active text-primary{% else %}text-muted{% endif %}" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-muted" href="/#features">Features</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-muted" href="/#how-it-works">How It Works</a>
+                </li>
+            </ul>
+            
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3 mt-3 mt-lg-0">
+                <!-- Theme Toggle -->
+                <div class="theme-switch-wrapper me-lg-2" title="Toggle Theme">
+                    <label class="theme-switch" for="globalThemeTogglePublic">
+                        <input type="checkbox" id="globalThemeTogglePublic" onchange="document.getElementById('globalThemeToggle').checked = this.checked; document.getElementById('globalThemeToggle').dispatchEvent(new Event('change'));" />
+                        <div class="theme-slider">
+                            <i class="bi bi-sun-fill text-warning sun-icon"></i>
+                            <i class="bi bi-moon-stars-fill text-primary moon-icon"></i>
+                        </div>
+                    </label>
+                </div>
+                
+                <a href="/login" class="btn btn-outline-primary fw-bold px-4 rounded-pill">Log In</a>
+                <a href="/register_institute" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm">Register Institute</a>
+            </div>
+        </div>
+    </div>
+</nav>

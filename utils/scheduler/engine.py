@@ -33,7 +33,7 @@ class TimetableEngine:
         self.failure_counts = collections.defaultdict(int)
         self.deepest_failure_unit = None
 
-        self.max_generation_seconds = 30.0
+        self.max_generation_seconds = 120.0
         self.max_optimization_seconds = 10.0
         self.max_optimization_iterations = 5
 
@@ -44,6 +44,10 @@ class TimetableEngine:
         for day in self.days:
             if unit.preferred_days and day not in unit.preferred_days:
                 continue
+                
+            if unit.teacher_id and unit.teacher_id in state.teacher_available_days:
+                if day not in state.teacher_available_days[unit.teacher_id]:
+                    continue
 
             max_start_idx = len(self.time_slots) - unit.duration
             for idx in range(max_start_idx + 1):
@@ -141,7 +145,15 @@ class TimetableEngine:
         total_slots = len(self.time_slots) * len(self.days)
 
         for t_id, req in teacher_req.items():
-            max_h = state.teacher_max_hours.get(t_id, total_slots)
+            base_max = state.teacher_max_hours.get(t_id, total_slots)
+            
+            # Bound capacity by available days constraint
+            if t_id in state.teacher_available_days:
+                allowed_days = [d for d in self.days if d in state.teacher_available_days[t_id]]
+                hard_max = len(allowed_days) * len(self.time_slots)
+                max_h = min(base_max, hard_max)
+            else:
+                max_h = base_max
             if req > max_h:
                 return GenerationDiagnostics(
                     status="FAILED",
