@@ -2,8 +2,8 @@
 <html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoTime - Smart Timetable System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ title if title else 'AutoTime Dashboard' }}</title>
     <!-- Theme Script (runs early to prevent flicker) -->
     <script>
         (function() {
@@ -69,16 +69,24 @@
             background-color: var(--bs-primary) !important;
             font-weight: 600;
         }
-        /* Animated Background for Auth */
+        /* Professional Tech/AI Background for Auth */
         .auth-bg {
-            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-            background-size: 400% 400%;
-            animation: gradientBG 15s ease infinite;
+            background-color: #f8fafc;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
         }
-        @keyframes gradientBG {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .auth-bg::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        .auth-bg > div {
+            position: relative;
+            z-index: 1;
         }
     </style>
 </head>
@@ -262,12 +270,15 @@
                         <a href="/teacher_notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
                             <i class="bi bi-bell-fill"></i>
                         </a>
-                        <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
-                            <i class="bi bi-gear-fill"></i>
-                        </a>
-                        <a href="{{ url_for('main.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm" data-turbo="false">
-                            <i class="bi bi-box-arrow-right me-1"></i> Logout
-                        </a>
+                        <!-- Mobile Drawer Toggle -->
+                        <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        {% elif session.get('student_id') %}
+                        <!-- Mobile Drawer Toggle -->
+                        <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
                         {% endif %}
                         
                         {% endif %}

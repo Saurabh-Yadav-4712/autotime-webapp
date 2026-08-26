@@ -176,8 +176,9 @@ def teacher_view_class():
     class_id = request.args.get('class_id')
     
     if not class_id:
-        flash('Please select a class to view.', 'warning')
-        return redirect(url_for('main.teacher_dash'))
+        # Render the class selector page instead of redirecting
+        courses = Classes.query.filter_by(institute_code=inst_code).all()
+        return render_template('teacher/course_viewer.html', courses=courses, title='Course Viewer')
         
     schedule = {}
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -202,7 +203,11 @@ def teacher_view_class():
 @main_bp.route('/apply_leave', methods=['GET', 'POST'])
 def apply_leave():
     if request.method == 'GET':
-        return redirect(url_for('main.teacher_dash'))
+        if 'teacher_id' not in session: return redirect(url_for('main.login_page'))
+        inst_code = session['institute_code']
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        time_slots = get_dynamic_time_slots(inst_code)
+        return render_template('teacher/apply_leave.html', days=days, time_slots=time_slots, title='Apply Leave')
         
     if 'teacher_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
@@ -218,7 +223,7 @@ def apply_leave():
         
         if datetime.now().time() > cutoff_time:
             flash(f'Leave for today must be applied before {cutoff_time.strftime("%I:%M %p")}. Please contact Admin.', 'danger')
-            return redirect(url_for('main.teacher_dash'))
+            return redirect(url_for('main.apply_leave'))
 
     t_name = session['teacher_name']
     t_dept = session['teacher_dept'].split(',')
@@ -233,7 +238,7 @@ def apply_leave():
     if not my_lectures:
         time_text = f"at {leave_time}" if leave_time != 'ALL' else "on this day"
         flash(f'You have no lectures scheduled {time_text}!', 'info')
-        return redirect(url_for('main.teacher_dash'))
+        return redirect(url_for('main.apply_leave'))
         
     # Step 2: Calculate Current Workload for Workload Balancing
     from sqlalchemy import func

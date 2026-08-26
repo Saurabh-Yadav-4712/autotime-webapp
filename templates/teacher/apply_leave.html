@@ -1,0 +1,47 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold text-warning mb-1 d-flex align-items-center"><i class="bi bi-calendar-x me-2"></i> Apply for Leave</h2>
+            <small class="text-muted">Auto-Proxy Management System</small>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <!-- Auto-Proxy Leave Box -->
+            <div class="card border-0 border-top border-warning border-4 shadow-sm mb-4">
+                <div class="card-body p-5 bg-light-custom">
+                    <h4 class="fw-bold mb-3 d-flex align-items-center text-dark"><i class="bi bi-calendar-x text-warning me-2"></i> Select Leave Details</h4>
+                    <p class="text-muted mb-4">Our Auto-Proxy system will automatically assign your lectures to free teachers based on workload and availability.</p>
+                    <form action="/apply_leave" method="POST">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Select Day</label>
+                            <select name="leave_day" class="form-select form-select-lg bg-white shadow-sm" required>
+                                <option value="" selected disabled>Select Day...</option>
+                                {% for day in days %}
+                                    <option value="{{ day }}">{{ day }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Specific Slot <span class="text-muted fw-normal">(Optional)</span></label>
+                            <select name="leave_time" class="form-select form-select-lg bg-white shadow-sm">
+                                <option value="ALL" selected>All Day (Full Leave)</option>
+                                {% for slot in time_slots %}
+                                    <option value="{{ slot[0] }}">{{ slot[0] }} - {{ slot[1] }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Selecting "All Day" will arrange proxies for all your classes on that day.</div>
+                        </div>
+                        <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm" onclick="return confirm('Are you sure you want to apply for leave? Auto-Proxy will modify the live timetable immediately.');">
+                            <i class="bi bi-send-fill me-2"></i> Submit Leave Request
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
