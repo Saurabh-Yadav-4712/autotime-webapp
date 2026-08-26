@@ -107,7 +107,7 @@ def engine_generate_timetable(inst_code):
                         subject_id_fk=s_id_fk,
                         session_group_id=unit.id,
                         class_id=c_id,
-                        day_name=actual_slot.day,
+                        day_name=unit.assigned_slot.day,
                         start_time=actual_slot.start_time,
                         end_time=actual_slot.end_time,
                         subject_name=disp_name,
