@@ -13,6 +13,8 @@ class GenerationDiagnostics:
     available_capacity: int = 0
     shortage: int = 0
     suggestions: List[str] = field(default_factory=list)
+    additional_pressure: Optional[str] = None
+    bottleneck_stats: dict = field(default_factory=dict)
     statistics: dict = field(default_factory=dict)
 
     def to_dict(self):
@@ -27,6 +29,8 @@ class GenerationDiagnostics:
             "available_capacity": self.available_capacity,
             "shortage": self.shortage,
             "suggestions": self.suggestions,
+            "additional_pressure": self.additional_pressure,
+            "bottleneck_stats": self.bottleneck_stats,
             "statistics": self.statistics
         }
 

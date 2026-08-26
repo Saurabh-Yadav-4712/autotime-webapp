@@ -225,19 +225,20 @@ h1, h2, h3, h4, h5, h6 {
     border-bottom: 1px solid var(--border);
 }
 .table-hover tbody tr:hover {
-    background-color: #f1f5f9;
+    background-color: var(--surface);
+    filter: brightness(0.95);
 }
 
 /* Alerts */
 .custom-alert {
     border-radius: var(--radius-md);
-    border: none;
+    border: 1px solid var(--border);
     font-weight: 500;
 }
-.alert-success { background-color: #ecfdf5; color: #065f46; }
-.alert-danger { background-color: #fef2f2; color: #991b1b; }
-.alert-warning { background-color: #fffbeb; color: #92400e; }
-.alert-info { background-color: #eff6ff; color: #1e40af; }
+.alert-success { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+.alert-danger { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.alert-warning { background-color: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.alert-info { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 
 /* Dashboard specific */
 .stat-card {
@@ -281,8 +282,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Utilities */
-.text-muted-custom { color: var(--text-muted); }
-.bg-light-custom { background-color: var(--bg-color); }
+.text-muted-custom { color: var(--text-muted) !important; }
+.bg-light-custom { background-color: var(--bg-color) !important; }
+.bg-surface { background-color: var(--surface) !important; }
+
+/* SVG Scheduling Pattern Background for Auth & Landing */
+.auth-bg {
+    background-color: var(--bg-color);
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234f46e5' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    color: var(--text-main);
+}
+[data-bs-theme="dark"] .auth-bg {
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
 
 /* Turbo Progress Bar */
 .turbo-progress-bar {

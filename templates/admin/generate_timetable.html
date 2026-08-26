@@ -27,30 +27,12 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-4 text-center text-primary">Generation In Progress</h5>
                 
-                <div class="d-flex flex-column gap-3 max-w-md mx-auto" style="max-width: 400px; margin: 0 auto;">
-                    <div id="step-loading" class="d-flex align-items-center text-muted fw-bold">
-                        <div class="spinner-border spinner-border-sm text-primary me-3" role="status" id="spinner-loading"></div>
-                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-loading"></i>
-                        Loading academic data...
+                <div class="d-flex flex-column align-items-center justify-content-center py-4">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
-                    
-                    <div id="step-feasibility" class="d-flex align-items-center text-muted fw-bold">
-                        <div class="spinner-border spinner-border-sm text-primary me-3 d-none" role="status" id="spinner-feasibility"></div>
-                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-feasibility"></i>
-                        Checking feasibility and capacities...
-                    </div>
-                    
-                    <div id="step-search" class="d-flex align-items-center text-muted fw-bold">
-                        <div class="spinner-border spinner-border-sm text-primary me-3 d-none" role="status" id="spinner-search"></div>
-                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-search"></i>
-                        Searching for feasible assignments...
-                    </div>
-                    
-                    <div id="step-optimize" class="d-flex align-items-center text-muted fw-bold">
-                        <div class="spinner-border spinner-border-sm text-primary me-3 d-none" role="status" id="spinner-optimize"></div>
-                        <i class="bi bi-check-circle-fill text-success me-3 d-none" id="check-optimize"></i>
-                        Global Gap Optimization...
-                    </div>
+                    <h5 class="fw-bold mt-4 text-dark">Generating Timetable...</h5>
+                    <p class="text-muted text-center mt-2" style="max-width: 400px;">Please wait while the scheduling engine calculates the optimal assignment. This requires deep searching and may take up to 10 seconds.</p>
                 </div>
             </div>
         </div>
@@ -100,8 +82,13 @@
                 </div>
                 
                 <div class="bg-danger bg-opacity-10 p-4 rounded-3 mb-4">
-                    <h5 class="fw-bold text-danger mb-3">Primary Bottleneck</h5>
+                    <h5 class="fw-bold text-danger mb-2">Primary Cause</h5>
                     <p class="fs-5 mb-0 fw-medium" id="fail-bottleneck"></p>
+                </div>
+                
+                <div class="bg-warning bg-opacity-10 p-4 rounded-3 mb-4 d-none" id="fail-pressure-container">
+                    <h6 class="fw-bold text-warning-emphasis mb-2"><i class="bi bi-info-circle me-1"></i> Additional Constraint Pressure</h6>
+                    <p class="mb-0 text-dark" id="fail-pressure"></p>
                 </div>
                 
                 <div class="row g-4 mb-4">
@@ -165,29 +152,6 @@
         document.getElementById('generation-controls').classList.add('d-none');
         document.getElementById('generation-progress').classList.remove('d-none');
         
-        // Simulating the synchronous phases slightly in UI so user knows what's happening
-        // Since it's a CPU-bound POST request, we just set it to 'Search' phase visually while we await.
-        
-        const setPhase = (step) => {
-            document.getElementById(`step-${step}`).classList.replace('text-muted', 'text-dark');
-            document.getElementById(`spinner-${step}`).classList.remove('d-none');
-        }
-        
-        const completePhase = (step) => {
-            document.getElementById(`spinner-${step}`).classList.add('d-none');
-            document.getElementById(`check-${step}`).classList.remove('d-none');
-        }
-
-        setPhase('loading');
-        await new Promise(r => setTimeout(r, 400));
-        completePhase('loading');
-        
-        setPhase('feasibility');
-        await new Promise(r => setTimeout(r, 400));
-        completePhase('feasibility');
-        
-        setPhase('search');
-        
         try {
             const response = await fetch('/api/generate_timetable', {
                 method: 'POST',
@@ -195,11 +159,6 @@
             });
             
             const data = await response.json();
-            
-            completePhase('search');
-            setPhase('optimize');
-            await new Promise(r => setTimeout(r, 300));
-            completePhase('optimize');
             
             document.getElementById('generation-progress').classList.add('d-none');
             
@@ -220,6 +179,13 @@
                 
                 const diag = data.diagnostics || {};
                 document.getElementById('fail-bottleneck').textContent = diag.primary_bottleneck || data.message || "Unknown error";
+                
+                if (diag.additional_pressure) {
+                    document.getElementById('fail-pressure-container').classList.remove('d-none');
+                    document.getElementById('fail-pressure').textContent = diag.additional_pressure;
+                } else {
+                    document.getElementById('fail-pressure-container').classList.add('d-none');
+                }
                 
                 document.getElementById('fail-req').textContent = diag.required_capacity || 'N/A';
                 document.getElementById('fail-avail').textContent = diag.available_capacity || 'N/A';

@@ -58,7 +58,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Available Days</label>
-                        <div class="d-flex flex-wrap gap-2 p-2 bg-white border rounded">
+                        <div class="d-flex flex-wrap gap-2 p-2 bg-surface border rounded">
                             {% for day in ['Mon','Tue','Wed','Thu','Fri','Sat'] %}
                             <div class="form-check form-check-inline m-0">
                                 <input class="form-check-input" type="checkbox" name="days" value="{{ day }}" id="day_{{ day }}" checked>
@@ -167,8 +167,8 @@
     <div class="col-md-8">
         <form id="bulkDeleteForm" action="/bulk_delete/{{ manage_type }}" method="POST" onsubmit="return confirm('Are you sure you want to delete the selected items?');">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
-                    <h5 class="mb-0 fw-bold text-dark">Existing Records</h5>
+                <div class="card-header bg-surface border-bottom d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
+                    <h5 class="mb-0 fw-bold text-main">Existing Records</h5>
                     
                     <div class="d-flex align-items-center gap-2">
                         {% if manage_type == 'course' or manage_type == 'subject' %}
@@ -221,13 +221,13 @@
                                 <td class="fw-bold">{{ item.class_id }}</td><td>{{ item.department }}</td><td>{{ item.semester }}</td><td><span class="badge bg-secondary">{{ item.division }}</span></td>
                                 {% elif manage_type == 'teacher' %}
                                 <td class="fw-bold">{{ item.teacher_id }}</td>
-                                <td><div class="fw-semibold">{{ item.name }}</div><small class="text-muted">{{ item.email }}</small></td>
-                                <td><span class="badge bg-light text-dark border">{{ item.departments }}</span></td>
-                                <td><small class="text-muted">{{ item.available_days }}</small></td>
+                                <td><div class="fw-semibold">{{ item.name }}</div><small class="text-muted-custom">{{ item.email }}</small></td>
+                                <td><span class="badge bg-surface text-main border">{{ item.departments }}</span></td>
+                                <td><small class="text-muted-custom">{{ item.available_days }}</small></td>
                                 {% elif manage_type == 'subject' %}
                                 <td class="fw-bold">{{ item.subject_code }}</td>
-                                <td><div class="fw-semibold">{{ item.subject_name }}</div><span class="badge bg-light text-dark border">{{ item.subject_type }}</span></td>
-                                <td><small class="text-muted">{{ item.class_id }}</small></td>
+                                <td><div class="fw-semibold">{{ item.subject_name }}</div><span class="badge bg-surface text-main border">{{ item.subject_type }}</span></td>
+                                <td><small class="text-muted-custom">{{ item.class_id }}</small></td>
                                 <td>{{ item.teacher_id }}</td>
                                 <td>{{ item.total_course_hours }}</td>
                                 {% endif %}

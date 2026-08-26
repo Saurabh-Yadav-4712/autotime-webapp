@@ -208,6 +208,7 @@ class TimetableEngine:
         candidates = list(self.domains[unit.id])
         
         if not candidates:
+            self.failure_counts[unit.id] += 1
             msg = f"Failed at {unit.subject_name}. Teacher: {unit.teacher_id}. No valid slots left."
             return False, [], msg
             
@@ -242,6 +243,7 @@ class TimetableEngine:
             state.unassign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
             
         self.stats["backjumps"] += 1
+        self.failure_counts[unit.id] += 1
         msg = f"Backtracking exhausted for {unit.subject_name}. All {len(candidates)} candidates led to future failures."
         return False, [], msg
         
@@ -368,11 +370,22 @@ class TimetableEngine:
         
         if not success:
             self.stats["total_time"] = time.time() - t_start
+            
+            additional_pressure = None
+            if self.failure_counts:
+                hardest_unit_id = max(self.failure_counts.items(), key=lambda x: x[1])[0]
+                hardest_unit = next((u for u in units if u.id == hardest_unit_id), None)
+                if hardest_unit:
+                    t_str = f"Prof. {hardest_unit.teacher_id}" if hardest_unit.teacher_id else "No Teacher"
+                    additional_pressure = f"{hardest_unit.subject_name} ({t_str}) failed {self.failure_counts[hardest_unit_id]} times during deep search."
+                    
             diag = GenerationDiagnostics(
                 status="FAILED",
                 reason_code=ReasonCodes.SEARCH_TIMEOUT if "timed out" in msg else ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
-                primary_bottleneck=msg,
-                suggestions=["Loosen constraints", "Increase teacher maximum hours"]
+                primary_bottleneck="Search tree exhausted or timed out. Complex constraints prevented a full schedule.",
+                additional_pressure=additional_pressure,
+                bottleneck_stats=dict(self.failure_counts),
+                suggestions=["Loosen constraints", "Increase teacher maximum hours", "Check consecutive periods required"]
             )
             return False, sched, msg, self.stats, diag
             

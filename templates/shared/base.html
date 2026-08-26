@@ -57,16 +57,16 @@
             margin-left: -250px;
         }
         .nav-link.sidebar-link {
-            color: rgba(255, 255, 255, 0.7) !important;
+            color: var(--text-muted) !important;
             transition: all 0.2s ease;
         }
         .nav-link.sidebar-link:hover {
-            color: #fff !important;
-            background-color: rgba(255,255,255,0.1);
+            color: var(--text-main) !important;
+            background-color: rgba(120, 120, 120, 0.1);
         }
         .nav-link.sidebar-link.active {
-            color: #fff !important;
-            background-color: var(--bs-primary) !important;
+            color: #ffffff !important;
+            background-color: var(--primary) !important;
             font-weight: 600;
         }
         /* Prevent iOS auto-zoom on inputs */
@@ -108,8 +108,8 @@
     <div class="d-flex flex-grow-1">
         <!-- SaaS Sidebar (Admin Only) -->
         {% if session.get('admin_id') %}
-        <div id="desktopSidebar" class="bg-dark text-white p-3 d-none d-md-flex flex-column flex-shrink-0 shadow saas-sidebar">
-            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+        <div id="desktopSidebar" class="bg-surface p-3 d-none d-md-flex flex-column flex-shrink-0 shadow-sm saas-sidebar border-end">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-main text-decoration-none">
                 <i class="bi bi-clock-history fs-4 me-2 text-primary"></i>
                 <span class="fs-5 fw-bold">AutoTime Admin</span>
             </a>
@@ -174,8 +174,8 @@
         </div>
         {% elif session.get('teacher_id') %}
         <!-- Teacher Sidebar -->
-        <div id="desktopSidebar" class="bg-dark text-white p-3 d-none d-md-flex flex-column flex-shrink-0 shadow saas-sidebar">
-            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+        <div id="desktopSidebar" class="bg-surface p-3 d-none d-md-flex flex-column flex-shrink-0 shadow-sm saas-sidebar border-end">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-main text-decoration-none">
                 <i class="bi bi-clock-history fs-4 me-2 text-primary"></i>
                 <span class="fs-5 fw-bold">AutoTime Teacher</span>
             </a>
@@ -211,8 +211,8 @@
         </div>
         {% elif session.get('student_id') %}
         <!-- Student Sidebar -->
-        <div id="desktopSidebar" class="bg-dark text-white p-3 d-none d-md-flex flex-column flex-shrink-0 shadow saas-sidebar">
-            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
+        <div id="desktopSidebar" class="bg-surface p-3 d-none d-md-flex flex-column flex-shrink-0 shadow-sm saas-sidebar border-end">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-main text-decoration-none">
                 <i class="bi bi-clock-history fs-4 me-2 text-primary"></i>
                 <span class="fs-5 fw-bold">AutoTime Student</span>
             </a>
@@ -350,10 +350,10 @@
     
     <!-- Mobile Offcanvas Sidebar -->
     {% if session.get('admin_id') %}
-    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
-      <div class="offcanvas-header border-bottom border-secondary">
-        <h5 class="offcanvas-title fw-bold" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Admin</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold text-main" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Admin</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
         <ul class="nav nav-pills flex-column mb-auto gap-1">
@@ -374,10 +374,10 @@
       </div>
     </div>
     {% elif session.get('teacher_id') %}
-    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
-      <div class="offcanvas-header border-bottom border-secondary">
-        <h5 class="offcanvas-title fw-bold" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Teacher</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold text-main" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Teacher</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
         <ul class="nav nav-pills flex-column mb-auto gap-1">
@@ -391,10 +391,10 @@
       </div>
     </div>
     {% elif session.get('student_id') %}
-    <div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
-      <div class="offcanvas-header border-bottom border-secondary">
-        <h5 class="offcanvas-title fw-bold" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Student</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold text-main" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Student</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body">
         <ul class="nav nav-pills flex-column mb-auto gap-1">
