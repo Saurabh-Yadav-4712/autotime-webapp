@@ -2,7 +2,7 @@
 <html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title if title else 'AutoTime Dashboard' }}</title>
     <!-- Theme Script (runs early to prevent flicker) -->
     <script>
@@ -68,6 +68,13 @@
             color: #fff !important;
             background-color: var(--bs-primary) !important;
             font-weight: 600;
+        }
+        /* Prevent iOS auto-zoom on inputs */
+        input[type="text"], input[type="password"], input[type="email"], input[type="number"], select, textarea {
+            font-size: 16px !important;
+        }
+        .bg-light-custom {
+            background-color: #f8f9fa;
         }
         /* Professional Tech/AI Background for Auth */
         .auth-bg {

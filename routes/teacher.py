@@ -177,7 +177,7 @@ def teacher_view_class():
     
     if not class_id:
         # Render the class selector page instead of redirecting
-        courses = Classes.query.filter_by(institute_code=inst_code).all()
+        courses = Course.query.filter_by(institute_code=inst_code).all()
         return render_template('teacher/course_viewer.html', courses=courses, title='Course Viewer')
         
     schedule = {}
