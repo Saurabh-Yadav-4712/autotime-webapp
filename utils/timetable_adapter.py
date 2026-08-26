@@ -9,9 +9,8 @@ def engine_generate_timetable(inst_code):
     from utils.scheduler import TimeSlot, SessionOccurrence, GlobalState, TimetableEngine, TimetableValidator
     import random
     import json
-
-    Timetable.query.filter_by(institute_code=inst_code, specific_date=None).delete()
-    db.session.commit()
+    # Defer deletion of the existing timetable until successful generation
+    # to maintain database transaction safety.
 
     institute = Institute.query.filter_by(institute_code=inst_code).first()
     institute_id = institute.id if institute else 0
@@ -83,25 +82,39 @@ def engine_generate_timetable(inst_code):
             )
 
     if success:
+        # Transaction Safety: Delete old timetable only when replacement is ready
+        Timetable.query.filter_by(institute_code=inst_code, specific_date=None).delete()
+
         records_to_add = []
         for unit in scheduled_units:
             disp_name = f"{unit.subject_name} (Practical)" if unit.is_practical else unit.subject_name
             teacher = teacher_dict.get(unit.teacher_id)
             t_name = teacher.name if teacher else unit.teacher_id
+            t_id_fk = teacher.id if teacher else None
+            s_id_fk = getattr(unit, 'subject_id', None)
 
             for c_id in unit.target_classes:
-                new_entry = Timetable(
-                    institute_id=institute_id,
-                    institute_code=inst_code,
-                    class_id=c_id,
-                    day_name=unit.assigned_slot.day,
-                    start_time=unit.assigned_slot.start_time,
-                    end_time=unit.assigned_slot.end_time,
-                    subject_name=disp_name,
-                    teacher_name=t_name,
-                    is_proxy=False
-                )
-                records_to_add.append(new_entry)
+                course_match = next((c for c in courses if getattr(c, 'class_id', None) == c_id), None)
+                c_id_fk = course_match.id if course_match else None
+
+                for offset in range(unit.duration):
+                    actual_slot = time_slots[unit.assigned_slot.idx + offset]
+                    new_entry = Timetable(
+                        institute_id=institute_id,
+                        institute_code=inst_code,
+                        course_id_fk=c_id_fk,
+                        teacher_id_fk=t_id_fk,
+                        subject_id_fk=s_id_fk,
+                        session_group_id=unit.id,
+                        class_id=c_id,
+                        day_name=actual_slot.day,
+                        start_time=actual_slot.start_time,
+                        end_time=actual_slot.end_time,
+                        subject_name=disp_name,
+                        teacher_name=t_name,
+                        is_proxy=False
+                    )
+                    records_to_add.append(new_entry)
 
         db.session.bulk_save_objects(records_to_add)
 
@@ -120,6 +133,13 @@ def engine_generate_timetable(inst_code):
     )
     db.session.add(history)
     db.session.commit()
+
+    if success:
+        stats["logical_session_occurrences"] = len(scheduled_units)
+        stats["occupied_class_periods"] = sum(unit.duration * len(unit.target_classes) for unit in scheduled_units)
+    else:
+        stats["logical_session_occurrences"] = 0
+        stats["occupied_class_periods"] = 0
 
     result = {
         "success": success,
