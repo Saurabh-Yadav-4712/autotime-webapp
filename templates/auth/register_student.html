@@ -26,6 +26,15 @@
                 </div>
             </div>
             <div class="mb-3">
+                <label class="form-label">Select Department</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                    <select name="department" id="dept_id" class="form-select" disabled>
+                        <option value="" disabled selected>Enter Institute Code first...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Select Course / Class</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-journal-bookmark"></i></span>
@@ -68,38 +77,63 @@
     const classSelect = document.getElementById('class_id');
     const spinner = document.getElementById('inst_code_spinner');
     
-    if (!instCodeInput || !classSelect) return;
+    const deptSelect = document.getElementById('dept_id');
+    let groupedClassesData = {};
     
     instCodeInput.addEventListener('blur', function() {
         const code = this.value.trim();
         if (code.length < 3) return;
         
         spinner.classList.remove('d-none');
-        classSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+        deptSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+        classSelect.innerHTML = '<option value="" disabled selected>Waiting for department...</option>';
+        deptSelect.disabled = true;
         classSelect.disabled = true;
         
         fetch('/api/get_classes/' + encodeURIComponent(code))
             .then(res => res.json())
             .then(data => {
-                classSelect.innerHTML = '<option value="" disabled selected>Select your class...</option>';
-                if (data.classes && data.classes.length > 0) {
-                    data.classes.forEach(c => {
+                groupedClassesData = data.grouped_classes || {};
+                deptSelect.innerHTML = '<option value="" disabled selected>Select Department...</option>';
+                
+                const depts = Object.keys(groupedClassesData);
+                if (depts.length > 0) {
+                    depts.forEach(d => {
                         const opt = document.createElement('option');
-                        opt.value = c;
-                        opt.textContent = c;
-                        classSelect.appendChild(opt);
+                        opt.value = d;
+                        opt.textContent = d;
+                        deptSelect.appendChild(opt);
                     });
-                    classSelect.disabled = false;
+                    deptSelect.disabled = false;
                 } else {
-                    classSelect.innerHTML = '<option value="" disabled selected>No classes found for this code.</option>';
+                    deptSelect.innerHTML = '<option value="" disabled selected>No departments found.</option>';
                 }
             })
             .catch(err => {
-                classSelect.innerHTML = '<option value="" disabled selected>Error fetching classes.</option>';
+                deptSelect.innerHTML = '<option value="" disabled selected>Error fetching data.</option>';
+                console.error(err);
             })
             .finally(() => {
                 spinner.classList.add('d-none');
             });
+    });
+    
+    deptSelect.addEventListener('change', function() {
+        const dept = this.value;
+        classSelect.innerHTML = '<option value="" disabled selected>Select your class...</option>';
+        
+        if (dept && groupedClassesData[dept]) {
+            groupedClassesData[dept].forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                classSelect.appendChild(opt);
+            });
+            classSelect.disabled = false;
+        } else {
+            classSelect.innerHTML = '<option value="" disabled selected>No classes available.</option>';
+            classSelect.disabled = true;
+        }
     });
 })();
 </script>

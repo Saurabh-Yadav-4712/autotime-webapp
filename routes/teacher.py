@@ -1,7 +1,7 @@
 from utils.timetable_helpers import build_timetable_view_model
 from utils.decorators import login_required_teacher
 from flask import current_app
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db
 from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
@@ -301,8 +301,15 @@ def teacher_cancel_leave(leave_id):
 @main_bp.route('/api/get_classes/<inst_code>')
 def get_classes(inst_code):
     courses = Course.query.filter_by(institute_code=inst_code).all()
+    grouped_classes = {}
+    for c in courses:
+        dept = c.department or "General"
+        if dept not in grouped_classes:
+            grouped_classes[dept] = []
+        grouped_classes[dept].append(c.class_id)
+        
     classes = [c.class_id for c in courses]
-    return jsonify({'classes': classes})
+    return jsonify({'grouped_classes': grouped_classes, 'classes': classes})
 from models import Notification
 @main_bp.route('/teacher_notifications')
 @login_required_teacher
