@@ -25,6 +25,7 @@
             <div class="col-md-5">
                 <label class="form-label fw-bold">Select Date (Optional)</label>
                 <input type="date" class="form-control border-primary" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()">
+                <div class="form-text"><i class="bi bi-info-circle me-1"></i>Select a date to view specific proxies & leaves.</div>
             </div>
             <div class="col-md-2">
                 {% if selected_class or selected_date %}

@@ -17,7 +17,7 @@
                 <h5 class="fw-bold text-success mb-0 d-flex align-items-center"><i class="bi bi-calendar-week me-2"></i> My Schedule</h5>
                 <div class="d-flex align-items-center gap-2">
                     <form method="GET" class="d-flex align-items-center mb-0">
-                        <input type="date" class="form-control form-control-sm border-success me-2" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()" style="max-width: 150px;">
+                        <input type="date" class="form-control form-control-sm border-success me-2" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()" style="max-width: 150px;" title="Select a date to view specific proxies and leaves">
                         {% if selected_date %}
                         <a href="/teacher_dash" class="btn btn-sm btn-outline-danger me-2"><i class="bi bi-x"></i></a>
                         {% endif %}
