@@ -83,7 +83,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Assign Teacher</label>
-                        <select class="form-select" name="teacher_id" required>
+                        <select class="form-select searchable-select" name="teacher_id" required>
                             <option value="" selected disabled>Select Teacher...</option>
                             {% for t in teachers %}<option value="{{ t.teacher_id }}">{{ t.name }}</option>{% endfor %}
                         </select>

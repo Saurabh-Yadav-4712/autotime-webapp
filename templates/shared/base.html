@@ -22,6 +22,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Turbo for SPA -->
     <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='loader.css') }}">
     
@@ -115,17 +117,15 @@
             pointer-events: none;
         }
         
-        @media (prefers-reduced-motion: no-preference) {
-            .auth-bg::after {
-                animation: algoSearch 15s infinite alternate ease-in-out;
-            }
-            @keyframes algoSearch {
-                0% { transform: translate(10vw, 10vh) scale(1); }
-                25% { transform: translate(50vw, 20vh) scale(1.5); }
-                50% { transform: translate(80vw, 60vh) scale(1); }
-                75% { transform: translate(30vw, 80vh) scale(1.8); }
-                100% { transform: translate(60vw, 10vh) scale(1.2); }
-            }
+        .auth-bg::after {
+            animation: algoSearch 15s infinite alternate ease-in-out;
+        }
+        @keyframes algoSearch {
+            0% { transform: translate(10vw, 10vh) scale(1); }
+            25% { transform: translate(50vw, 20vh) scale(1.5); }
+            50% { transform: translate(80vw, 60vh) scale(1); }
+            75% { transform: translate(30vw, 80vh) scale(1.8); }
+            100% { transform: translate(60vw, 10vh) scale(1.2); }
         }
         
         .auth-bg > div {

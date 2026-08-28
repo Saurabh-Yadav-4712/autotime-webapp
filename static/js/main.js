@@ -23,6 +23,21 @@ function syncThemeToggle() {
 document.addEventListener('DOMContentLoaded', syncThemeToggle);
 document.addEventListener('turbo:load', syncThemeToggle);
 
+function initSearchableSelects() {
+    if (typeof TomSelect !== 'undefined') {
+        document.querySelectorAll('.searchable-select').forEach(el => {
+            if (!el.tomselect) {
+                new TomSelect(el, {
+                    create: false,
+                    sortField: {field: "text", direction: "asc"}
+                });
+            }
+        });
+    }
+}
+document.addEventListener('DOMContentLoaded', initSearchableSelects);
+document.addEventListener('turbo:load', initSearchableSelects);
+
 // Global Loader Logic
 window.addEventListener('turbo:before-visit', () => {
     const loader = document.getElementById('global-loader');
