@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ title if title else 'AutoTime Dashboard' }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
     <!-- Theme & Sidebar Script (runs early to prevent flicker) -->
     <script>
         (function() {
@@ -21,7 +23,7 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Turbo for SPA -->
-    <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.23/+esm"></script>
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -209,9 +211,10 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/logout" data-turbo="false" class="nav-link sidebar-link">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
+                    <form action="{{ url_for('main.logout') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="nav-link sidebar-link border-0 bg-transparent w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Logout</button>
+                    </form>
                 </li>
             </ul>
         </div>
@@ -246,9 +249,10 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/logout" data-turbo="false" class="nav-link sidebar-link">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
+                    <form action="{{ url_for('main.logout') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="nav-link sidebar-link border-0 bg-transparent w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Logout</button>
+                    </form>
                 </li>
             </ul>
         </div>
@@ -273,9 +277,10 @@
                     </a>
                 </li>
                 <li>
-                    <a href="/logout" data-turbo="false" class="nav-link sidebar-link">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
+                    <form action="{{ url_for('main.logout') }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="nav-link sidebar-link border-0 bg-transparent w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Logout</button>
+                    </form>
                 </li>
             </ul>
         </div>
@@ -389,7 +394,7 @@
             <footer class="bg-body-tertiary border-top py-3 mt-auto shadow-sm d-print-none">
                 <div class="container-fluid px-4 text-center">
                     <p class="mb-0 text-muted small fw-semibold">
-                        &copy; <script>document.write(new Date().getFullYear())</script> AutoTime. All rights reserved.
+                        &copy; {{ current_year }} AutoTime. All rights reserved.
                     </p>
                 </div>
             </footer>
@@ -419,7 +424,7 @@
             <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
             <li><a href="/college_settings" class="nav-link sidebar-link"><i class="bi bi-building me-2"></i> Institute Config</a></li>
             <li><a href="/settings" class="nav-link sidebar-link"><i class="bi bi-gear me-2"></i> Settings</a></li>
-            <li><a href="/logout" data-turbo="false" class="nav-link sidebar-link"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+            <li><form action="{{ url_for('main.logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-link sidebar-link border-0 bg-transparent w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Logout</button></form></li>
         </ul>
       </div>
     </div>
@@ -436,7 +441,7 @@
             <li><a href="/apply_leave" class="nav-link sidebar-link"><i class="bi bi-envelope-paper me-2"></i> Leave Requests</a></li>
             <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
             <li><a href="/settings" class="nav-link sidebar-link"><i class="bi bi-gear me-2"></i> Settings</a></li>
-            <li><a href="/logout" data-turbo="false" class="nav-link sidebar-link"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+            <li><form action="{{ url_for('main.logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-link sidebar-link border-0 bg-transparent w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Logout</button></form></li>
         </ul>
       </div>
     </div>
@@ -451,7 +456,7 @@
             <li><a href="/student_dash" class="nav-link sidebar-link"><i class="bi bi-calendar3 me-2"></i> My Class Schedule</a></li>
             <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
             <li><a href="/settings" class="nav-link sidebar-link"><i class="bi bi-gear me-2"></i> Settings</a></li>
-            <li><a href="/logout" data-turbo="false" class="nav-link sidebar-link"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+            <li><form action="{{ url_for('main.logout') }}" method="POST"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="nav-link sidebar-link border-0 bg-transparent w-100 text-start"><i class="bi bi-box-arrow-right me-2"></i> Logout</button></form></li>
         </ul>
       </div>
     </div>

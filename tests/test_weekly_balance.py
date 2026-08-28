@@ -1,11 +1,16 @@
 import pytest
 from utils.scheduler.engine import TimetableEngine, GlobalState, SessionOccurrence, TimeSlot
 
+
 class MockEngine(TimetableEngine):
     def __init__(self, working_days=5, max_lectures=5):
         days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"][:working_days]
-        slots = [TimeSlot(day="", idx=i, start_time=f"{8+i}:00", end_time=f"{9+i}:00") for i in range(max_lectures)]
+        slots = [
+            TimeSlot(day="", idx=i, start_time=f"{8 + i}:00", end_time=f"{9 + i}:00")
+            for i in range(max_lectures)
+        ]
         super().__init__(slots, days)
+
 
 def test_case_c_lexicographic_balance_metric():
     # Case C: Same range, different distribution.
@@ -19,7 +24,7 @@ def test_case_c_lexicographic_balance_metric():
         "Tuesday": set(range(5)),
         "Wednesday": set(range(5)),
         "Thursday": set(range(3)),
-        "Friday": set(range(3))
+        "Friday": set(range(3)),
     }
 
     score1 = engine._calculate_class_balance(state)
@@ -29,7 +34,7 @@ def test_case_c_lexicographic_balance_metric():
         "Tuesday": set(range(5)),
         "Wednesday": set(range(4)),
         "Thursday": set(range(4)),
-        "Friday": set(range(3))
+        "Friday": set(range(3)),
     }
 
     score2 = engine._calculate_class_balance(state)
@@ -41,6 +46,7 @@ def test_case_c_lexicographic_balance_metric():
     assert score2 < score1
     assert score1 == 4
     assert score2 == 2
+
 
 def test_case_e_practical_load():
     engine = MockEngine()
@@ -60,6 +66,7 @@ def test_case_e_practical_load():
     assert counts[0] == 2
     assert sum(counts) == 2
 
+
 def test_case_f_common_subject_load():
     engine = MockEngine()
     state = GlobalState()
@@ -75,6 +82,7 @@ def test_case_f_common_subject_load():
     # Penalty: 0
     assert c1_bal == 0
     assert c2_bal == 0
+
 
 def test_case_a_and_b_optimization():
     # Case A: 21 periods
@@ -107,13 +115,14 @@ def test_case_a_and_b_optimization():
         units.append(u)
 
     initial_score = engine._calculate_global_score(state)
-    assert initial_score[1] == 6 # Balance penalty for [5,5,5,5,1] is 6
+    assert initial_score[1] == 6  # Balance penalty for [5,5,5,5,1] is 6
 
     # optimize
     engine._optimize(units, state)
 
     final_score = engine._calculate_global_score(state)
-    assert final_score[1] == 0 # Balance penalty should reach 0 -> [5,4,4,4,4]
+    assert final_score[1] == 0  # Balance penalty should reach 0 -> [5,4,4,4,4]
+
 
 def test_case_d_teacher_override():
     engine = MockEngine()

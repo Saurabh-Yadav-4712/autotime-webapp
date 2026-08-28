@@ -10,6 +10,15 @@ instance/
 
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.verification-packages/
+.coverage
+coverage.xml
+htmlcov/
+
+.vercel/
 
 scratch/
 *.log

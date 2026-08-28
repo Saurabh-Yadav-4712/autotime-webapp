@@ -1,27 +1,40 @@
-from models import db, Timetable, Subject, Teacher, Course, Notification, AcademicCalendar, TeacherLeave, GenerationHistory, Institute
+import copy
+
+from models import Course, GenerationHistory, Institute, Subject, Teacher, Timetable, db
 from utils.helpers import get_dynamic_time_slots
-import random
-from datetime import datetime, timedelta
+
 
 def engine_generate_timetable(inst_code):
-    from models import Timetable, Subject, Teacher, Course, db, GenerationHistory, Institute
-    from utils.helpers import get_dynamic_time_slots
-    from utils.scheduler import TimeSlot, SessionOccurrence, GlobalState, TimetableEngine, TimetableValidator
-    import random
+    from utils.scheduler import (
+        TimeSlot,
+        SessionOccurrence,
+        GlobalState,
+        TimetableEngine,
+        TimetableValidator,
+    )
     import json
     # Defer deletion of the existing timetable until successful generation
     # to maintain database transaction safety.
 
     institute = Institute.query.filter_by(institute_code=inst_code).first()
-    institute_id = institute.id if institute else 0
+    if not institute:
+        return {
+            "success": False,
+            "status": "FAILED",
+            "message": "Institute not found.",
+            "stats": {},
+            "diagnostics": None,
+        }
+    institute_id = institute.id
 
     subjects = Subject.query.filter_by(institute_code=inst_code).all()
     teachers = Teacher.query.filter_by(institute_code=inst_code).all()
     courses = Course.query.filter_by(institute_code=inst_code).all()
 
     teacher_dict = {t.teacher_id: t for t in teachers}
+    course_dict = {course.class_id: course for course in courses}
     raw_slots = get_dynamic_time_slots(inst_code)
-    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
     time_slots = []
     for idx, (st, et) in enumerate(raw_slots):
@@ -30,10 +43,10 @@ def engine_generate_timetable(inst_code):
     state = GlobalState()
     for t in teachers:
         state.teacher_max_hours[t.teacher_id] = t.max_hours
-        
+
         # Parse available days
         if t.available_days:
-            parsed_days = {d.strip() for d in t.available_days.split(',')}
+            parsed_days = {d.strip() for d in t.available_days.split(",")}
             state.teacher_available_days[t.teacher_id] = parsed_days
         else:
             # Documented backward-compatibility: Missing means all working days
@@ -43,8 +56,8 @@ def engine_generate_timetable(inst_code):
 
     for sub in subjects:
         # Determine target classes
-        if ',' in sub.class_id:
-            target_classes = [c.strip() for c in sub.class_id.split(',') if c.strip()]
+        if "," in sub.class_id:
+            target_classes = [c.strip() for c in sub.class_id.split(",") if c.strip()]
         else:
             target_classes = [sub.class_id.strip()]
 
@@ -52,9 +65,9 @@ def engine_generate_timetable(inst_code):
 
         pref_days = []
         if sub.preferred_days:
-            pref_days = [d.strip() for d in sub.preferred_days.split(',') if d.strip()]
+            pref_days = [d.strip() for d in sub.preferred_days.split(",") if d.strip()]
 
-        is_prac = sub.subject_type and sub.subject_type.lower() == 'practical'
+        is_prac = sub.subject_type and sub.subject_type.lower() == "practical"
 
         # Determine how many sessions to create based on required_hours and session_length
         session_len = sub.session_length if sub.session_length else 1
@@ -69,7 +82,7 @@ def engine_generate_timetable(inst_code):
                 target_classes=target_classes,
                 duration=session_len,
                 preferred_days=pref_days,
-                is_practical=is_prac
+                is_practical=is_prac,
             )
             units.append(unit)
 
@@ -78,15 +91,16 @@ def engine_generate_timetable(inst_code):
 
     if success:
         # Validate
-        is_valid, errors = TimetableValidator.audit(scheduled_units, time_slots, state.teacher_available_days)
+        is_valid, errors = TimetableValidator.audit(
+            scheduled_units, time_slots, state.teacher_available_days
+        )
         if not is_valid:
             success = False
             msg = f"Validation failed: {errors[0]}"
             from utils.scheduler.diagnostics import GenerationDiagnostics
+
             diag = GenerationDiagnostics(
-                status="FAILED",
-                reason_code="VALIDATION_FAILED",
-                primary_bottleneck=msg
+                status="FAILED", reason_code="VALIDATION_FAILED", primary_bottleneck=msg
             )
 
     if success:
@@ -95,14 +109,16 @@ def engine_generate_timetable(inst_code):
 
         records_to_add = []
         for unit in scheduled_units:
-            disp_name = f"{unit.subject_name} (Practical)" if unit.is_practical else unit.subject_name
+            disp_name = (
+                f"{unit.subject_name} (Practical)" if unit.is_practical else unit.subject_name
+            )
             teacher = teacher_dict.get(unit.teacher_id)
             t_name = teacher.name if teacher else unit.teacher_id
             t_id_fk = teacher.id if teacher else None
-            s_id_fk = getattr(unit, 'subject_id', None)
+            s_id_fk = getattr(unit, "subject_id", None)
 
             for c_id in unit.target_classes:
-                course_match = next((c for c in courses if getattr(c, 'class_id', None) == c_id), None)
+                course_match = course_dict.get(c_id)
                 c_id_fk = course_match.id if course_match else None
 
                 for offset in range(unit.duration):
@@ -120,7 +136,7 @@ def engine_generate_timetable(inst_code):
                         end_time=actual_slot.end_time,
                         subject_name=disp_name,
                         teacher_name=t_name,
-                        is_proxy=False
+                        is_proxy=False,
                     )
                     records_to_add.append(new_entry)
 
@@ -137,14 +153,16 @@ def engine_generate_timetable(inst_code):
         optimization_time=stats.get("optimization_time", 0),
         gap_score=gap_score,
         primary_failure_reason=diag.primary_bottleneck if diag else None,
-        diagnostics_json=json.dumps(diag.to_dict()) if diag else None
+        diagnostics_json=json.dumps(diag.to_dict()) if diag else None,
     )
     db.session.add(history)
     db.session.commit()
 
     if success:
         stats["logical_session_occurrences"] = len(scheduled_units)
-        stats["occupied_class_periods"] = sum(unit.duration * len(unit.target_classes) for unit in scheduled_units)
+        stats["occupied_class_periods"] = sum(
+            unit.duration * len(unit.target_classes) for unit in scheduled_units
+        )
     else:
         stats["logical_session_occurrences"] = 0
         stats["occupied_class_periods"] = 0
@@ -154,11 +172,10 @@ def engine_generate_timetable(inst_code):
         "status": "SUCCESS" if success else "FAILED",
         "message": msg,
         "stats": stats,
-        "diagnostics": diag.to_dict() if diag else None
+        "diagnostics": diag.to_dict() if diag else None,
     }
 
     return result
-
 
 
 def get_effective_timetable(inst_code, filters=None, target_date=None):
@@ -168,44 +185,41 @@ def get_effective_timetable(inst_code, filters=None, target_date=None):
     """
     if filters is None:
         filters = {}
-        
-    filters['institute_code'] = inst_code
-    
+
+    filters = dict(filters)
+    filters["institute_code"] = inst_code
+
     # 1. Fetch master timetable (specific_date is NULL)
     master_query = Timetable.query.filter_by(**filters, specific_date=None)
     master_records = master_query.all()
-    
+
     if not target_date:
         return master_records
-        
+
     # 2. Fetch specific_date overrides for this target_date
     override_query = Timetable.query.filter_by(**filters, specific_date=target_date)
     override_records = override_query.all()
-    
+
     if not override_records:
         return master_records
-        
+
     # 3. Merge. Overrides replace master records with matching class_id, day_name, start_time
     effective_dict = {}
-    
+
     for r in master_records:
         # Key by class, day, and time
         key = (r.class_id, r.day_name, r.start_time)
         effective_dict[key] = r
-        
+
     for r in override_records:
         key = (r.class_id, r.day_name, r.start_time)
         effective_dict[key] = r
-        
-    final_records = list(effective_dict.values())
-    
-    # Safely transform __UNCOVERED__ tokens for presentation without mutating DB state
-    from models import db
-    import sqlalchemy
-    for r in final_records:
-        if r.teacher_name == "__UNCOVERED__":
-            if sqlalchemy.inspect(r).session:
-                db.session.expunge(r)
-            r.teacher_name = "Teacher on Leave / Proxy Not Assigned"
-            
+
+    final_records = []
+    for record in effective_dict.values():
+        if record.teacher_name == "__UNCOVERED__":
+            record = copy.copy(record)
+            record.teacher_name = "Teacher on Leave / Proxy Not Assigned"
+        final_records.append(record)
+
     return final_records

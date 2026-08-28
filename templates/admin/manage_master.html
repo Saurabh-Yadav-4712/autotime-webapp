@@ -234,7 +234,10 @@
                                 
                                 <td class="text-nowrap text-end pe-4">
                                     <a href="/edit_{{ manage_type }}/{{ item.id }}" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
-                                    <a href="/delete/{{ manage_type }}/{{ item.id }}" class="btn btn-sm btn-outline-danger" data-turbo="false" onclick="return confirm('Confirm Delete?');" title="Delete"><i class="bi bi-trash"></i></a>
+                                    <form action="/delete/{{ manage_type }}/{{ item.id }}" method="POST" class="d-inline" onsubmit="return confirm('Confirm Delete?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                                    </form>
                                 </td>
                             </tr>
                             {% endfor %}

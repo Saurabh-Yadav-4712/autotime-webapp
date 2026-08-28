@@ -1,4 +1,28 @@
 // Global Theme Toggle Logic (Event Delegation for Turbo safety)
+function getCsrfToken() {
+    const tokenElement = document.querySelector('meta[name="csrf-token"]');
+    return tokenElement ? tokenElement.content : '';
+}
+
+function addCsrfTokensToForms() {
+    const token = getCsrfToken();
+    if (!token) return;
+
+    document.querySelectorAll('form').forEach(form => {
+        const method = (form.getAttribute('method') || 'GET').toUpperCase();
+        if (method === 'GET' || form.querySelector('input[name="csrf_token"]')) return;
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrf_token';
+        input.value = token;
+        form.appendChild(input);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', addCsrfTokensToForms);
+document.addEventListener('turbo:load', addCsrfTokensToForms);
+
 document.addEventListener('change', function(e) {
     if (e.target && e.target.classList.contains('theme-toggle-input')) {
         const newTheme = e.target.checked ? 'dark' : 'light';
