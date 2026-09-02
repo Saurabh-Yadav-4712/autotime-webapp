@@ -1,3 +1,4 @@
+from utils.timetable_helpers import build_timetable_view_model
 from utils.decorators import login_required_admin
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, jsonify
@@ -377,10 +378,13 @@ def generate_timetable():
         
     inst_code = session['institute_code']
     
-    from utils.autotime_main import engine_generate_timetable
-    engine_generate_timetable(inst_code)
+    from utils.timetable_adapter import engine_generate_timetable
+    success, msgs = engine_generate_timetable(inst_code)
     
-    flash('⚡ Timetable Generated Successfully! Zero Clashes Detected.', 'success')
+    if not success:
+        flash(f'Failed to generate: {msgs[0]}', 'danger')
+    else:
+        flash('⚡ Timetable Generated Successfully! Zero Clashes Detected.', 'success')
     return redirect(url_for('main.admin_dash'))
 
 @main_bp.route('/view_timetable')
@@ -419,7 +423,8 @@ def view_timetable():
     else:
         subjects = []
     
-    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
+    days_data = build_timetable_view_model(schedule, days, time_slots)
+    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
 
 @main_bp.route('/api/get_slot_data', methods=['GET'])
 @login_required_admin
@@ -666,7 +671,7 @@ def reject_teacher_request(req_id):
     return redirect(url_for('main.admin_dash'))
 from models import AcademicCalendar, Notification
 from datetime import datetime
-from utils.autotime_main import auto_allocate_proxy
+from utils.timetable_adapter import auto_allocate_proxy
 
 @main_bp.route('/manage_calendar', methods=['GET', 'POST'])
 @login_required_admin

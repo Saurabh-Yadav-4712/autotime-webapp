@@ -1,0 +1,87 @@
+{% macro render_timetable(days_data, time_slots, lunch_after, editable=false, selected_class=None, role='student') %}
+<div class="table-responsive timetable-container">
+    <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
+        <caption class="visually-hidden">Timetable Schedule</caption>
+        <thead class="table-light">
+            <tr>
+                <th scope="col" class="bg-secondary text-white py-3" style="width: 12%;">Day \ Time</th>
+                {% set break_printed = namespace(value=false) %}
+                {% for slot in time_slots %}
+                    {% if loop.index0 == lunch_after and not break_printed.value %}
+                        <th scope="col" class="bg-warning text-dark py-3" style="width: 80px;">
+                            <div class="fw-bold mb-2" style="letter-spacing: 1px;">BREAK</div>
+                        </th>
+                        {% set break_printed.value = true %}
+                    {% endif %}
+                    <th scope="col" class="py-3 time-header">
+                        <div class="text-primary">{{ slot[0] }}</div>
+                        <div class="small text-muted">to</div>
+                        <div class="text-primary">{{ slot[1] }}</div>
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for day_data in days_data %}
+            <tr>
+                <th scope="row" class="fw-bold bg-light fs-5 align-middle">{{ day_data.day }}</th>
+                {% set break_printed_row = namespace(value=false) %}
+                
+                {% for slot_data in day_data.slots %}
+                    {% if loop.index0 == lunch_after and not break_printed_row.value %}
+                        <td class="bg-warning bg-opacity-25 border-warning"><span class="visually-hidden">Lunch Break</span></td>
+                        {% set break_printed_row.value = true %}
+                    {% endif %}
+                    
+                    {% if slot_data.status == 'occupied' %}
+                        <td class="cell-occupied p-3 position-relative shadow-sm" style="background-color: rgba(79, 70, 229, 0.05); border-color: var(--primary);">
+                            {% if editable and role == 'admin' %}
+                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1" 
+                                    data-bs-toggle="modal" data-bs-target="#editTimetableModal"
+                                    onclick="openEditModal('{{ slot_data.id }}', '{{ day_data.day }}', '{{ slot_data.start_time }}', '{{ slot_data.teacher }}', '{{ slot_data.subject }}');"
+                                    aria-label="Edit Slot">
+                                <i class="bi bi-pencil-square text-primary" style="font-size: 0.75rem;" aria-hidden="true"></i>
+                            </button>
+                            {% endif %}
+                            <div class="fw-bold text-dark fs-6 mb-1 mt-2">{{ slot_data.subject }}</div>
+                            <div class="text-muted small fw-semibold">
+                                <i class="bi bi-person-video3 me-1" aria-hidden="true"></i>{{ slot_data.teacher }}
+                            </div>
+                            {% if role == 'teacher' and slot_data.course %}
+                                <div class="badge bg-info mt-1">{{ slot_data.course }}</div>
+                            {% endif %}
+                        </td>
+                    {% elif slot_data.status == 'practical' %}
+                        <td class="cell-practical p-3" style="background-color: rgba(16, 185, 129, 0.05); border-color: #10b981;">
+                            <span class="visually-hidden">Practical Session</span>
+                            <div class="fw-bold text-dark fs-6 mb-1">{{ slot_data.subject }} (Prac)</div>
+                            <div class="text-muted small">{{ slot_data.teacher }}</div>
+                        </td>
+                    {% elif slot_data.status == 'proxy' %}
+                        <td class="cell-proxy p-3 position-relative" style="background-color: rgba(225, 29, 72, 0.05); border: 2px dashed #e11d48;">
+                            <span class="visually-hidden">Proxy Session</span>
+                            <div class="fw-bold text-dark fs-6 mb-1 mt-2">{{ slot_data.subject }}</div>
+                            <div class="text-muted small fw-semibold">
+                                <i class="bi bi-person-video3 me-1" aria-hidden="true"></i>{{ slot_data.teacher }}
+                            </div>
+                            <div class="badge bg-danger mt-2">PROXY</div>
+                        </td>
+                    {% elif slot_data.status == 'internal_gap' %}
+                        <td class="cell-internal-gap p-3" style="background-color: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
+                            <span class="visually-hidden">Internal free period</span>
+                            <small class="text-warning fw-bold d-block"><i class="bi bi-exclamation-triangle me-1"></i>Free (Gap)</small>
+                        </td>
+                    {% else %}
+                        {# Default to edge free #}
+                        <td class="cell-edge-free p-3 text-muted bg-light" style="border: 1px dashed var(--border);">
+                            <span class="visually-hidden">Free period</span>
+                            <small class="opacity-50">Free</small>
+                        </td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}

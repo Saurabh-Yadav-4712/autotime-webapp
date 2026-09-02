@@ -1,3 +1,4 @@
+from utils.timetable_helpers import build_timetable_view_model
 from utils.decorators import login_required_student
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
@@ -41,7 +42,8 @@ def student_portal():
                     
         time_slots = trim_time_slots(schedule, time_slots, lunch_after)
 
-    return render_template('student/student_portal.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, inst_code=inst_code, class_id=class_id)
+    days_data = build_timetable_view_model(schedule, days, time_slots)
+    return render_template('student/student_portal.html', schedule=schedule, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, inst_code=inst_code, class_id=class_id)
 
 @main_bp.route('/register_student', methods=['GET', 'POST'])
 def register_student():

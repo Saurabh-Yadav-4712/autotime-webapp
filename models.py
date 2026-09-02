@@ -5,6 +5,14 @@ from datetime import datetime
 # ==========================================
 # DATABASE MODELS
 # ==========================================
+
+class SubjectCourse(db.Model):
+    __tablename__ = 'subject_courses'
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id', ondelete='CASCADE'), primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id', ondelete='CASCADE'), primary_key=True)
+    is_active = db.Column(db.Boolean, default=True)
+
+
 class Institute(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -15,6 +23,7 @@ class Institute(db.Model):
 
 class Teacher(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    institute_id = db.Column(db.Integer, db.ForeignKey("institute.id", ondelete="CASCADE"), nullable=True)
     institute_code = db.Column(db.String(20), nullable=False)
     teacher_id = db.Column(db.String(20), nullable=False)
     name = db.Column(db.String(100), nullable=False)
@@ -26,6 +35,7 @@ class Teacher(db.Model):
 
 class Course(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    institute_id = db.Column(db.Integer, db.ForeignKey("institute.id", ondelete="CASCADE"), nullable=True)
     institute_code = db.Column(db.String(20), nullable=False)
     class_id = db.Column(db.String(50), nullable=False)
     department = db.Column(db.String(50), nullable=False)
@@ -34,6 +44,9 @@ class Course(db.Model):
 
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    institute_id = db.Column(db.Integer, db.ForeignKey("institute.id", ondelete="CASCADE"), nullable=True)
+    teacher_id_fk = db.Column(db.Integer, db.ForeignKey("teacher.id", ondelete="RESTRICT"), nullable=True)
+    courses = db.relationship("Course", secondary="subject_courses", backref=db.backref("subjects", lazy="dynamic"))
     institute_code = db.Column(db.String(20), nullable=False)
     subject_code = db.Column(db.String(20), nullable=False)
     subject_name = db.Column(db.String(100), nullable=False)
@@ -48,6 +61,11 @@ class Subject(db.Model):
 
 class Timetable(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    institute_id = db.Column(db.Integer, db.ForeignKey("institute.id", ondelete="CASCADE"), nullable=True)
+    course_id_fk = db.Column(db.Integer, db.ForeignKey("course.id", ondelete="CASCADE"), nullable=True)
+    teacher_id_fk = db.Column(db.Integer, db.ForeignKey("teacher.id", ondelete="CASCADE"), nullable=True)
+    subject_id_fk = db.Column(db.Integer, db.ForeignKey("subject.id", ondelete="CASCADE"), nullable=True)
+    session_group_id = db.Column(db.String(50), nullable=True, index=True)
     institute_code = db.Column(db.String(20), nullable=False)
     class_id = db.Column(db.String(50), nullable=False)
     day_name = db.Column(db.String(20), nullable=False)
