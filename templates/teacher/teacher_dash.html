@@ -1,0 +1,174 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+    <div>
+        <h2 class="fw-bold text-success mb-1 d-flex align-items-center"><i class="bi bi-person-video3 me-2"></i> Welcome, Prof. {{ t_name }}</h2>
+        <small class="text-muted">Teacher Dashboard & Management Portal</small>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/change_password" class="btn btn-outline-secondary fw-bold"><i class="bi bi-key me-1"></i> Change Password</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- LEFT COLUMN: LEAVE & COURSE VIEWER -->
+    <div class="col-md-3">
+        
+        <!-- Auto-Proxy Leave Box -->
+        <div class="card border-0 border-top border-warning border-4 shadow-sm mb-4">
+            <div class="card-body p-4 bg-light-custom">
+                <h5 class="fw-bold mb-3 d-flex align-items-center"><i class="bi bi-calendar-x text-warning me-2"></i> Apply for Leave</h5>
+                <p class="small text-muted mb-3">Our Auto-Proxy system will automatically assign your lectures to free teachers.</p>
+                <form action="/apply_leave" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Select Day</label>
+                        <select name="leave_day" class="form-select bg-white" required>
+                            <option value="" selected disabled>Select Day...</option>
+                            {% for day in days %}
+                                <option value="{{ day }}">{{ day }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Specific Slot <span class="text-muted fw-normal">(Optional)</span></label>
+                        <select name="leave_time" class="form-select bg-white">
+                            <option value="ALL" selected>All Day</option>
+                            {% for slot in time_slots %}
+                                <option value="{{ slot[0] }}">{{ slot[0] }} - {{ slot[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold" onclick="return confirm('Are you sure you want to apply for leave? Auto-Proxy will modify the timetable.');">
+                        <i class="bi bi-send me-1"></i> Apply & Trigger Proxy
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Read-Only Course Viewer -->
+        <div class="card border-0 border-top border-primary border-4 shadow-sm mb-4">
+            <div class="card-body p-4 bg-light-custom">
+                <h5 class="fw-bold mb-3 d-flex align-items-center"><i class="bi bi-building text-primary me-2"></i> Course Viewer</h5>
+                <p class="small text-muted mb-3">Check if a specific class is free.</p>
+                <form action="/teacher_view_class" method="GET">
+                    <select name="class_id" class="form-select mb-3 bg-white" required>
+                        <option value="" selected disabled>Select Class...</option>
+                        {% for course in courses %}
+                            <option value="{{ course.class_id }}">{{ course.class_id }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="bi bi-eye me-1"></i> View Timetable</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN: MY SCHEDULE GRID -->
+    <div class="col-md-9 mb-4">
+        <div class="card border-0 border-top border-success border-4 shadow-sm h-100">
+            <div class="card-header bg-white pt-4 pb-3 d-flex justify-content-between align-items-center border-0">
+                <h5 class="fw-bold text-success mb-0 d-flex align-items-center"><i class="bi bi-calendar-week me-2"></i> My Schedule</h5>
+                <div>
+                    <button class="btn btn-sm btn-success me-1 fw-bold px-3" onclick="toggleView('today')">Today</button>
+                    <button class="btn btn-sm btn-outline-success fw-bold px-3" onclick="toggleView('week')">Weekly</button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="bg-secondary text-white py-3" style="width: 12%;">Day \ Time</th>
+                                {% set break_printed = namespace(value=false) %}
+                                {% for slot in time_slots %}
+                                    {% if loop.index0 == lunch_after and not break_printed.value %}
+                                        <th class="bg-warning text-dark py-3" style="width: 80px;">
+                                            <div class="fw-bold mb-2" style="letter-spacing: 1px;">BREAK</div>
+                                            {% if loop.index0 > 0 %}
+                                            <div class="small opacity-75" style="font-size: 0.75rem; line-height: 1.2;">
+                                                {{ time_slots[loop.index0 - 1][1] }}<br>to<br>{{ slot[0] }}
+                                            </div>
+                                            {% endif %}
+                                        </th>
+                                        {% set break_printed.value = true %}
+                                    {% endif %}
+                                    <th class="py-3">
+                                        <div class="text-primary">{{ slot[0] }}</div>
+                                        <div class="small text-muted">to</div>
+                                        <div class="text-primary">{{ slot[1] }}</div>
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in days %}
+                            <tr class="schedule-row" data-day="{{ day }}">
+                                <td class="fw-bold bg-light align-middle fs-5">{{ day }}</td>
+                                
+                                {% set break_printed_row = namespace(value=false) %}
+                                {% for slot in time_slots %}
+                                    {% set start_time = slot[0] %}
+                                    
+                                    {% if loop.index0 == lunch_after and not break_printed_row.value %}
+                                        <td class="bg-warning bg-opacity-25 border-warning"></td>
+                                        {% set break_printed_row.value = true %}
+                                    {% endif %}
+                                    
+                                    {% if day in schedule and start_time in schedule[day] %}
+                                        {% set entry = schedule[day][start_time] %}
+                                        
+                                        {% if entry.is_proxy %}
+                                            <td class="bg-danger bg-opacity-10 border-danger p-3">
+                                                <div class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> PROXY</div>
+                                                <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
+                                                <div class="badge bg-danger mt-2">Class: {{ entry.class_id }}</div>
+                                            </td>
+                                        {% else %}
+                                            <td class="bg-success bg-opacity-10 border-success p-3">
+                                                <div class="fw-bold text-dark fs-6 mb-1">{{ entry.subject_name }}</div>
+                                                <div class="badge bg-success mt-2">Class: {{ entry.class_id }}</div>
+                                            </td>
+                                        {% endif %}
+                                        
+                                    {% else %}
+                                        <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function toggleView(view) {
+        const todayStr = "{{ today_str }}";
+        const rows = document.querySelectorAll('.schedule-row');
+        
+        rows.forEach(row => {
+            if (view === 'today') {
+                if (row.getAttribute('data-day') === todayStr) {
+                    row.classList.remove('d-none');
+                } else {
+                    row.classList.add('d-none');
+                }
+            } else {
+                row.classList.remove('d-none');
+            }
+        });
+    }
+    
+    window.onload = function() {
+        const todayStr = "{{ today_str }}";
+        const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        if (validDays.includes(todayStr)) {
+            toggleView('today');
+        } else {
+            toggleView('week');
+        }
+    }
+</script>
+{% endblock %}

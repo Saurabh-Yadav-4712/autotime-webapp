@@ -1,0 +1,114 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="card p-5 border-0 shadow-lg w-100" style="max-width: 500px;">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-primary mb-1"><i class="bi bi-clock-history me-2"></i>AutoTime</h2>
+            <p class="text-muted small">Smart Timetable Management System</p>
+        </div>
+
+        <ul class="nav nav-pills nav-fill mb-4 p-1 bg-light rounded-3" id="authTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-3" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button" role="tab">Admin</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-3" id="teacher-tab" data-bs-toggle="tab" data-bs-target="#teacher" type="button" role="tab">Teacher</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-3" id="student-tab" data-bs-toggle="tab" data-bs-target="#student" type="button" role="tab">Student</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="authTabsContent">
+            
+            <!-- ADMIN TAB -->
+            <div class="tab-pane fade show active" id="admin" role="tabpanel">
+                <h5 class="fw-bold text-center mb-4 text-muted">Admin Portal</h5>
+                <form action="/login_admin" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                            <input type="password" name="password" id="adminPwd" class="form-control border-end-0" required>
+                            <span class="input-group-text bg-white toggle-password border-start-0" data-target="adminPwd">
+                                <i class="bi bi-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Login as Admin</button>
+                </form>
+                <div class="text-center">
+                    <p class="small text-muted mb-0">New Institute? <a href="/register_institute" class="text-primary text-decoration-none fw-bold">Register Here</a></p>
+                </div>
+            </div>
+
+            <!-- TEACHER TAB -->
+            <div class="tab-pane fade" id="teacher" role="tabpanel">
+                <h5 class="fw-bold text-center mb-4 text-muted">Teacher Portal</h5>
+                <form action="/login_teacher" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                            <input type="password" name="password" id="teacherPwd" class="form-control border-end-0" required>
+                            <span class="input-group-text bg-white toggle-password border-start-0" data-target="teacherPwd">
+                                <i class="bi bi-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Login as Teacher</button>
+                </form>
+                <div class="text-center">
+                    <p class="small text-muted mb-0">First time logging in? <a href="/activate_teacher" class="text-success text-decoration-none fw-bold">Activate Account</a></p>
+                </div>
+            </div>
+
+            <!-- STUDENT TAB -->
+            <div class="tab-pane fade" id="student" role="tabpanel">
+                <h5 class="fw-bold text-center mb-4 text-muted">Student Portal</h5>
+                <form action="/login_student" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" name="email" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+                            <input type="password" name="password" id="studentPwd" class="form-control border-end-0" required>
+                            <span class="input-group-text bg-white toggle-password border-start-0" data-target="studentPwd">
+                                <i class="bi bi-eye"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Login as Student</button>
+                </form>
+                <div class="text-center">
+                    <p class="small text-muted mb-0">New Student? <a href="/register_student" class="text-primary text-decoration-none fw-bold">Register Here</a></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 border-top pt-4">
+            <a href="/forgot_password" class="text-muted text-decoration-none small"><i class="bi bi-key me-1"></i>Forgot Password?</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

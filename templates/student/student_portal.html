@@ -1,0 +1,102 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+{% if teacher_view %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+    <h2 class="fw-bold text-primary mb-0 d-flex align-items-center"><i class="bi bi-building me-2"></i> Class Viewer: {{ class_id }}</h2>
+    <a href="/teacher_dash" class="btn btn-outline-secondary fw-bold"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+</div>
+{% else %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+    <h2 class="fw-bold text-primary mb-0 d-flex align-items-center"><i class="bi bi-mortarboard me-2"></i> Student Timetable Portal</h2>
+    <a href="/" class="btn btn-outline-secondary fw-bold"><i class="bi bi-house me-1"></i> Home</a>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4 bg-light-custom">
+        <form method="GET" action="/student_portal" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-bold small">Institute Code</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                    <input type="text" name="inst_code" class="form-control" placeholder="e.g. INS-12345" value="{{ inst_code or '' }}" required>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">Your Class ID</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-journal-bookmark"></i></span>
+                    <input type="text" name="class_id" class="form-control" placeholder="e.g. FYCS-A" value="{{ class_id or '' }}" required>
+                </div>
+            </div>
+            <div class="col-md-3 mt-3 mt-md-0">
+                <button type="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-search me-1"></i> View Schedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if schedule %}
+<div class="card shadow-sm border-0 border-top border-primary border-4 mb-5">
+    <div class="card-header bg-white pt-4 pb-3">
+        <h5 class="fw-bold text-center text-primary mb-0">Schedule for Class: {{ class_id }}</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="bg-secondary text-white py-3" style="width: 12%;">Day \ Time</th>
+                        {% set break_printed = namespace(value=false) %}
+                        {% for slot in time_slots %}
+                            {% if loop.index0 == lunch_after and not break_printed.value %}
+                                <th class="bg-warning text-dark py-3" style="width: 80px;">
+                                    <div class="fw-bold mb-2" style="letter-spacing: 1px;">BREAK</div>
+                                    {% if loop.index0 > 0 %}
+                                    <div class="small opacity-75" style="font-size: 0.75rem; line-height: 1.2;">
+                                        {{ time_slots[loop.index0 - 1][1] }}<br>to<br>{{ slot[0] }}
+                                    </div>
+                                    {% endif %}
+                                </th>
+                                {% set break_printed.value = true %}
+                            {% endif %}
+                            <th class="py-3">
+                                <div class="text-primary">{{ slot[0] }}</div>
+                                <div class="small text-muted">to</div>
+                                <div class="text-primary">{{ slot[1] }}</div>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in days %}
+                    <tr>
+                        <td class="fw-bold bg-light fs-5 align-middle">{{ day }}</td>
+                        {% set break_printed_row = namespace(value=false) %}
+                        {% for slot in time_slots %}
+                            {% set start_time = slot[0] %}
+                            
+                            {% if loop.index0 == lunch_after and not break_printed_row.value %}
+                                <td class="bg-warning bg-opacity-25 border-warning"></td>
+                                {% set break_printed_row.value = true %}
+                            {% endif %}
+                            
+                            {% if day in schedule and start_time in schedule[day] %}
+                                {% set entry = schedule[day][start_time] %}
+                                <td class="bg-primary bg-opacity-10 border-primary p-3">
+                                    <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
+                                    <div class="badge bg-secondary mt-2">{{ entry.teacher_name }}</div>
+                                </td>
+                            {% else %}
+                                <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

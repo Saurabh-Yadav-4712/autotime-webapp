@@ -1,0 +1,104 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold text-main mb-0 d-flex align-items-center"><i class="bi bi-calendar-grid-31 text-primary me-2"></i> View Timetable</h2>
+    <div>
+        {% if session.get('admin_id') %}
+        <a href="/export_timetables" class="btn btn-success me-2 fw-bold"><i class="bi bi-file-earmark-excel me-1"></i> Export All to Excel</a>
+        <a href="/admin_dash" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 border-top border-primary border-4 mb-4">
+    <div class="card-body bg-light-custom p-4">
+        <form method="GET" class="d-flex align-items-end gap-3">
+            <div class="flex-grow-1">
+                <label class="form-label fw-bold">Select Class</label>
+                <select class="form-select border-primary" name="class_id" onchange="this.form.submit()">
+                    <option value="" selected disabled>-- Select a Class --</option>
+                    {% for c in courses %}
+                    <option value="{{ c.class_id }}" {% if selected_class == c.class_id %}selected{% endif %}>{{ c.class_id }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if selected_class %}
+            <a href="/view_timetable" class="btn btn-outline-danger"><i class="bi bi-x-circle me-1"></i> Clear</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if selected_class %}
+<div class="card shadow-sm border-0 mb-5">
+    <div class="card-header bg-white py-3">
+        <h4 class="mb-0 text-center fw-bold text-primary">Class Timetable: {{ selected_class }}</h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="bg-secondary text-white fw-bold py-3" style="width: 100px;">Day \ Time</th>
+                        
+                        {% set lunch_printed = namespace(value=false) %}
+                        {% for i in range(time_slots|length) %}
+                            
+                            {% if not lunch_printed.value and i == lunch_after %}
+                                <th class="bg-warning text-dark border-dark align-middle py-3" style="width: 80px;">
+                                    <div class="fw-bold mb-1">LUNCH</div>
+                                    <div class="small fw-bold">{{ break_duration }} min</div>
+                                </th>
+                                {% set lunch_printed.value = true %}
+                            {% endif %}
+                            
+                            <th class="fw-bold py-3">
+                                <div class="text-primary">{{ time_slots[i][0] }}</div>
+                                <div class="text-muted small">to</div>
+                                <div class="text-primary">{{ time_slots[i][1] }}</div>
+                            </th>
+                            
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for day in days %}
+                    <tr>
+                        <td class="bg-light fw-bold fs-5 text-dark align-middle">{{ day }}</td>
+                        
+                        {% set lunch_printed_row = namespace(value=false) %}
+                        {% for i in range(time_slots|length) %}
+                            {% set slot = time_slots[i] %}
+                            
+                            {% if not lunch_printed_row.value and i == lunch_after %}
+                                <td class="bg-warning bg-opacity-25 border-warning fw-bold text-muted" style="writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 5px;">
+                                    {% if loop.index == 1 %}BREAK{% endif %}
+                                </td>
+                                {% set lunch_printed_row.value = true %}
+                            {% endif %}
+                            
+                            {% if slot[0] in schedule.get(day, {}) %}
+                                {% set entry = schedule[day][slot[0]] %}
+                                <td class="p-3 {% if entry.is_proxy %}bg-danger bg-opacity-10 border-danger{% else %}bg-primary bg-opacity-10{% endif %}">
+                                    <div class="fw-bold text-dark fs-6 mb-1">{{ entry.subject_name }}</div>
+                                    <div class="text-muted small fw-semibold">
+                                        <i class="bi bi-person-video3 me-1"></i>{{ entry.teacher_name }}
+                                    </div>
+                                    {% if entry.is_proxy %}
+                                        <div class="badge bg-danger mt-2">PROXY</div>
+                                    {% endif %}
+                                </td>
+                            {% else %}
+                                <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
+                            {% endif %}
+                            
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
