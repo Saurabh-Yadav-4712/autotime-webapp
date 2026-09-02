@@ -3,3 +3,4 @@
 pip-audit==2.10.1
 pytest==9.1.1
 ruff==0.16.5
+beautifulsoup4==4.12.3

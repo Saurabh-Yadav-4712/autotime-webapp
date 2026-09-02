@@ -4,7 +4,7 @@
     <h2 class="fw-bold text-main mb-0 d-flex align-items-center"><i class="bi bi-calendar-grid-31 text-primary me-2"></i> View Timetable</h2>
     <div class="d-flex flex-wrap gap-2">
         {% if session.get('admin_id') %}
-        <a href="/export_timetables" class="btn btn-success fw-bold"><i class="bi bi-file-earmark-excel me-1"></i> Export All to Excel</a>
+        <a href="/export_timetables" class="btn btn-success fw-bold" data-turbo="false"><i class="bi bi-file-earmark-excel me-1"></i> Export All to Excel</a>
         <a href="/admin_dash" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
         {% endif %}
     </div>
