@@ -9,16 +9,28 @@ from datetime import datetime, timedelta
 from routes.blueprint import main_bp
 from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
+def redirect_if_authenticated():
+    if 'admin_id' in session:
+        return redirect(url_for('main.admin_dash'))
+    if 'teacher_id' in session:
+        return redirect(url_for('main.teacher_dash'))
+    if 'student_id' in session:
+        return redirect(url_for('main.student_dash'))
+    return None
+
 @main_bp.route('/')
 def home():
+    if red := redirect_if_authenticated(): return red
     return render_template('main_site/landing.html')
 
 @main_bp.route('/login')
 def login_page():
+    if red := redirect_if_authenticated(): return red
     return render_template('auth/auth.html')
 
 @main_bp.route('/register_institute', methods=['GET', 'POST'])
 def register_institute():
+    if red := redirect_if_authenticated(): return red
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         email = request.form.get('email', '').strip()
@@ -55,6 +67,7 @@ def register_institute():
 
 @main_bp.route('/verify_reg_otp', methods=['GET', 'POST'])
 def verify_reg_otp():
+    if red := redirect_if_authenticated(): return red
     if 'reg_data' not in session or 'reg_otp' not in session:
         flash('Session expired. Please register again.', 'danger')
         return redirect(url_for('main.login_page'))

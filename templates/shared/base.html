@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoTime - Smart Timetable System</title>
-    <!-- Theme Script (runs early to prevent flicker) -->
+    <title>{{ title if title else 'AutoTime Dashboard' }}</title>
+    <!-- Theme & Sidebar Script (runs early to prevent flicker) -->
     <script>
         (function() {
             const savedTheme = localStorage.getItem('autotime_theme') || 'light';
             document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            if (localStorage.getItem('sidebar_collapsed') === 'true') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
         })();
     </script>
     <!-- Bootstrap 5 CSS -->
@@ -45,6 +48,91 @@
             });
         }
     </script>
+    <!-- Custom UI Styles -->
+    <style>
+        /* Sidebar Styling */
+        .saas-sidebar {
+            width: 250px; 
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        .saas-sidebar.collapsed, html.sidebar-collapsed .saas-sidebar {
+            margin-left: -250px;
+        }
+        /* Mobile defaults to collapsed by default through offcanvas behavior, 
+           so html.sidebar-collapsed only affects desktop */
+        .nav-link.sidebar-link {
+            color: var(--text-muted) !important;
+            transition: all 0.2s ease;
+        }
+        .nav-link.sidebar-link:hover {
+            color: var(--text-main) !important;
+            background-color: rgba(120, 120, 120, 0.1);
+        }
+        .nav-link.sidebar-link.active {
+            color: #ffffff !important;
+            background-color: var(--primary) !important;
+            font-weight: 600;
+        }
+        /* Prevent iOS auto-zoom on inputs */
+        input[type="text"], input[type="password"], input[type="email"], input[type="number"], select, textarea {
+            font-size: 16px !important;
+        }
+        .bg-light-custom {
+            background-color: #f8f9fa;
+        }
+        
+        /* Modern Abstract Python/Scheduling Background */
+        .auth-bg {
+            background-color: #f8fafc;
+            background-image: 
+                linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Gradient overlay */
+        .auth-bg::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        /* Animated Python-esque glowing nodes simulating a search algorithm */
+        .auth-bg::after {
+            content: '';
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        @media (prefers-reduced-motion: no-preference) {
+            .auth-bg::after {
+                animation: algoSearch 15s infinite alternate ease-in-out;
+            }
+            @keyframes algoSearch {
+                0% { transform: translate(10vw, 10vh) scale(1); }
+                25% { transform: translate(50vw, 20vh) scale(1.5); }
+                50% { transform: translate(80vw, 60vh) scale(1); }
+                75% { transform: translate(30vw, 80vh) scale(1.8); }
+                100% { transform: translate(60vw, 10vh) scale(1.2); }
+            }
+        }
+        
+        .auth-bg > div {
+            position: relative;
+            z-index: 1;
+        }
+    </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
 
@@ -53,96 +141,314 @@
         <div class="loader-spinner"></div>
         <h5 class="fw-bold text-muted">Processing...</h5>
     </div>
-
-    <!-- Top Navigation Bar -->
-    <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm d-print-none">
-        <div class="container-fluid px-2 px-md-4">
-            <a class="navbar-brand fw-bold" href="/" data-turbo="false"><i class="bi bi-clock-history me-2"></i>AutoTime</a>
-            <div class="d-flex align-items-center gap-2">
-                <div class="theme-switch-wrapper me-2" title="Toggle Theme">
-                    <label class="theme-switch" for="globalThemeToggle">
-                        <input type="checkbox" id="globalThemeToggle" />
-                        <div class="theme-slider">
-                            <i class="bi bi-sun-fill"></i>
-                            <i class="bi bi-moon-stars-fill"></i>
-                        </div>
-                    </label>
-                </div>
-                {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
+    
+    <div class="d-flex flex-grow-1">
+        {% if not is_public_page %}
+        <!-- SaaS Sidebar (Admin Only) -->
+        {% if session.get('admin_id') %}
+        <div id="desktopSidebar" class="bg-surface p-3 d-none d-md-flex flex-column flex-shrink-0 shadow-sm saas-sidebar border-end">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-main text-decoration-none">
+                <i class="bi bi-clock-history fs-4 me-2 text-primary"></i>
+                <span class="fs-5 fw-bold">AutoTime Admin</span>
+            </a>
+            <hr class="border-secondary">
+            <ul class="nav nav-pills flex-column mb-auto gap-1">
+                <li class="nav-item">
+                    <a href="/admin_dash" class="nav-link sidebar-link {% if request.path == '/admin_dash' %}active{% endif %}">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Academic</small></li>
+                <li>
+                    <a href="/manage_courses" class="nav-link sidebar-link {% if 'course' in request.path %}active{% endif %}">
+                        <i class="bi bi-journal-bookmark me-2"></i> Classes
+                    </a>
+                </li>
+                <li>
+                    <a href="/manage_subjects" class="nav-link sidebar-link {% if 'subject' in request.path %}active{% endif %}">
+                        <i class="bi bi-book me-2"></i> Subjects
+                    </a>
+                </li>
+                <li>
+                    <a href="/manage_teachers" class="nav-link sidebar-link {% if 'teacher' in request.path %}active{% endif %}">
+                        <i class="bi bi-person-badge me-2"></i> Teachers
+                    </a>
+                </li>
                 
-                {% if session.get('admin_id') %}
-                <a href="/notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
-                    <i class="bi bi-bell-fill"></i>
-                </a>
-                {% elif session.get('teacher_id') %}
-                <a href="/teacher_notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
-                    <i class="bi bi-bell-fill"></i>
-                </a>
-                {% endif %}
+                <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Timetable</small></li>
+                <li>
+                    <a href="/generate_timetable" class="nav-link sidebar-link {% if 'generate' in request.path %}active{% endif %}">
+                        <i class="bi bi-magic me-2"></i> Generate
+                    </a>
+                </li>
+                <li>
+                    <a href="/view_timetable" class="nav-link sidebar-link {% if 'view' in request.path %}active{% endif %}">
+                        <i class="bi bi-calendar-grid-31 me-2"></i> View
+                    </a>
+                </li>
+                <li>
+                    <a href="/generation_history" class="nav-link sidebar-link {% if 'history' in request.path %}active{% endif %}">
+                        <i class="bi bi-clock-history me-2"></i> History
+                    </a>
+                </li>
                 
-                <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
-                    <i class="bi bi-gear-fill"></i>
-                </a>
-                <a href="{{ url_for('main.logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm" data-turbo="false">
-                    <i class="bi bi-box-arrow-right me-1"></i> Logout
-                </a>
-                {% endif %}
-            </div>
+                <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
+                <li>
+                    <a href="/college_settings" class="nav-link sidebar-link {% if request.path == '/college_settings' %}active{% endif %}">
+                        <i class="bi bi-building me-2"></i> Institute Config
+                    </a>
+                </li>
+                <li>
+                    <a href="/settings" class="nav-link sidebar-link {% if request.path == '/settings' %}active{% endif %}">
+                        <i class="bi bi-gear me-2"></i> Settings
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout" data-turbo="false" class="nav-link sidebar-link">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
+        {% elif session.get('teacher_id') %}
+        <!-- Teacher Sidebar -->
+        <div id="desktopSidebar" class="bg-surface p-3 d-none d-md-flex flex-column flex-shrink-0 shadow-sm saas-sidebar border-end">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-main text-decoration-none">
+                <i class="bi bi-clock-history fs-4 me-2 text-primary"></i>
+                <span class="fs-5 fw-bold">AutoTime Teacher</span>
+            </a>
+            <hr class="border-secondary">
+            <ul class="nav nav-pills flex-column mb-auto gap-1">
+                <li>
+                    <a href="/teacher_dash" class="nav-link sidebar-link {% if request.path == '/teacher_dash' %}active{% endif %}">
+                        <i class="bi bi-calendar3 me-2"></i> My Schedule
+                    </a>
+                </li>
+                <li>
+                    <a href="/teacher_view_class" class="nav-link sidebar-link {% if request.path == '/teacher_view_class' %}active{% endif %}">
+                        <i class="bi bi-people me-2"></i> Class Timetables
+                    </a>
+                </li>
+                <li>
+                    <a href="/apply_leave" class="nav-link sidebar-link {% if request.path == '/apply_leave' %}active{% endif %}">
+                        <i class="bi bi-envelope-paper me-2"></i> Leave Requests
+                    </a>
+                </li>
+                <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
+                <li>
+                    <a href="/settings" class="nav-link sidebar-link {% if request.path == '/settings' %}active{% endif %}">
+                        <i class="bi bi-gear me-2"></i> Settings
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout" data-turbo="false" class="nav-link sidebar-link">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% elif session.get('student_id') %}
+        <!-- Student Sidebar -->
+        <div id="desktopSidebar" class="bg-surface p-3 d-none d-md-flex flex-column flex-shrink-0 shadow-sm saas-sidebar border-end">
+            <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-main text-decoration-none">
+                <i class="bi bi-clock-history fs-4 me-2 text-primary"></i>
+                <span class="fs-5 fw-bold">AutoTime Student</span>
+            </a>
+            <hr class="border-secondary">
+            <ul class="nav nav-pills flex-column mb-auto gap-1">
+                <li>
+                    <a href="/student_dash" class="nav-link sidebar-link {% if request.path == '/student_dash' %}active{% endif %}">
+                        <i class="bi bi-calendar3 me-2"></i> My Class Schedule
+                    </a>
+                </li>
+                <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
+                <li>
+                    <a href="/settings" class="nav-link sidebar-link {% if request.path == '/settings' %}active{% endif %}">
+                        <i class="bi bi-gear me-2"></i> Settings
+                    </a>
+                </li>
+                <li>
+                    <a href="/logout" data-turbo="false" class="nav-link sidebar-link">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
+        {% endif %}
 
-    <!-- Main Content Area -->
-    <div class="container-fluid px-2 px-md-4 fade-in flex-grow-1 mb-5">
-        
-        <!-- Toast Notifications Container -->
-        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        {% set toast_class = 'text-bg-primary' %}
-                        {% set icon = 'bi-info-circle-fill' %}
-                        {% if category == 'success' %}
-                            {% set toast_class = 'text-bg-success' %}
-                            {% set icon = 'bi-check-circle-fill' %}
-                        {% elif category == 'danger' %}
-                            {% set toast_class = 'text-bg-danger' %}
-                            {% set icon = 'bi-x-circle-fill' %}
-                        {% elif category == 'warning' %}
-                            {% set toast_class = 'text-bg-warning' %}
-                            {% set icon = 'bi-exclamation-triangle-fill' %}
-                        {% elif category == 'info' %}
-                            {% set toast_class = 'text-bg-info' %}
-                            {% set icon = 'bi-info-circle-fill' %}
+        <!-- Main Wrapper -->
+        <div class="flex-grow-1 d-flex flex-column min-w-0" style="transition: all 0.3s ease;">
+            {% if not is_public_page %}
+            <!-- Top Navigation Bar -->
+            <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm d-print-none">
+                <div class="container-fluid px-2 px-md-4">
+                    {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
+                    <!-- Desktop Sidebar Toggle -->
+                    <button class="btn btn-light d-none d-md-inline-block me-3 shadow-sm border" id="sidebarToggleBtn" type="button" title="Toggle Sidebar">
+                        <i class="bi bi-layout-sidebar"></i>
+                    </button>
+                    {% endif %}
+                    
+                    <a class="navbar-brand fw-bold d-md-none" href="/" data-turbo="false"><i class="bi bi-clock-history me-2"></i>AutoTime</a>
+                    <div class="d-none d-md-block"></div> <!-- Spacer -->
+                    
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <div class="theme-switch-wrapper me-2" title="Toggle Theme">
+                            <label class="theme-switch" for="globalThemeToggle">
+                                <input type="checkbox" id="globalThemeToggle" />
+                                <div class="theme-slider">
+                                    <i class="bi bi-sun-fill"></i>
+                                    <i class="bi bi-moon-stars-fill"></i>
+                                </div>
+                            </label>
+                        </div>
+                        {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
+                        
+                        {% if session.get('admin_id') %}
+                        <a href="/notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                            <i class="bi bi-bell-fill"></i>
+                        </a>
+                        <!-- Mobile Drawer Toggle -->
+                        <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        {% elif session.get('teacher_id') %}
+                        <a href="/teacher_notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                            <i class="bi bi-bell-fill"></i>
+                        </a>
+                        <!-- Mobile Drawer Toggle -->
+                        <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
+                        {% elif session.get('student_id') %}
+                        <!-- Mobile Drawer Toggle -->
+                        <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
+                            <i class="bi bi-list"></i>
+                        </button>
                         {% endif %}
                         
-                        <div class="toast align-items-center {{ toast_class }} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
-                            <div class="d-flex">
-                                <div class="toast-body d-flex align-items-center fw-medium">
-                                    <i class="bi {{ icon }} me-2 fs-5"></i>
-                                    {{ message }}
+                        {% endif %}
+                    </div>
+                </div>
+            </nav>
+            {% endif %}
+
+            <!-- Main Content Area -->
+            <div class="container-fluid px-2 px-md-4 fade-in flex-grow-1 mb-5">
+                
+                <!-- Toast Notifications Container -->
+                <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                {% set toast_class = 'text-bg-primary' %}
+                                {% set icon = 'bi-info-circle-fill' %}
+                                {% if category == 'success' %}
+                                    {% set toast_class = 'text-bg-success' %}
+                                    {% set icon = 'bi-check-circle-fill' %}
+                                {% elif category == 'danger' %}
+                                    {% set toast_class = 'text-bg-danger' %}
+                                    {% set icon = 'bi-x-circle-fill' %}
+                                {% elif category == 'warning' %}
+                                    {% set toast_class = 'text-bg-warning' %}
+                                    {% set icon = 'bi-exclamation-triangle-fill' %}
+                                {% elif category == 'info' %}
+                                    {% set toast_class = 'text-bg-info' %}
+                                    {% set icon = 'bi-info-circle-fill' %}
+                                {% endif %}
+                                
+                                <div class="toast align-items-center {{ toast_class }} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+                                    <div class="d-flex">
+                                        <div class="toast-body d-flex align-items-center fw-medium">
+                                            <i class="bi {{ icon }} me-2 fs-5"></i>
+                                            {{ message }}
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                                    </div>
                                 </div>
-                                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
 
-        {% block content %}
-        <!-- Yahan par dusre pages ka content automatically aayega -->
-        {% endblock %}
-        
+                {% block content %}
+                <!-- Yahan par dusre pages ka content automatically aayega -->
+                {% endblock %}
+                
+            </div>
+
+            <!-- Global Footer -->
+            <footer class="bg-body-tertiary border-top py-3 mt-auto shadow-sm d-print-none">
+                <div class="container-fluid px-4 text-center">
+                    <p class="mb-0 text-muted small fw-semibold">
+                        &copy; <script>document.write(new Date().getFullYear())</script> AutoTime. All rights reserved.
+                    </p>
+                </div>
+            </footer>
+        </div>
     </div>
-
-    <!-- Global Footer -->
-    <footer class="bg-body-tertiary border-top py-3 mt-auto shadow-sm d-print-none">
-        <div class="container-fluid px-4 text-center">
-            <p class="mb-0 text-muted small fw-semibold">
-                &copy; <script>document.write(new Date().getFullYear())</script> AutoTime. All rights reserved.
-            </p>
-        </div>
-    </footer>
+    
+    {% if not is_public_page %}
+    <!-- Mobile Offcanvas Sidebar -->
+    {% if session.get('admin_id') %}
+    <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold text-main" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Admin</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="nav nav-pills flex-column mb-auto gap-1">
+            <li class="nav-item"><a href="/admin_dash" class="nav-link sidebar-link"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+            <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Academic</small></li>
+            <li><a href="/manage_courses" class="nav-link sidebar-link"><i class="bi bi-journal-bookmark me-2"></i> Classes</a></li>
+            <li><a href="/manage_subjects" class="nav-link sidebar-link"><i class="bi bi-book me-2"></i> Subjects</a></li>
+            <li><a href="/manage_teachers" class="nav-link sidebar-link"><i class="bi bi-person-badge me-2"></i> Teachers</a></li>
+            <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Timetable</small></li>
+            <li><a href="/generate_timetable" class="nav-link sidebar-link"><i class="bi bi-magic me-2"></i> Generate</a></li>
+            <li><a href="/view_timetable" class="nav-link sidebar-link"><i class="bi bi-calendar-grid-31 me-2"></i> View</a></li>
+            <li><a href="/generation_history" class="nav-link sidebar-link"><i class="bi bi-clock-history me-2"></i> History</a></li>
+            <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
+            <li><a href="/college_settings" class="nav-link sidebar-link"><i class="bi bi-building me-2"></i> Institute Config</a></li>
+            <li><a href="/settings" class="nav-link sidebar-link"><i class="bi bi-gear me-2"></i> Settings</a></li>
+            <li><a href="/logout" data-turbo="false" class="nav-link sidebar-link"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+        </ul>
+      </div>
+    </div>
+    {% elif session.get('teacher_id') %}
+    <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold text-main" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Teacher</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="nav nav-pills flex-column mb-auto gap-1">
+            <li><a href="/teacher_dash" class="nav-link sidebar-link"><i class="bi bi-calendar3 me-2"></i> My Schedule</a></li>
+            <li><a href="/teacher_view_class" class="nav-link sidebar-link"><i class="bi bi-people me-2"></i> Class Timetables</a></li>
+            <li><a href="/apply_leave" class="nav-link sidebar-link"><i class="bi bi-envelope-paper me-2"></i> Leave Requests</a></li>
+            <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
+            <li><a href="/settings" class="nav-link sidebar-link"><i class="bi bi-gear me-2"></i> Settings</a></li>
+            <li><a href="/logout" data-turbo="false" class="nav-link sidebar-link"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+        </ul>
+      </div>
+    </div>
+    {% elif session.get('student_id') %}
+    <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold text-main" id="mobileSidebarLabel"><i class="bi bi-clock-history me-2 text-primary"></i>AutoTime Student</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+      </div>
+      <div class="offcanvas-body">
+        <ul class="nav nav-pills flex-column mb-auto gap-1">
+            <li><a href="/student_dash" class="nav-link sidebar-link"><i class="bi bi-calendar3 me-2"></i> My Class Schedule</a></li>
+            <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
+            <li><a href="/settings" class="nav-link sidebar-link"><i class="bi bi-gear me-2"></i> Settings</a></li>
+            <li><a href="/logout" data-turbo="false" class="nav-link sidebar-link"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
 
     <!-- Modals Block -->
     {% block modals %}{% endblock %}
@@ -151,6 +457,30 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Global UI Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('sidebarToggleBtn');
+            const sidebar = document.getElementById('desktopSidebar');
+            if(toggleBtn && sidebar) {
+                // Ensure classList matches the html class initialized early
+                if (document.documentElement.classList.contains('sidebar-collapsed')) {
+                    sidebar.classList.add('collapsed');
+                }
+                toggleBtn.addEventListener('click', () => {
+                    sidebar.classList.toggle('collapsed');
+                    
+                    const isCollapsed = sidebar.classList.contains('collapsed');
+                    localStorage.setItem('sidebar_collapsed', isCollapsed);
+                    
+                    if (isCollapsed) {
+                        document.documentElement.classList.add('sidebar-collapsed');
+                    } else {
+                        document.documentElement.classList.remove('sidebar-collapsed');
+                    }
+                });
+            }
+        });
+    </script>
     <script src="{{ url_for('static', filename='js/main.js') }}" data-turbo-track="reload" data-turbo-eval="false"></script>
     {% block scripts %}{% endblock %}
 </body>

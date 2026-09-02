@@ -1,0 +1,91 @@
+{% extends 'shared/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold text-main mb-0">Generation History</h2>
+    <div>
+        {% if history|length > 0 %}
+        <button type="button" class="btn btn-outline-danger me-2" data-bs-toggle="modal" data-bs-target="#clearHistoryModal">
+            <i class="bi bi-trash3 me-1"></i> Clear History
+        </button>
+        {% endif %}
+        <a href="/admin_dash" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Date & Time</th>
+                        <th>Status</th>
+                        <th>Sessions</th>
+                        <th>Gen Time</th>
+                        <th>Opt Time</th>
+                        <th>Gap Score</th>
+                        <th class="pe-4">Reason / Bottleneck</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for h in history %}
+                    <tr>
+                        <td class="ps-4 text-muted">{{ h.created_at | ist_datetime }}</td>
+                        <td>
+                            {% if h.status == 'SUCCESS' %}
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i> Success</span>
+                            {% else %}
+                                <span class="badge bg-danger bg-opacity-25 text-danger border border-danger px-2 py-1"><i class="bi bi-x-circle-fill me-1"></i> Failed</span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-medium">{{ h.sessions_count }}</td>
+                        <td>{% if h.generation_time %}{{ "%.2f"|format(h.generation_time) }}s{% else %}-{% endif %}</td>
+                        <td>{% if h.optimization_time %}{{ "%.2f"|format(h.optimization_time) }}s{% else %}-{% endif %}</td>
+                        <td>{% if h.gap_score is not none %}{{ h.gap_score }}{% else %}-{% endif %}</td>
+                        <td class="pe-4 text-muted small">
+                            {% if h.status == 'FAILED' %}
+                                <span class="text-danger fw-bold">{{ h.primary_failure_reason or 'Unknown error' }}</span>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-clock-history fs-1 d-block mb-3"></i>
+                            <h5 class="fw-bold">No generation history found.</h5>
+                            <p>Generate a timetable to see history records here.</p>
+                            <a href="/generate_timetable" class="btn btn-outline-primary mt-2">Go to Generate</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Clear History Modal -->
+<div class="modal fade" id="clearHistoryModal" tabindex="-1" aria-labelledby="clearHistoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom-0 bg-danger text-white">
+        <h5 class="modal-title fw-bold" id="clearHistoryModalLabel"><i class="bi bi-exclamation-triangle-fill me-2"></i> Clear History?</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body py-4">
+        <p class="mb-0 fs-5 text-dark">This will permanently remove generation history records for this institute. The current timetable will <strong>not</strong> be deleted.</p>
+      </div>
+      <div class="modal-footer border-top-0 bg-light">
+        <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
+        <form action="/clear_history" method="POST" class="m-0">
+            <!-- Reuse existing CSRF token mechanism if project has Flask-WTF or just submit POST -->
+            <button type="submit" class="btn btn-danger fw-bold px-4">Clear History</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -9,61 +9,9 @@
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- LEFT COLUMN: LEAVE & COURSE VIEWER -->
-    <div class="col-md-3">
-        
-        <!-- Auto-Proxy Leave Box -->
-        <div class="card border-0 border-top border-warning border-4 shadow-sm mb-4">
-            <div class="card-body p-4 bg-light-custom">
-                <h5 class="fw-bold mb-3 d-flex align-items-center"><i class="bi bi-calendar-x text-warning me-2"></i> Apply for Leave</h5>
-                <p class="small text-muted mb-3">Our Auto-Proxy system will automatically assign your lectures to free teachers.</p>
-                <form action="/apply_leave" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Select Day</label>
-                        <select name="leave_day" class="form-select bg-white" required>
-                            <option value="" selected disabled>Select Day...</option>
-                            {% for day in days %}
-                                <option value="{{ day }}">{{ day }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Specific Slot <span class="text-muted fw-normal">(Optional)</span></label>
-                        <select name="leave_time" class="form-select bg-white">
-                            <option value="ALL" selected>All Day</option>
-                            {% for slot in time_slots %}
-                                <option value="{{ slot[0] }}">{{ slot[0] }} - {{ slot[1] }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100 fw-bold" onclick="return confirm('Are you sure you want to apply for leave? Auto-Proxy will modify the timetable.');">
-                        <i class="bi bi-send me-1"></i> Apply & Trigger Proxy
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Read-Only Course Viewer -->
-        <div class="card border-0 border-top border-primary border-4 shadow-sm mb-4">
-            <div class="card-body p-4 bg-light-custom">
-                <h5 class="fw-bold mb-3 d-flex align-items-center"><i class="bi bi-building text-primary me-2"></i> Course Viewer</h5>
-                <p class="small text-muted mb-3">Check if a specific class is free.</p>
-                <form action="/teacher_view_class" method="GET">
-                    <select name="class_id" class="form-select mb-3 bg-white" required>
-                        <option value="" selected disabled>Select Class...</option>
-                        {% for course in courses %}
-                            <option value="{{ course.class_id }}">{{ course.class_id }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="bi bi-eye me-1"></i> View Timetable</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- RIGHT COLUMN: MY SCHEDULE GRID -->
-    <div class="col-md-9 mb-4">
+<div class="row justify-content-center g-4">
+    <!-- FULL WIDTH MY SCHEDULE GRID -->
+    <div class="col-12 mb-4">
         <div class="card border-0 border-top border-success border-4 shadow-sm h-100">
             <div class="card-header bg-white pt-4 pb-3 d-flex justify-content-between align-items-center border-0">
                 <h5 class="fw-bold text-success mb-0 d-flex align-items-center"><i class="bi bi-calendar-week me-2"></i> My Schedule</h5>
