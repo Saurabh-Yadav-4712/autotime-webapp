@@ -12,7 +12,10 @@
                 <label class="form-label">Institute Code</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-hash"></i></span>
-                    <input type="text" name="inst_code" class="form-control" required placeholder="e.g. INS-XXXXX">
+                    <input type="text" name="inst_code" id="inst_code" class="form-control" required placeholder="e.g. INS-XXXXX">
+                    <span class="input-group-text bg-white d-none" id="inst_code_spinner">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    </span>
                 </div>
             </div>
             <div class="mb-3">
@@ -23,10 +26,12 @@
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Class ID (e.g., FYCS)</label>
+                <label class="form-label">Select Course / Class</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-journal-bookmark"></i></span>
-                    <input type="text" name="class_id" class="form-control text-uppercase" required placeholder="FYCS">
+                    <select name="class_id" id="class_id" class="form-select" required disabled>
+                        <option value="" disabled selected>Enter Institute Code first...</option>
+                    </select>
                 </div>
             </div>
             <div class="mb-3">
@@ -50,8 +55,52 @@
             <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Continue to Verification</button>
         </form>
         <div class="text-center">
-            <p class="small text-muted mb-0">Already registered? <a href="/" class="text-primary text-decoration-none fw-bold">Login Here</a></p>
+            <p class="small text-muted mb-0">Already registered? <a href="/login" class="text-primary text-decoration-none fw-bold">Login Here</a></p>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block modals %}
+<script>
+document.addEventListener('turbo:load', function() {
+    const instCodeInput = document.getElementById('inst_code');
+    const classSelect = document.getElementById('class_id');
+    const spinner = document.getElementById('inst_code_spinner');
+    
+    if (!instCodeInput || !classSelect) return;
+    
+    instCodeInput.addEventListener('blur', function() {
+        const code = this.value.trim();
+        if (code.length < 3) return;
+        
+        spinner.classList.remove('d-none');
+        classSelect.innerHTML = '<option value="" disabled selected>Loading...</option>';
+        classSelect.disabled = true;
+        
+        fetch('/api/get_classes/' + encodeURIComponent(code))
+            .then(res => res.json())
+            .then(data => {
+                classSelect.innerHTML = '<option value="" disabled selected>Select your class...</option>';
+                if (data.classes && data.classes.length > 0) {
+                    data.classes.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c;
+                        opt.textContent = c;
+                        classSelect.appendChild(opt);
+                    });
+                    classSelect.disabled = false;
+                } else {
+                    classSelect.innerHTML = '<option value="" disabled selected>No classes found for this code.</option>';
+                }
+            })
+            .catch(err => {
+                classSelect.innerHTML = '<option value="" disabled selected>Error fetching classes.</option>';
+            })
+            .finally(() => {
+                spinner.classList.add('d-none');
+            });
+    });
+});
+</script>
 {% endblock %}

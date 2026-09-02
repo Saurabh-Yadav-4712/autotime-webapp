@@ -2,17 +2,40 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
     <h2 class="fw-bold text-main mb-0">Admin Dashboard</h2>
-    <div class="d-flex gap-2">
-        <form action="/generate_timetable" method="POST" class="m-0">
-            <button type="submit" class="btn btn-warning shadow-sm" 
-                    {% if c_count == 0 or t_count == 0 or s_count == 0 %}disabled{% endif %} 
-                    onclick="return confirm('This will overwrite any existing timetable. Proceed?');">
-                <i class="bi bi-magic me-1"></i> <span class="fw-bold">Generate Timetable</span>
+    <div class="d-flex align-items-center gap-2">
+        <!-- Desktop Buttons -->
+        <div class="d-none d-md-flex gap-2">
+            <form action="/generate_timetable" method="POST" class="m-0">
+                <button type="submit" class="btn btn-warning shadow-sm" 
+                        {% if c_count == 0 or t_count == 0 or s_count == 0 %}disabled{% endif %} 
+                        onclick="return confirm('This will overwrite any existing timetable. Proceed?');">
+                    <i class="bi bi-magic me-1"></i> <span class="fw-bold">Generate Timetable</span>
+                </button>
+            </form>
+            <a href="/college_settings" class="btn btn-outline-secondary"><i class="bi bi-sliders me-1"></i> Institute Config</a>
+            <a href="/view_timetable" class="btn btn-outline-primary"><i class="bi bi-calendar-grid-31 me-1"></i> View Timetable</a>
+        </div>
+        
+        <!-- Mobile Dropdown -->
+        <div class="dropdown d-md-none">
+            <button class="btn btn-primary dropdown-toggle shadow-sm" type="button" id="adminActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-lightning-charge me-1"></i> Actions
             </button>
-        </form>
-        <a href="/college_settings" class="btn btn-outline-secondary"><i class="bi bi-gear me-1"></i> Settings</a>
-        <a href="/view_timetable" class="btn btn-outline-primary"><i class="bi bi-calendar-grid-31 me-1"></i> View Timetable</a>
-        <a href="/change_password" class="btn btn-outline-secondary"><i class="bi bi-key me-1"></i> Change Password</a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="adminActionsDropdown">
+                <li>
+                    <form action="/generate_timetable" method="POST" class="m-0 px-3 py-1">
+                        <button type="submit" class="btn btn-warning w-100 shadow-sm" 
+                                {% if c_count == 0 or t_count == 0 or s_count == 0 %}disabled{% endif %} 
+                                onclick="return confirm('This will overwrite any existing timetable. Proceed?');">
+                            <i class="bi bi-magic me-1"></i> Generate
+                        </button>
+                    </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="/view_timetable"><i class="bi bi-calendar-grid-31 me-2 text-primary"></i>View Timetable</a></li>
+                <li><a class="dropdown-item" href="/college_settings"><i class="bi bi-sliders me-2 text-secondary"></i>Institute Config</a></li>
+            </ul>
+        </div>
     </div>
 </div>
 
@@ -147,7 +170,7 @@
 {% if syllabus_tracking %}
 <!-- Syllabus Tracking Analytics -->
 <div class="card border-0 mb-4 p-4 shadow-sm">
-    <div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
         <h5 class="fw-bold text-success mb-0"><i class="bi bi-graph-up-arrow me-2"></i>Syllabus Completion Tracking</h5>
         <span class="badge bg-success bg-opacity-25 text-success border border-success fs-6">Semester Target: {{ weeks_per_semester }} Weeks</span>
     </div>

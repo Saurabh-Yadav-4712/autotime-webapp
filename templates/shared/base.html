@@ -1,9 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AutoTime - Smart Timetable System</title>
+    <!-- Theme Script (runs early to prevent flicker) -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('autotime_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -13,25 +20,63 @@
     <!-- Turbo for SPA -->
     <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- Password Visibility Toggle Logic -->
+    <script>
+        if (!window.passwordToggleInitialized) {
+            window.passwordToggleInitialized = true;
+            document.addEventListener('click', function(e) {
+                let btn = e.target.closest('.toggle-password');
+                if (!btn) return;
+                
+                let targetId = btn.getAttribute('data-target');
+                let input = document.getElementById(targetId);
+                
+                if (input) {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        btn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+                    } else {
+                        input.type = 'password';
+                        btn.innerHTML = '<i class="bi bi-eye"></i>';
+                    }
+                }
+            });
+        }
+    </script>
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- Loader Removed as requested -->
 
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm">
-        <div class="container-fluid px-4">
+        <div class="container-fluid px-2 px-md-4">
             <a class="navbar-brand fw-bold" href="/" data-turbo="false"><i class="bi bi-clock-history me-2"></i>AutoTime</a>
-            {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
-            <div class="d-flex align-items-center">
-                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3" data-turbo="false">
+            <div class="d-flex align-items-center gap-2">
+                <div class="theme-switch-wrapper me-2" title="Toggle Theme">
+                    <label class="theme-switch" for="globalThemeToggle">
+                        <input type="checkbox" id="globalThemeToggle" />
+                        <div class="theme-slider">
+                            <i class="bi bi-sun-fill"></i>
+                            <i class="bi bi-moon-stars-fill"></i>
+                        </div>
+                    </label>
+                </div>
+                {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
+                <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
+                    <i class="bi bi-gear-fill"></i>
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3 shadow-sm" data-turbo="false">
                     <i class="bi bi-box-arrow-right me-1"></i> Logout
                 </a>
+                {% endif %}
             </div>
-            {% endif %}
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <div class="container-fluid px-4 fade-in">
+    <div class="container-fluid px-2 px-md-4 fade-in flex-grow-1 mb-5">
         
         <!-- Yahan Flash Messages (Alerts) aayenge -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -55,36 +100,47 @@
         
     </div>
 
+    <!-- Global Footer -->
+    <footer class="bg-body-tertiary border-top py-3 mt-auto shadow-sm">
+        <div class="container-fluid px-4 text-center">
+            <p class="mb-0 text-muted small fw-semibold">
+                &copy; <script>document.write(new Date().getFullYear())</script> AutoTime. All rights reserved.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Modals Block -->
+    {% block modals %}{% endblock %}
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Global UI Scripts -->
     <script>
-        // Password Visibility Toggle Logic
-        document.addEventListener('turbo:load', initializeUI);
-        document.addEventListener('DOMContentLoaded', initializeUI);
+        // Turbo Drive Configuration
+        Turbo.session.drive = true;
+        
+        // Global Theme Toggle Logic (Event Delegation for Turbo safety)
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'globalThemeToggle') {
+                const newTheme = e.target.checked ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                localStorage.setItem('autotime_theme', newTheme);
+            }
+        });
 
-        function initializeUI() {
-            // Setup password toggles
-            const togglePasswordBtns = document.querySelectorAll('.toggle-password');
-            togglePasswordBtns.forEach(btn => {
-                // Prevent duplicate listeners on re-renders
-                if (btn.dataset.initialized) return;
-                btn.dataset.initialized = "true";
-                
-                btn.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    const input = document.getElementById(targetId);
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        this.innerHTML = '<i class="bi bi-eye-slash"></i>';
-                    } else {
-                        input.type = 'password';
-                        this.innerHTML = '<i class="bi bi-eye"></i>';
-                    }
-                });
-            });
+        function syncThemeToggle() {
+            const savedTheme = localStorage.getItem('autotime_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            
+            const toggleInput = document.getElementById('globalThemeToggle');
+            if (toggleInput) {
+                toggleInput.checked = (savedTheme === 'dark');
+            }
         }
+        
+        document.addEventListener('DOMContentLoaded', syncThemeToggle);
+        document.addEventListener('turbo:load', syncThemeToggle);
     </script>
 </body>
 </html>

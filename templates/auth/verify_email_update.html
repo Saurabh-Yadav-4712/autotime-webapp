@@ -1,0 +1,29 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+    <div class="card p-5 border-0 shadow-lg w-100" style="max-width: 500px;">
+        <div class="text-center mb-4">
+            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                <i class="bi bi-envelope-check fs-2"></i>
+            </div>
+            <h3 class="fw-bold text-main">Verify New Email</h3>
+            <p class="text-muted small">We sent a 6-digit OTP to <strong>{{ session.get('pending_email') }}</strong>. Please enter it below to confirm your email change.</p>
+        </div>
+
+        <form action="/verify_email_update" method="POST">
+            <div class="mb-4">
+                <label class="form-label">OTP Code</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-123"></i></span>
+                    <input type="text" name="otp" class="form-control text-center letter-spacing-custom" required maxlength="6" pattern="\d{6}" placeholder="------">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 mb-3">Verify & Update Email</button>
+        </form>
+        <div class="text-center">
+            <a href="/settings" class="text-muted text-decoration-none small"><i class="bi bi-arrow-left me-1"></i>Cancel</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

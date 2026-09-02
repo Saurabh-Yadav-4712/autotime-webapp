@@ -19,6 +19,96 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+[data-bs-theme="dark"] {
+    --bg-color: #0f172a;     /* Slate 900 */
+    --surface: #1e293b;      /* Slate 800 */
+    --text-main: #f8fafc;    /* Slate 50 */
+    --text-muted: #94a3b8;   /* Slate 400 */
+    --border: #334155;       /* Slate 700 */
+}
+
+/* Force dark mode colors on Bootstrap utilities */
+[data-bs-theme="dark"] .bg-light, 
+[data-bs-theme="dark"] .bg-white {
+    background-color: var(--surface) !important;
+}
+[data-bs-theme="dark"] .text-dark {
+    color: var(--text-main) !important;
+}
+
+[data-bs-theme="dark"] .input-group-text {
+    background-color: var(--surface);
+    color: var(--text-muted);
+}
+
+[data-bs-theme="dark"] .table th {
+    background-color: var(--surface);
+    color: var(--text-muted);
+}
+.text-main { color: var(--text-main); }
+.bg-main { background-color: var(--bg-color); }
+.bg-surface { background-color: var(--surface); }
+
+/* Theme Switch Toggle */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+}
+.theme-switch {
+    display: inline-block;
+    height: 30px;
+    position: relative;
+    width: 60px;
+    margin-bottom: 0;
+}
+.theme-switch input {
+    display: none;
+}
+.theme-slider {
+    background-color: #cbd5e1;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+    border-radius: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5px;
+}
+.theme-slider:before {
+    background-color: #fff;
+    bottom: 4px;
+    content: "";
+    height: 22px;
+    left: 4px;
+    position: absolute;
+    transition: .4s;
+    width: 22px;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+input:checked + .theme-slider {
+    background-color: #4f46e5;
+}
+input:checked + .theme-slider:before {
+    transform: translateX(30px);
+}
+.theme-slider .bi-sun-fill {
+    color: #f59e0b;
+    font-size: 14px;
+    z-index: 1;
+}
+.theme-slider .bi-moon-stars-fill {
+    color: #f8fafc;
+    font-size: 14px;
+    z-index: 1;
+}
+
 body {
     background-color: var(--bg-color);
     color: var(--text-main);

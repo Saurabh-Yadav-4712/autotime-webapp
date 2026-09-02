@@ -79,8 +79,18 @@
                             
                             {% if slot[0] in schedule.get(day, {}) %}
                                 {% set entry = schedule[day][slot[0]] %}
-                                <td class="p-3 {% if entry.is_proxy %}bg-danger bg-opacity-10 border-danger{% else %}bg-primary bg-opacity-10{% endif %}">
-                                    <div class="fw-bold text-dark fs-6 mb-1">{{ entry.subject_name }}</div>
+                                <td class="p-3 position-relative {% if entry.is_proxy %}bg-danger bg-opacity-10 border-danger{% else %}bg-primary bg-opacity-10{% endif %}">
+                                    {% if session.get('admin_id') %}
+                                    <button class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 shadow-sm border border-secondary border-opacity-25" 
+                                            style="padding: 0.1rem 0.3rem;"
+                                            data-bs-toggle="modal" data-bs-target="#editTimetableModal"
+                                            onclick="document.getElementById('edit_entry_id').value='{{ entry.id }}'; 
+                                                     document.getElementById('edit_subject').value='{{ entry.subject_name }}'; 
+                                                     document.getElementById('edit_teacher').value='{{ entry.teacher_name }}';">
+                                        <i class="bi bi-pencil-square text-primary" style="font-size: 0.75rem;"></i>
+                                    </button>
+                                    {% endif %}
+                                    <div class="fw-bold text-dark fs-6 mb-1 mt-2">{{ entry.subject_name }}</div>
                                     <div class="text-muted small fw-semibold">
                                         <i class="bi bi-person-video3 me-1"></i>{{ entry.teacher_name }}
                                     </div>
@@ -97,6 +107,54 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block modals %}
+{% if session.get('admin_id') %}
+<!-- Edit Timetable Slot Modal -->
+<div class="modal fade" id="editTimetableModal" tabindex="-1" aria-labelledby="editTimetableModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold" id="editTimetableModalLabel"><i class="bi bi-pencil-square me-2"></i>Edit Timetable Slot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="/edit_timetable_slot" method="POST">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="entry_id" id="edit_entry_id">
+                    <input type="hidden" name="class_id" value="{{ selected_class }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Subject</label>
+                        <select class="form-select" name="new_subject" id="edit_subject" required>
+                            <option value="" disabled>Select Subject...</option>
+                            {% for sub in subjects %}
+                            <option value="{{ sub.subject_name }}">{{ sub.subject_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Teacher</label>
+                        <select class="form-select" name="new_teacher" id="edit_teacher" required>
+                            <option value="" disabled>Select Teacher...</option>
+                            {% for teacher in teachers %}
+                            <option value="{{ teacher.name }}">{{ teacher.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>If the selected teacher is busy at this time, the system will reject the change.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

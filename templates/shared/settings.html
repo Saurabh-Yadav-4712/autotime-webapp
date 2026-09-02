@@ -1,0 +1,95 @@
+{% extends 'shared/base.html' %}
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            
+            <div class="d-flex align-items-center mb-4">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary rounded-circle shadow-sm me-3" style="width: 40px; height: 40px; padding: 0; line-height: 38px;">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h3 class="fw-bold mb-0">Account Settings</h3>
+            </div>
+
+
+
+            <!-- Profile Overview -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
+                    <h5 class="fw-bold text-success"><i class="bi bi-person-badge me-2"></i>Profile Details</h5>
+                </div>
+                <div class="card-body">
+                    <form action="/settings/update_profile" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Role</label>
+                            <input type="text" class="form-control bg-body-tertiary" value="{{ user_role|title }}" disabled>
+                        </div>
+                        {% if user_info.name %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Full Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ user_info.name }}" required>
+                        </div>
+                        {% endif %}
+                        {% if user_info.email %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ user_info.email }}" required>
+                        </div>
+                        {% endif %}
+                        {% if user_info.institute_code %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted small fw-bold">Institute Code</label>
+                            {% if user_role == 'admin' %}
+                                <input type="text" name="institute_code" class="form-control text-uppercase" value="{{ user_info.institute_code }}" required>
+                            {% else %}
+                                <input type="text" class="form-control bg-body-tertiary" value="{{ user_info.institute_code }}" disabled>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-success w-100 fw-bold mt-2 shadow-sm">Save Profile</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Security Settings -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0">
+                    <h5 class="fw-bold text-danger"><i class="bi bi-shield-lock me-2"></i>Security</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-4">Update your password to keep your account secure.</p>
+                    
+                    <form action="/settings/change_password" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Current Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-key"></i></span>
+                                <input type="password" name="current_password" id="curPwd" class="form-control border-end-0" required>
+                                <span class="input-group-text bg-white toggle-password border-start-0" data-target="curPwd">
+                                    <i class="bi bi-eye"></i>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">New Password</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                                <input type="password" name="new_password" id="newPwd" class="form-control border-end-0" required minlength="6">
+                                <span class="input-group-text bg-white toggle-password border-start-0" data-target="newPwd">
+                                    <i class="bi bi-eye"></i>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-danger w-100 fw-bold mt-2 shadow-sm">Update Password</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}

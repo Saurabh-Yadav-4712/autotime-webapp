@@ -16,11 +16,7 @@ def send_otp_email(to_email, otp, context="Account Verification"):
     smtp_password = os.environ.get('SMTP_PASSWORD')
     
     if not smtp_email or not smtp_password:
-        print("\n" + "="*50)
-        print(f"🔔 [MOCK EMAIL] EMAIL SENT TO: {to_email}")
-        print(f"🔔 CONTEXT: {context}")
-        print(f"🔔 OTP CODE: {otp}")
-        print("="*50 + "\n")
+        print(f"Error: SMTP credentials missing. Cannot send {context} OTP to {to_email}")
         return False
         
     try:
@@ -38,9 +34,14 @@ def send_otp_email(to_email, otp, context="Account Verification"):
         return False
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'super_secret_key_for_autotime'
-db_url = os.environ.get('DATABASE_URL', 'sqlite:///autotime.db')
+
+db_url = os.environ.get('DATABASE_URL')
+if not db_url:
+    raise ValueError("No DATABASE_URL environment variable set. A PostgreSQL database is required.")
+
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -170,6 +171,10 @@ with app.app_context():
 # ==========================================
 @app.route('/')
 def home():
+    return render_template('main_site/landing.html')
+
+@app.route('/login')
+def login_page():
     return render_template('auth/auth.html')
 
 @app.route('/register_institute', methods=['GET', 'POST'])
@@ -210,7 +215,7 @@ def register_institute():
 def verify_reg_otp():
     if 'reg_data' not in session or 'reg_otp' not in session:
         flash('Session expired. Please register again.', 'danger')
-        return redirect(url_for('home'))
+        return redirect(url_for('login_page'))
         
     if request.method == 'POST':
         user_otp = request.form['otp'].strip()
@@ -234,7 +239,7 @@ def verify_reg_otp():
                 session.pop('reg_otp', None)
                 
                 flash(f'College Registered Successfully! Your Institute Code is: {inst_code}', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('login_page'))
                 
             elif data['type'] == 'student':
                 new_student = Student(
@@ -251,7 +256,7 @@ def verify_reg_otp():
                 session.pop('reg_otp', None)
                 
                 flash('Student Registered Successfully! You can now login.', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('login_page'))
                 
         else:
             flash('Invalid OTP. Please try again.', 'danger')
@@ -259,8 +264,11 @@ def verify_reg_otp():
             
     return render_template('auth/verify_reg_otp.html')
 
-@app.route('/login_admin', methods=['POST'])
+@app.route('/login_admin', methods=['GET', 'POST'])
 def login_admin():
+    if request.method == 'GET':
+        return redirect(url_for('login_page'))
+        
     admin = Institute.query.filter_by(admin_username=request.form['username']).first()
     if admin and check_password_hash(admin.admin_password, request.form['password']):
         session['admin_id'] = admin.id
@@ -268,11 +276,11 @@ def login_admin():
         flash(f'Welcome back, {admin.name}!', 'success')
         return redirect(url_for('admin_dash'))
     flash('Invalid Credentials!', 'danger')
-    return redirect(url_for('home'))
+    return redirect(url_for('login_page'))
 
 @app.route('/admin_dash')
 def admin_dash():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     
     # Calculate Analytics
@@ -340,14 +348,14 @@ def admin_dash():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('home'))
+    return redirect(url_for('login_page'))
 
 # ==========================================
 # MANAGEMENT ROUTES
 # ==========================================
 @app.route('/manage_courses', methods=['GET', 'POST'])
 def manage_courses():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -365,7 +373,7 @@ def manage_courses():
 
 @app.route('/manage_teachers', methods=['GET', 'POST'])
 def manage_teachers():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -395,7 +403,7 @@ def manage_teachers():
 
 @app.route('/manage_subjects', methods=['GET', 'POST'])
 def manage_subjects():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -430,7 +438,7 @@ def manage_subjects():
 # ==========================================
 @app.route('/edit_course/<int:id>', methods=['GET', 'POST'])
 def edit_course(id):
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     course = Course.query.get_or_404(id)
     if request.method == 'POST':
         course.class_id = request.form['class_id']
@@ -444,7 +452,7 @@ def edit_course(id):
 
 @app.route('/edit_teacher/<int:id>', methods=['GET', 'POST'])
 def edit_teacher(id):
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     teacher = Teacher.query.get_or_404(id)
     if request.method == 'POST':
         teacher.teacher_id = request.form['teacher_id']
@@ -464,7 +472,7 @@ def edit_teacher(id):
 
 @app.route('/edit_subject/<int:id>', methods=['GET', 'POST'])
 def edit_subject(id):
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     subject = Subject.query.get_or_404(id)
     if request.method == 'POST':
         subject.subject_code = request.form['subject_code']
@@ -493,7 +501,7 @@ def edit_subject(id):
 # ==========================================
 @app.route('/delete/<type>/<int:id>')
 def delete_item(type, id):
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     
     if type == 'course':
         item = Course.query.get_or_404(id)
@@ -519,10 +527,13 @@ def delete_item(type, id):
 # ==========================================
 # ⚡ THE MASTER ALGORITHM (TIMETABLE ENGINE)
 # ==========================================
-@app.route('/generate_timetable', methods=['POST'])
+@app.route('/generate_timetable', methods=['GET', 'POST'])
 def generate_timetable():
+    if request.method == 'GET':
+        return redirect(url_for('admin_dash'))
+        
     if 'admin_id' not in session:
-        return redirect(url_for('home'))
+        return redirect(url_for('login_page'))
         
     inst_code = session['institute_code']
     
@@ -739,7 +750,7 @@ def generate_timetable():
 # ==========================================
 @app.route('/view_timetable')
 def view_timetable():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     
     courses = Course.query.filter_by(institute_code=inst_code).all()
@@ -766,14 +777,62 @@ def view_timetable():
     inst = Institute.query.filter_by(institute_code=inst_code).first()
     inst_name = inst.name if inst else "Institute"
     
-    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name)
+    # Fetch teachers and subjects for manual editing
+    teachers = Teacher.query.filter_by(institute_code=inst_code).all()
+    if selected_class:
+        subjects = Subject.query.filter_by(institute_code=inst_code, class_id=selected_class).all()
+    else:
+        subjects = []
+    
+    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
+
+# ==========================================
+# EDIT TIMETABLE SLOT (MANUAL)
+# ==========================================
+@app.route('/edit_timetable_slot', methods=['POST'])
+def edit_timetable_slot():
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
+    
+    entry_id = request.form.get('entry_id')
+    new_subject = request.form.get('new_subject')
+    new_teacher = request.form.get('new_teacher')
+    
+    entry = Timetable.query.get(entry_id)
+    if not entry:
+        flash('Timetable slot not found.', 'danger')
+        return redirect(url_for('view_timetable', class_id=request.form.get('class_id')))
+        
+    # Check for teacher clash (is the new teacher busy at this exact day and time?)
+    if new_teacher != entry.teacher_name:
+        clash = Timetable.query.filter_by(
+            institute_code=entry.institute_code,
+            day_name=entry.day_name,
+            start_time=entry.start_time,
+            teacher_name=new_teacher
+        ).first()
+        
+        if clash:
+            flash(f'Cannot assign {new_teacher}. They are already teaching Class {clash.class_id} at this time!', 'danger')
+            return redirect(url_for('view_timetable', class_id=entry.class_id))
+            
+    # Update entry
+    entry.subject_name = new_subject
+    entry.teacher_name = new_teacher
+    # Clear proxy flag if any
+    if hasattr(entry, 'is_proxy') and entry.is_proxy:
+        entry.is_proxy = False
+        entry.original_teacher = None
+        
+    db.session.commit()
+    flash('Timetable slot updated successfully!', 'success')
+    return redirect(url_for('view_timetable', class_id=entry.class_id))
 
 # ==========================================
 # ORIGINAL GRID EXCEL EXPORT (OPENPYXL)
 # ==========================================
 @app.route('/export_timetables')
 def export_timetables():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     
     # Fetch Classes
@@ -880,7 +939,7 @@ def export_timetables():
 # ==========================================
 @app.route('/college_settings', methods=['GET', 'POST'])
 def college_settings():
-    if 'admin_id' not in session: return redirect(url_for('home'))
+    if 'admin_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
 
     if request.method == 'POST':
@@ -994,7 +1053,7 @@ def activate_teacher():
             
         if teacher.password:
             flash('Account is already activated! Please login.', 'warning')
-            return redirect(url_for('home'))
+            return redirect(url_for('login_page'))
 
         # 6-Digit OTP Generate karo
         otp = str(random.randint(100000, 999999))
@@ -1042,7 +1101,7 @@ def verify_teacher_otp():
                 session.pop('activation_inst_code', None)
                 
                 flash('Account Activated Successfully! You can now login.', 'success')
-                return redirect(url_for('home'))
+                return redirect(url_for('login_page'))
         else:
             flash('Invalid OTP! Please try again.', 'danger')
             
@@ -1051,8 +1110,11 @@ def verify_teacher_otp():
 # ==========================================
 # TEACHER LOGIN & SECURE DASHBOARD
 # ==========================================
-@app.route('/login_teacher', methods=['POST'])
+@app.route('/login_teacher', methods=['GET', 'POST'])
 def login_teacher():
+    if request.method == 'GET':
+        return redirect(url_for('login_page'))
+        
     teacher = Teacher.query.filter_by(email=request.form['email']).first()
     if teacher and teacher.password and check_password_hash(teacher.password, request.form['password']):
         session['teacher_id'] = teacher.teacher_id
@@ -1063,11 +1125,11 @@ def login_teacher():
         return redirect(url_for('teacher_dash'))
     
     flash('Invalid Email/Password or Account not activated via OTP!', 'danger')
-    return redirect(url_for('home'))
+    return redirect(url_for('login_page'))
 
 @app.route('/teacher_dash')
 def teacher_dash():
-    if 'teacher_id' not in session: return redirect(url_for('home'))
+    if 'teacher_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     t_name = session['teacher_name']
     
@@ -1102,7 +1164,7 @@ def teacher_dash():
 
 @app.route('/teacher_view_class')
 def teacher_view_class():
-    if 'teacher_id' not in session: return redirect(url_for('home'))
+    if 'teacher_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     class_id = request.args.get('class_id')
     
@@ -1135,9 +1197,12 @@ def teacher_view_class():
 # ==========================================
 # THE AUTO-PROXY ALGORITHM 🌟
 # ==========================================
-@app.route('/apply_leave', methods=['POST'])
+@app.route('/apply_leave', methods=['GET', 'POST'])
 def apply_leave():
-    if 'teacher_id' not in session: return redirect(url_for('home'))
+    if request.method == 'GET':
+        return redirect(url_for('teacher_dash'))
+        
+    if 'teacher_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     leave_day = request.form['leave_day']
     leave_time = request.form.get('leave_time', 'ALL')
@@ -1232,6 +1297,12 @@ def apply_leave():
 # ==========================================
 # STUDENT REGISTRATION, LOGIN & DASHBOARD
 # ==========================================
+@app.route('/api/get_classes/<inst_code>')
+def get_classes(inst_code):
+    courses = Course.query.filter_by(institute_code=inst_code).all()
+    classes = [c.class_id for c in courses]
+    return jsonify({'classes': classes})
+
 @app.route('/register_student', methods=['GET', 'POST'])
 def register_student():
     if request.method == 'POST':
@@ -1239,18 +1310,24 @@ def register_student():
         name = request.form['name'].strip()
         email = request.form['email'].strip()
         password = request.form['password'].strip()
-        class_id = request.form['class_id'].strip().upper()
+        class_id = request.form.get('class_id', '').strip().upper()
 
         # Institute check
         institute = Institute.query.filter_by(institute_code=inst_code).first()
         if not institute:
             flash('Invalid Institute Code!', 'danger')
             return redirect(url_for('register_student'))
+            
+        # Class check
+        course = Course.query.filter_by(institute_code=inst_code, class_id=class_id).first()
+        if not course:
+            flash(f'Invalid Class ID for Institute {inst_code}!', 'danger')
+            return redirect(url_for('register_student'))
 
         # Email check
         if Student.query.filter_by(email=email).first():
             flash('Email already registered! Please login.', 'warning')
-            return redirect(url_for('home'))
+            return redirect(url_for('login_page'))
 
         # Generate OTP and store in session
         otp = str(random.randint(100000, 999999))
@@ -1273,8 +1350,11 @@ def register_student():
 
     return render_template('auth/register_student.html')
 
-@app.route('/login_student', methods=['POST'])
+@app.route('/login_student', methods=['GET', 'POST'])
 def login_student():
+    if request.method == 'GET':
+        return redirect(url_for('login_page'))
+        
     student = Student.query.filter_by(email=request.form['email']).first()
     if student and check_password_hash(student.password, request.form['password']):
         session['student_id'] = student.id
@@ -1285,11 +1365,11 @@ def login_student():
         return redirect(url_for('student_dash'))
     
     flash('Invalid Email or Password!', 'danger')
-    return redirect(url_for('home'))
+    return redirect(url_for('login_page'))
 
 @app.route('/student_dash')
 def student_dash():
-    if 'student_id' not in session: return redirect(url_for('home'))
+    if 'student_id' not in session: return redirect(url_for('login_page'))
     inst_code = session['institute_code']
     class_id = session['student_class']
     s_name = session['student_name']
@@ -1350,9 +1430,12 @@ def forgot_password():
         
     return render_template('auth/forgot_password.html')
 
-@app.route('/reset_password', methods=['POST'])
+@app.route('/reset_password', methods=['GET', 'POST'])
 def reset_password():
-    if 'reset_email' not in session:
+    if request.method == 'GET':
+        return redirect(url_for('login_page'))
+        
+    if 'reset_email' not in session or 'reset_role' not in session:
         return redirect(url_for('forgot_password'))
         
     otp_input = request.form.get('otp').strip()
@@ -1381,44 +1464,173 @@ def reset_password():
     session.pop('reset_otp', None)
     
     flash('Password successfully reset! Please login.', 'success')
-    return redirect(url_for('home'))
+    return redirect(url_for('login_page'))
+
+
+
+@app.route('/settings')
+def settings():
+    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
+        flash('Please login to access settings.', 'danger')
+        return redirect(url_for('login_page'))
+        
+    user_role = ""
+    user_info = {}
+    
+    if 'admin_id' in session:
+        user_role = "admin"
+        inst = Institute.query.get(session['admin_id'])
+        user_info = {'name': inst.name, 'email': inst.admin_email, 'institute_code': inst.institute_code}
+    elif 'teacher_id' in session:
+        user_role = "teacher"
+        t = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        user_info = {'name': t.name, 'email': t.email, 'institute_code': t.institute_code}
+    elif 'student_id' in session:
+        user_role = "student"
+        s = Student.query.get(session['student_id'])
+        user_info = {'name': s.name, 'email': s.email, 'institute_code': s.institute_code}
+
+    return render_template('shared/settings.html', user_role=user_role, user_info=user_info)
+
+@app.route('/settings/update_profile', methods=['POST'])
+def update_profile():
+    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
+        return redirect(url_for('login_page'))
+    
+    new_name = request.form.get('name', '').strip()
+    new_email = request.form.get('email', '').strip()
+    
+    if not new_name or not new_email:
+        flash('Name and Email cannot be empty.', 'danger')
+        return redirect(url_for('settings'))
+
+    user = None
+    role = None
+    current_email = None
+
+    if 'admin_id' in session:
+        role = 'admin'
+        user = Institute.query.get(session['admin_id'])
+        current_email = user.admin_email
+        new_code = request.form.get('institute_code', '').strip().upper()
+        if new_code and new_code != user.institute_code:
+            if Institute.query.filter_by(institute_code=new_code).first():
+                flash('Institute Code already taken by another institute.', 'danger')
+                return redirect(url_for('settings'))
+            
+            # Cascade update to related tables
+            old_code = user.institute_code
+            Teacher.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            Student.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            Course.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            Timetable.query.filter_by(institute_code=old_code).update({"institute_code": new_code})
+            # Also subjects are tied to course_id, which is fine, but they don't have institute_code directly.
+            user.institute_code = new_code
+            db.session.commit()
+            
+    elif 'teacher_id' in session:
+        role = 'teacher'
+        user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        current_email = user.email
+    elif 'student_id' in session:
+        role = 'student'
+        user = Student.query.get(session['student_id'])
+        current_email = user.email
+
+    if user:
+        user.name = new_name
+        db.session.commit()
+
+    # If email changed, trigger OTP flow
+    if new_email != current_email:
+        # Check uniqueness across models
+        if Institute.query.filter_by(admin_email=new_email).first() or \
+           Teacher.query.filter_by(email=new_email).first() or \
+           Student.query.filter_by(email=new_email).first():
+            flash('This email is already in use.', 'danger')
+            return redirect(url_for('settings'))
+            
+        otp = str(random.randint(100000, 999999))
+        if send_otp_email(new_email, otp, context="Email Update"):
+            session['pending_email'] = new_email
+            session['email_update_otp'] = otp
+            session['email_update_role'] = role
+            return redirect(url_for('verify_email_update'))
+        else:
+            flash('Failed to send verification email. Please try again.', 'danger')
+            return redirect(url_for('settings'))
+
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/verify_email_update', methods=['GET', 'POST'])
+def verify_email_update():
+    if 'pending_email' not in session or 'email_update_otp' not in session:
+        flash('No pending email update found.', 'warning')
+        return redirect(url_for('settings'))
+        
+    if request.method == 'POST':
+        user_otp = request.form.get('otp', '').strip()
+        if user_otp == str(session['email_update_otp']):
+            new_email = session['pending_email']
+            role = session['email_update_role']
+            
+            if role == 'admin' and 'admin_id' in session:
+                user = Institute.query.get(session['admin_id'])
+                user.admin_email = new_email
+            elif role == 'teacher' and 'teacher_id' in session:
+                user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+                user.email = new_email
+            elif role == 'student' and 'student_id' in session:
+                user = Student.query.get(session['student_id'])
+                user.email = new_email
+                
+            db.session.commit()
+            
+            session.pop('pending_email', None)
+            session.pop('email_update_otp', None)
+            session.pop('email_update_role', None)
+            
+            flash('Email successfully updated!', 'success')
+            return redirect(url_for('settings'))
+        else:
+            flash('Invalid OTP code.', 'danger')
+            
+    return render_template('auth/verify_email_update.html')
+
+
+@app.route('/settings/change_password', methods=['POST'])
+def settings_change_password():
+    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
+        return redirect(url_for('login_page'))
+    
+    old_pass = request.form['current_password']
+    new_pass = request.form['new_password']
+    
+    if 'admin_id' in session:
+        user = Institute.query.get(session['admin_id'])
+        if check_password_hash(user.admin_password, old_pass):
+            user.admin_password = generate_password_hash(new_pass)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('settings'))
+    elif 'teacher_id' in session:
+        user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
+        if user and check_password_hash(user.password, old_pass):
+            user.password = generate_password_hash(new_pass)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('settings'))
+    elif 'student_id' in session:
+        user = Student.query.get(session['student_id'])
+        if user and check_password_hash(user.password, old_pass):
+            user.password = generate_password_hash(new_pass)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('settings'))
+            
+    flash('Incorrect current password.', 'danger')
+    return redirect(url_for('settings'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-@app.route('/change_password', methods=['GET', 'POST'])
-def change_password():
-    if 'admin_id' not in session and 'teacher_id' not in session and 'student_id' not in session:
-        flash('Please login to change password.', 'danger')
-        return redirect(url_for('home'))
-    
-    if request.method == 'POST':
-        old_pass = request.form['old_password']
-        new_pass = request.form['new_password']
-        
-        if 'admin_id' in session:
-            user = Institute.query.get(session['admin_id'])
-            if check_password_hash(user.admin_password, old_pass):
-                user.admin_password = generate_password_hash(new_pass)
-                db.session.commit()
-                flash('Password changed successfully!', 'success')
-                return redirect(url_for('admin_dash'))
-        elif 'teacher_id' in session:
-            user = Teacher.query.filter_by(teacher_id=session['teacher_id']).first()
-            if user and check_password_hash(user.password, old_pass):
-                user.password = generate_password_hash(new_pass)
-                db.session.commit()
-                flash('Password changed successfully!', 'success')
-                return redirect(url_for('teacher_dash'))
-        elif 'student_id' in session:
-            user = Student.query.get(session['student_id'])
-            if user and check_password_hash(user.password, old_pass):
-                user.password = generate_password_hash(new_pass)
-                db.session.commit()
-                flash('Password changed successfully!', 'success')
-                return redirect(url_for('student_dash'))
-                
-        flash('Incorrect old password.', 'danger')
-        return redirect(url_for('change_password'))
-        
-    return render_template('auth/change_password.html')
+    app.run()
