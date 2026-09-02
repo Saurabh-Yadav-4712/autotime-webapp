@@ -159,7 +159,10 @@
         try {
             const response = await fetch('/api/generate_timetable', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json'
+                }
             });
             
             const data = await response.json();

@@ -1,6 +1,5 @@
 import time
-import math
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple
 import collections
 
 from utils.scheduler.core import TimeSlot, SessionOccurrence, GlobalState
@@ -10,6 +9,7 @@ from utils.scheduler.diagnostics import GenerationDiagnostics, ReasonCodes
 class TimetableEngine:
     def __init__(self, time_slots: List[TimeSlot], days: List[str], max_iterations=1000, seed=None):
         self.time_slots = time_slots
+        self.time_slots_by_index = {slot.idx: slot for slot in time_slots}
         self.days = days
         self.max_iterations = max_iterations
         self.seed = seed
@@ -25,7 +25,7 @@ class TimetableEngine:
             "feasibility_time": 0.0,
             "optimization_time": 0.0,
             "validation_time": 0.0,
-            "total_time": 0.0
+            "total_time": 0.0,
         }
         self.domains = {}
         self.teacher_deps = collections.defaultdict(list)
@@ -33,18 +33,20 @@ class TimetableEngine:
         self.failure_counts = collections.defaultdict(int)
         self.deepest_failure_unit = None
 
-        self.max_generation_seconds = 120.0
-        self.max_optimization_seconds = 10.0
-        self.max_optimization_iterations = 5
+        self.max_generation_seconds = 3.0
+        self.max_optimization_seconds = 1.0
+        self.max_optimization_iterations = 2
 
         self.start_time = 0.0
 
-    def _get_valid_candidates(self, unit: SessionOccurrence, state: GlobalState) -> List[Tuple[str, int]]:
+    def _get_valid_candidates(
+        self, unit: SessionOccurrence, state: GlobalState
+    ) -> List[Tuple[str, int]]:
         candidates = []
         for day in self.days:
             if unit.preferred_days and day not in unit.preferred_days:
                 continue
-                
+
             if unit.teacher_id and unit.teacher_id in state.teacher_available_days:
                 if day not in state.teacher_available_days[unit.teacher_id]:
                     continue
@@ -55,7 +57,14 @@ class TimetableEngine:
                     candidates.append((day, idx))
         return candidates
 
-    def _evaluate_candidate(self, unit: SessionOccurrence, state: GlobalState, day: str, idx: int, scheduled_units: List[SessionOccurrence]) -> int:
+    def _evaluate_candidate(
+        self,
+        unit: SessionOccurrence,
+        state: GlobalState,
+        day: str,
+        idx: int,
+        scheduled_units: List[SessionOccurrence],
+    ) -> int:
         self.stats["candidates_evaluated"] += 1
         score = 0
 
@@ -63,12 +72,17 @@ class TimetableEngine:
             return i in state.class_busy.get(c_id, {}).get(d, set())
 
         def teacher_has_class(t_id, d, i):
-            if not t_id: return False
+            if not t_id:
+                return False
             return i in state.teacher_busy.get(t_id, {}).get(d, set())
 
         for c_id in unit.target_classes:
             adj_before = class_has_class(c_id, day, idx - 1) if idx > 0 else False
-            adj_after = class_has_class(c_id, day, idx + unit.duration) if idx + unit.duration < len(self.time_slots) else False
+            adj_after = (
+                class_has_class(c_id, day, idx + unit.duration)
+                if idx + unit.duration < len(self.time_slots)
+                else False
+            )
 
             if adj_before or adj_after:
                 score += 50
@@ -77,7 +91,11 @@ class TimetableEngine:
 
         if unit.teacher_id:
             adj_before_t = teacher_has_class(unit.teacher_id, day, idx - 1) if idx > 0 else False
-            adj_after_t = teacher_has_class(unit.teacher_id, day, idx + unit.duration) if idx + unit.duration < len(self.time_slots) else False
+            adj_after_t = (
+                teacher_has_class(unit.teacher_id, day, idx + unit.duration)
+                if idx + unit.duration < len(self.time_slots)
+                else False
+            )
 
             if adj_before_t or adj_after_t:
                 score += 30
@@ -87,7 +105,11 @@ class TimetableEngine:
         # Subject distribution penalty
         same_day_count = 0
         for s_unit in scheduled_units:
-            if s_unit.subject_id == unit.subject_id and s_unit.assigned_slot and s_unit.assigned_slot.day == day:
+            if (
+                s_unit.subject_id == unit.subject_id
+                and s_unit.assigned_slot
+                and s_unit.assigned_slot.day == day
+            ):
                 same_day_count += 1
 
         if same_day_count > 0:
@@ -101,9 +123,11 @@ class TimetableEngine:
         affected_units = {}
 
         if assigned_unit.teacher_id:
-            for f_u in self.teacher_deps[assigned_unit.teacher_id]: affected_units[f_u.id] = f_u
+            for f_u in self.teacher_deps[assigned_unit.teacher_id]:
+                affected_units[f_u.id] = f_u
         for c_id in assigned_unit.target_classes:
-            for f_u in self.class_deps[c_id]: affected_units[f_u.id] = f_u
+            for f_u in self.class_deps[c_id]:
+                affected_units[f_u.id] = f_u
 
         for f_unit in affected_units.values():
             if f_unit.assigned_slot is not None:
@@ -113,7 +137,9 @@ class TimetableEngine:
             pruned_for_this_unit = []
 
             for c_day, c_idx in self.domains[f_unit.id]:
-                if not state.is_free(f_unit.teacher_id, f_unit.target_classes, c_day, c_idx, f_unit.duration):
+                if not state.is_free(
+                    f_unit.teacher_id, f_unit.target_classes, c_day, c_idx, f_unit.duration
+                ):
                     pruned_for_this_unit.append((c_day, c_idx))
                 else:
                     new_domain.append((c_day, c_idx))
@@ -132,7 +158,9 @@ class TimetableEngine:
 
         return True, pruned_history
 
-    def _presolve(self, units: List[SessionOccurrence], state: GlobalState) -> 'GenerationDiagnostics':
+    def _presolve(
+        self, units: List[SessionOccurrence], state: GlobalState
+    ) -> "GenerationDiagnostics":
         teacher_req = collections.defaultdict(int)
         class_req = collections.defaultdict(int)
 
@@ -146,7 +174,7 @@ class TimetableEngine:
 
         for t_id, req in teacher_req.items():
             base_max = state.teacher_max_hours.get(t_id, total_slots)
-            
+
             # Bound capacity by available days constraint
             if t_id in state.teacher_available_days:
                 allowed_days = [d for d in self.days if d in state.teacher_available_days[t_id]]
@@ -163,7 +191,11 @@ class TimetableEngine:
                     required_capacity=req,
                     available_capacity=max_h,
                     shortage=req - max_h,
-                    suggestions=["Increase teacher maximum hours", "Assign another teacher to some subjects", "Reduce weekly requirement"]
+                    suggestions=[
+                        "Increase teacher maximum hours",
+                        "Assign another teacher to some subjects",
+                        "Reduce weekly requirement",
+                    ],
                 )
 
         for c_id, req in class_req.items():
@@ -176,12 +208,14 @@ class TimetableEngine:
                     required_capacity=req,
                     available_capacity=total_slots,
                     shortage=req - total_slots,
-                    suggestions=["Reduce total weekly hours for this class"]
+                    suggestions=["Reduce total weekly hours for this class"],
                 )
 
         return None
 
-    def _solve(self, units: List[SessionOccurrence], state: GlobalState, depth: int) -> Tuple[bool, List[SessionOccurrence], str]:
+    def _solve(
+        self, units: List[SessionOccurrence], state: GlobalState, depth: int
+    ) -> Tuple[bool, List[SessionOccurrence], str]:
         if time.time() - self.start_time > self.max_generation_seconds:
             return False, [], "Generation timed out while searching for a feasible timetable."
 
@@ -208,8 +242,10 @@ class TimetableEngine:
             # Apply scarcity tie-breaker
             def get_scarcity(u):
                 s = 0
-                if u.is_practical: s += 50
-                if len(u.target_classes) > 1: s += 50
+                if u.is_practical:
+                    s += 50
+                if len(u.target_classes) > 1:
+                    s += 50
                 return s
 
             scarcity_scores = [(get_scarcity(u), u) for u in tied_domain]
@@ -227,7 +263,9 @@ class TimetableEngine:
                     if len(domain) == 1:
                         regret = 9999
                     else:
-                        scores = [self._evaluate_candidate(u, state, d, i, units[:depth]) for d, i in domain]
+                        scores = [
+                            self._evaluate_candidate(u, state, d, i, units) for d, i in domain
+                        ]
                         scores.sort(reverse=True)
                         regret = scores[0] - scores[1]
 
@@ -245,15 +283,20 @@ class TimetableEngine:
 
         scored_candidates = []
         for day, idx in candidates:
-            score = self._evaluate_candidate(unit, state, day, idx, units[:depth])
+            score = self._evaluate_candidate(unit, state, day, idx, units)
             scored_candidates.append((score, day, idx))
 
         scored_candidates.sort(key=lambda x: x[0], reverse=True)
 
         for score, day, idx in scored_candidates:
             state.assign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
-            time_slot_obj = next((ts for ts in self.time_slots if ts.idx == idx), None)
-            unit.assigned_slot = TimeSlot(day=day, idx=idx, start_time=time_slot_obj.start_time, end_time=self.time_slots[idx + unit.duration - 1].end_time)
+            time_slot_obj = self.time_slots_by_index[idx]
+            unit.assigned_slot = TimeSlot(
+                day=day,
+                idx=idx,
+                start_time=time_slot_obj.start_time,
+                end_time=self.time_slots[idx + unit.duration - 1].end_time,
+            )
 
             fc_ok, pruned_history = self._forward_check_prune(unit, state)
 
@@ -278,9 +321,9 @@ class TimetableEngine:
         msg = f"Backtracking exhausted for {unit.subject_name}. All {len(candidates)} candidates led to future failures."
         return False, [], msg
 
-
-
-    def _calculate_class_balance(self, state: 'GlobalState', target_classes: List[str] = None) -> int:
+    def _calculate_class_balance(
+        self, state: "GlobalState", target_classes: List[str] = None
+    ) -> int:
         penalty = 0
         c_ids = target_classes if target_classes else list(state.class_busy.keys())
         for c_id in c_ids:
@@ -290,13 +333,16 @@ class TimetableEngine:
                 actual_counts.append(len(days_data.get(day, set())))
 
             total_periods = sum(actual_counts)
-            if total_periods == 0: continue
+            if total_periods == 0:
+                continue
 
             working_days_count = len(self.days)
             base_load = total_periods // working_days_count
             remainder = total_periods % working_days_count
 
-            target_counts = [base_load + 1] * remainder + [base_load] * (working_days_count - remainder)
+            target_counts = [base_load + 1] * remainder + [base_load] * (
+                working_days_count - remainder
+            )
 
             actual_sorted = sorted(actual_counts, reverse=True)
             penalty += sum(abs(a - t) for a, t in zip(actual_sorted, target_counts))
@@ -307,15 +353,17 @@ class TimetableEngine:
         teacher_gaps = 0
         for c_id, days_data in state.class_busy.items():
             for day, slots in days_data.items():
-                if not slots: continue
+                if not slots:
+                    continue
                 indices = sorted(list(slots))
-                class_gaps += (indices[-1] - indices[0] + 1 - len(indices))
+                class_gaps += indices[-1] - indices[0] + 1 - len(indices)
 
         for t_id, days_data in state.teacher_busy.items():
             for day, slots in days_data.items():
-                if not slots: continue
+                if not slots:
+                    continue
                 indices = sorted(list(slots))
-                teacher_gaps += (indices[-1] - indices[0] + 1 - len(indices))
+                teacher_gaps += indices[-1] - indices[0] + 1 - len(indices)
         return class_gaps, teacher_gaps
 
     def _calculate_global_score(self, state: GlobalState) -> Tuple[int, int, int, int]:
@@ -324,25 +372,31 @@ class TimetableEngine:
         leading = self._calculate_leading_free_periods(state)
         return (c_gaps, bal, t_gaps, leading)
 
-    def _calculate_local_score(self, teacher_id: str, target_classes: List[str], state: GlobalState) -> Tuple[int, int, int, int]:
+    def _calculate_local_score(
+        self, teacher_id: str, target_classes: List[str], state: GlobalState
+    ) -> Tuple[int, int, int, int]:
         c_gaps = 0
         t_gaps = 0
         if teacher_id and teacher_id in state.teacher_busy:
             for day, slots in state.teacher_busy[teacher_id].items():
-                if not slots: continue
+                if not slots:
+                    continue
                 indices = sorted(list(slots))
-                t_gaps += (indices[-1] - indices[0] + 1 - len(indices))
+                t_gaps += indices[-1] - indices[0] + 1 - len(indices)
         for c_id in target_classes:
             if c_id in state.class_busy:
                 for day, slots in state.class_busy[c_id].items():
-                    if not slots: continue
+                    if not slots:
+                        continue
                     indices = sorted(list(slots))
-                    c_gaps += (indices[-1] - indices[0] + 1 - len(indices))
+                    c_gaps += indices[-1] - indices[0] + 1 - len(indices)
         bal = self._calculate_class_balance(state, target_classes)
         leading = self._calculate_leading_free_periods(state, target_classes)
         return (c_gaps, bal, t_gaps, leading)
 
-    def _calculate_leading_free_periods(self, state: GlobalState, target_classes: List[str] = None) -> int:
+    def _calculate_leading_free_periods(
+        self, state: GlobalState, target_classes: List[str] = None
+    ) -> int:
         penalty = 0
         c_ids = target_classes if target_classes else list(state.class_busy.keys())
         for c_id in c_ids:
@@ -354,7 +408,6 @@ class TimetableEngine:
 
     def _optimize(self, units: List[SessionOccurrence], state: GlobalState):
         opt_start = time.time()
-
 
         made_changes = True
         passes = 0
@@ -378,7 +431,8 @@ class TimetableEngine:
 
             # --- 1. MOVE PHASE ---
             for unit in units:
-                if not unit.assigned_slot: continue
+                if not unit.assigned_slot:
+                    continue
 
                 if time.time() - opt_start > self.max_optimization_seconds:
                     break
@@ -390,7 +444,9 @@ class TimetableEngine:
 
                 old_local = self._calculate_local_score(unit.teacher_id, unit.target_classes, state)
 
-                state.unassign(unit.teacher_id, unit.target_classes, original_day, original_idx, unit.duration)
+                state.unassign(
+                    unit.teacher_id, unit.target_classes, original_day, original_idx, unit.duration
+                )
 
                 candidates = self._get_valid_candidates(unit, state)
 
@@ -398,10 +454,13 @@ class TimetableEngine:
                 best_move = None
 
                 for day, idx in candidates:
-                    if day == original_day and idx == original_idx: continue
+                    if day == original_day and idx == original_idx:
+                        continue
 
                     state.assign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
-                    new_local = self._calculate_local_score(unit.teacher_id, unit.target_classes, state)
+                    new_local = self._calculate_local_score(
+                        unit.teacher_id, unit.target_classes, state
+                    )
                     if new_local < old_local:
                         if best_move is None or new_local < best_score:
                             best_score = new_local
@@ -412,14 +471,24 @@ class TimetableEngine:
                 if best_move:
                     day, idx = best_move
                     state.assign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
-                    time_slot_obj = next((ts for ts in self.time_slots if ts.idx == idx), None)
-                    unit.assigned_slot = TimeSlot(day=day, idx=idx, start_time=time_slot_obj.start_time, end_time=self.time_slots[idx + unit.duration - 1].end_time)
-
+                    time_slot_obj = self.time_slots_by_index[idx]
+                    unit.assigned_slot = TimeSlot(
+                        day=day,
+                        idx=idx,
+                        start_time=time_slot_obj.start_time,
+                        end_time=self.time_slots[idx + unit.duration - 1].end_time,
+                    )
 
                     made_changes = True
                     self.stats["optimization_accepted"] += 1
                 else:
-                    state.assign(unit.teacher_id, unit.target_classes, original_day, original_idx, unit.duration)
+                    state.assign(
+                        unit.teacher_id,
+                        unit.target_classes,
+                        original_day,
+                        original_idx,
+                        unit.duration,
+                    )
 
             # Record state after MOVE
             if passes == 1:
@@ -433,16 +502,26 @@ class TimetableEngine:
                 for c_id, days_data in state.class_busy.items():
                     for day, slots in days_data.items():
                         indices = sorted(list(slots))
-                        if not indices: continue
+                        if not indices:
+                            continue
                         for i in range(indices[0], indices[-1] + 1):
                             if i not in indices:
                                 gap_slots.append((c_id, day, i))
 
                 for gap_class, gap_day, gap_idx in gap_slots:
-                    if made_changes: break
-                    if time.time() - opt_start > self.max_optimization_seconds: break
+                    if made_changes:
+                        break
+                    if time.time() - opt_start > self.max_optimization_seconds:
+                        break
 
-                    candidates_a = [u for u in units if u.assigned_slot and gap_class in u.target_classes and u.duration == 1 and not (u.assigned_slot.day == gap_day and u.assigned_slot.idx == gap_idx)]
+                    candidates_a = [
+                        u
+                        for u in units
+                        if u.assigned_slot
+                        and gap_class in u.target_classes
+                        and u.duration == 1
+                        and not (u.assigned_slot.day == gap_day and u.assigned_slot.idx == gap_idx)
+                    ]
 
                     best_swap_score = None
                     best_swap = None
@@ -450,52 +529,105 @@ class TimetableEngine:
                     for unit_a in candidates_a:
                         day_a, idx_a = unit_a.assigned_slot.day, unit_a.assigned_slot.idx
 
-                        candidates_b = [u for u in units if u.assigned_slot and u.assigned_slot.day == gap_day and u.assigned_slot.idx == gap_idx and u.duration == 1 and gap_class not in u.target_classes]
+                        candidates_b = [
+                            u
+                            for u in units
+                            if u.assigned_slot
+                            and u.assigned_slot.day == gap_day
+                            and u.assigned_slot.idx == gap_idx
+                            and u.duration == 1
+                            and gap_class not in u.target_classes
+                        ]
 
                         for unit_b in candidates_b:
-                            if unit_a.id == unit_b.id: continue
+                            if unit_a.id == unit_b.id:
+                                continue
 
                             self.stats["swap_attempts"] += 1
 
                             day_b, idx_b = unit_b.assigned_slot.day, unit_b.assigned_slot.idx
 
-                            if unit_a.preferred_days and day_b not in unit_a.preferred_days: continue
-                            if unit_b.preferred_days and day_a not in unit_b.preferred_days: continue
+                            if unit_a.preferred_days and day_b not in unit_a.preferred_days:
+                                continue
+                            if unit_b.preferred_days and day_a not in unit_b.preferred_days:
+                                continue
 
                             def _score_subset():
                                 c_gaps = 0
                                 t_gaps = 0
                                 affected_teachers = {unit_a.teacher_id, unit_b.teacher_id}
-                                affected_classes = set(unit_a.target_classes).union(unit_b.target_classes)
+                                affected_classes = set(unit_a.target_classes).union(
+                                    unit_b.target_classes
+                                )
 
                                 for t_id in affected_teachers:
-                                    if not t_id: continue
+                                    if not t_id:
+                                        continue
                                     if t_id in state.teacher_busy:
                                         for d, slots in state.teacher_busy[t_id].items():
-                                            if not slots: continue
+                                            if not slots:
+                                                continue
                                             indices = sorted(list(slots))
-                                            t_gaps += (indices[-1] - indices[0] + 1 - len(indices))
+                                            t_gaps += indices[-1] - indices[0] + 1 - len(indices)
                                 for c_id in affected_classes:
                                     if c_id in state.class_busy:
                                         for d, slots in state.class_busy[c_id].items():
-                                            if not slots: continue
+                                            if not slots:
+                                                continue
                                             indices = sorted(list(slots))
-                                            c_gaps += (indices[-1] - indices[0] + 1 - len(indices))
+                                            c_gaps += indices[-1] - indices[0] + 1 - len(indices)
                                 bal = self._calculate_class_balance(state, list(affected_classes))
-                                leading = self._calculate_leading_free_periods(state, list(affected_classes))
+                                leading = self._calculate_leading_free_periods(
+                                    state, list(affected_classes)
+                                )
                                 return (c_gaps, bal, t_gaps, leading)
 
                             old_subset_score = _score_subset()
 
-                            state.unassign(unit_a.teacher_id, unit_a.target_classes, day_a, idx_a, unit_a.duration)
-                            state.unassign(unit_b.teacher_id, unit_b.target_classes, day_b, idx_b, unit_b.duration)
+                            state.unassign(
+                                unit_a.teacher_id,
+                                unit_a.target_classes,
+                                day_a,
+                                idx_a,
+                                unit_a.duration,
+                            )
+                            state.unassign(
+                                unit_b.teacher_id,
+                                unit_b.target_classes,
+                                day_b,
+                                idx_b,
+                                unit_b.duration,
+                            )
 
-                            valid = state.is_free(unit_a.teacher_id, unit_a.target_classes, day_b, idx_b, unit_a.duration) and \
-                                    state.is_free(unit_b.teacher_id, unit_b.target_classes, day_a, idx_a, unit_b.duration)
+                            valid = state.is_free(
+                                unit_a.teacher_id,
+                                unit_a.target_classes,
+                                day_b,
+                                idx_b,
+                                unit_a.duration,
+                            ) and state.is_free(
+                                unit_b.teacher_id,
+                                unit_b.target_classes,
+                                day_a,
+                                idx_a,
+                                unit_b.duration,
+                            )
 
                             if valid:
-                                state.assign(unit_a.teacher_id, unit_a.target_classes, day_b, idx_b, unit_a.duration)
-                                state.assign(unit_b.teacher_id, unit_b.target_classes, day_a, idx_a, unit_b.duration)
+                                state.assign(
+                                    unit_a.teacher_id,
+                                    unit_a.target_classes,
+                                    day_b,
+                                    idx_b,
+                                    unit_a.duration,
+                                )
+                                state.assign(
+                                    unit_b.teacher_id,
+                                    unit_b.target_classes,
+                                    day_a,
+                                    idx_a,
+                                    unit_b.duration,
+                                )
 
                                 new_subset_score = _score_subset()
                                 if new_subset_score < old_subset_score:
@@ -503,40 +635,84 @@ class TimetableEngine:
                                         best_swap_score = new_subset_score
                                         best_swap = (unit_a, unit_b, day_a, idx_a, day_b, idx_b)
 
-                                state.unassign(unit_a.teacher_id, unit_a.target_classes, day_b, idx_b, unit_a.duration)
-                                state.unassign(unit_b.teacher_id, unit_b.target_classes, day_a, idx_a, unit_b.duration)
+                                state.unassign(
+                                    unit_a.teacher_id,
+                                    unit_a.target_classes,
+                                    day_b,
+                                    idx_b,
+                                    unit_a.duration,
+                                )
+                                state.unassign(
+                                    unit_b.teacher_id,
+                                    unit_b.target_classes,
+                                    day_a,
+                                    idx_a,
+                                    unit_b.duration,
+                                )
 
                             # Always restore the original state for the next candidate
-                            state.assign(unit_a.teacher_id, unit_a.target_classes, day_a, idx_a, unit_a.duration)
-                            state.assign(unit_b.teacher_id, unit_b.target_classes, day_b, idx_b, unit_b.duration)
+                            state.assign(
+                                unit_a.teacher_id,
+                                unit_a.target_classes,
+                                day_a,
+                                idx_a,
+                                unit_a.duration,
+                            )
+                            state.assign(
+                                unit_b.teacher_id,
+                                unit_b.target_classes,
+                                day_b,
+                                idx_b,
+                                unit_b.duration,
+                            )
 
                     if best_swap:
                         unit_a, unit_b, day_a, idx_a, day_b, idx_b = best_swap
 
-                        state.unassign(unit_a.teacher_id, unit_a.target_classes, day_a, idx_a, unit_a.duration)
-                        state.unassign(unit_b.teacher_id, unit_b.target_classes, day_b, idx_b, unit_b.duration)
+                        state.unassign(
+                            unit_a.teacher_id, unit_a.target_classes, day_a, idx_a, unit_a.duration
+                        )
+                        state.unassign(
+                            unit_b.teacher_id, unit_b.target_classes, day_b, idx_b, unit_b.duration
+                        )
 
-                        state.assign(unit_a.teacher_id, unit_a.target_classes, day_b, idx_b, unit_a.duration)
-                        state.assign(unit_b.teacher_id, unit_b.target_classes, day_a, idx_a, unit_b.duration)
+                        state.assign(
+                            unit_a.teacher_id, unit_a.target_classes, day_b, idx_b, unit_a.duration
+                        )
+                        state.assign(
+                            unit_b.teacher_id, unit_b.target_classes, day_a, idx_a, unit_b.duration
+                        )
 
-                        time_slot_b = next((ts for ts in self.time_slots if ts.idx == idx_b), None)
-                        time_slot_a = next((ts for ts in self.time_slots if ts.idx == idx_a), None)
+                        time_slot_b = self.time_slots_by_index[idx_b]
+                        time_slot_a = self.time_slots_by_index[idx_a]
 
-                        unit_a.assigned_slot = TimeSlot(day=day_b, idx=idx_b, start_time=time_slot_b.start_time, end_time=self.time_slots[idx_b + unit_a.duration - 1].end_time)
-                        unit_b.assigned_slot = TimeSlot(day=day_a, idx=idx_a, start_time=time_slot_a.start_time, end_time=self.time_slots[idx_a + unit_b.duration - 1].end_time)
-
+                        unit_a.assigned_slot = TimeSlot(
+                            day=day_b,
+                            idx=idx_b,
+                            start_time=time_slot_b.start_time,
+                            end_time=self.time_slots[idx_b + unit_a.duration - 1].end_time,
+                        )
+                        unit_b.assigned_slot = TimeSlot(
+                            day=day_a,
+                            idx=idx_a,
+                            start_time=time_slot_a.start_time,
+                            end_time=self.time_slots[idx_a + unit_b.duration - 1].end_time,
+                        )
 
                         made_changes = True
                         self.stats["swap_accepted"] += 1
 
-                        if made_changes: break
+                        if made_changes:
+                            break
 
             # --- 3. BALANCE REPAIR PHASE ---
             if not made_changes:
                 b_opt_start = time.time()
                 for unit in units:
-                    if not unit.assigned_slot: continue
-                    if time.time() - b_opt_start > self.max_optimization_seconds: break
+                    if not unit.assigned_slot:
+                        continue
+                    if time.time() - b_opt_start > self.max_optimization_seconds:
+                        break
 
                     # only care if the class is severely imbalanced
                     needs_balance = False
@@ -546,47 +722,76 @@ class TimetableEngine:
                         if max(counts) - min(counts) > 1:
                             needs_balance = True
                             break
-                    if not needs_balance: continue
+                    if not needs_balance:
+                        continue
 
                     original_day = unit.assigned_slot.day
                     original_idx = unit.assigned_slot.idx
 
-                    old_local = self._calculate_local_score(unit.teacher_id, unit.target_classes, state)
+                    old_local = self._calculate_local_score(
+                        unit.teacher_id, unit.target_classes, state
+                    )
 
-                    state.unassign(unit.teacher_id, unit.target_classes, original_day, original_idx, unit.duration)
+                    state.unassign(
+                        unit.teacher_id,
+                        unit.target_classes,
+                        original_day,
+                        original_idx,
+                        unit.duration,
+                    )
                     candidates = self._get_valid_candidates(unit, state)
 
                     best_score = old_local
                     best_move = None
 
                     for day, idx in candidates:
-                        if day == original_day and idx == original_idx: continue
+                        if day == original_day and idx == original_idx:
+                            continue
                         state.assign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
-                        new_local = self._calculate_local_score(unit.teacher_id, unit.target_classes, state)
+                        new_local = self._calculate_local_score(
+                            unit.teacher_id, unit.target_classes, state
+                        )
                         if new_local < old_local:
                             if best_move is None or new_local < best_score:
                                 best_score = new_local
                                 best_move = (day, idx)
-                        state.unassign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
+                        state.unassign(
+                            unit.teacher_id, unit.target_classes, day, idx, unit.duration
+                        )
 
                     if best_move:
                         day, idx = best_move
                         state.assign(unit.teacher_id, unit.target_classes, day, idx, unit.duration)
-                        time_slot_obj = next((ts for ts in self.time_slots if ts.idx == idx), None)
-                        unit.assigned_slot = TimeSlot(day=day, idx=idx, start_time=time_slot_obj.start_time, end_time=self.time_slots[idx + unit.duration - 1].end_time)
+                        time_slot_obj = self.time_slots_by_index[idx]
+                        unit.assigned_slot = TimeSlot(
+                            day=day,
+                            idx=idx,
+                            start_time=time_slot_obj.start_time,
+                            end_time=self.time_slots[idx + unit.duration - 1].end_time,
+                        )
                         made_changes = True
                         self.stats["optimization_accepted"] += 1
-                        break # Start over since we made a change
+                        break  # Start over since we made a change
                     else:
-                        state.assign(unit.teacher_id, unit.target_classes, original_day, original_idx, unit.duration)
+                        state.assign(
+                            unit.teacher_id,
+                            unit.target_classes,
+                            original_day,
+                            original_idx,
+                            unit.duration,
+                        )
 
-    def _validate_timetable(self, units: List[SessionOccurrence], state: GlobalState) -> Tuple[bool, str]:
+    def _validate_timetable(
+        self, units: List[SessionOccurrence], state: GlobalState
+    ) -> Tuple[bool, str]:
         for u in units:
             if not u.assigned_slot:
                 return False, f"Missing assignment for {u.subject_name}"
         return True, "Valid"
 
-    def generate(self, units: List[SessionOccurrence], state: GlobalState) -> Tuple[bool, List[SessionOccurrence], str, dict, 'GenerationDiagnostics']:
+    def generate(
+        self, units: List[SessionOccurrence], state: GlobalState
+    ) -> Tuple[bool, List[SessionOccurrence], str, dict, "GenerationDiagnostics"]:
         t_start = time.time()
         self.start_time = t_start
 
@@ -595,7 +800,6 @@ class TimetableEngine:
         if diag:
             self.stats["total_time"] = time.time() - t_start
             return False, [], diag.reason_code, self.stats, diag
-
 
         # Initialize domains and dependencies
         for u in units:
@@ -618,16 +822,26 @@ class TimetableEngine:
                 hardest_unit_id = max(self.failure_counts.items(), key=lambda x: x[1])[0]
                 hardest_unit = next((u for u in units if u.id == hardest_unit_id), None)
                 if hardest_unit:
-                    t_str = f"Prof. {hardest_unit.teacher_id}" if hardest_unit.teacher_id else "No Teacher"
+                    t_str = (
+                        f"Prof. {hardest_unit.teacher_id}"
+                        if hardest_unit.teacher_id
+                        else "No Teacher"
+                    )
                     additional_pressure = f"{hardest_unit.subject_name} ({t_str}) failed {self.failure_counts[hardest_unit_id]} times during deep search."
 
             diag = GenerationDiagnostics(
                 status="FAILED",
-                reason_code=ReasonCodes.SEARCH_TIMEOUT if "timed out" in msg else ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
+                reason_code=ReasonCodes.SEARCH_TIMEOUT
+                if "timed out" in msg
+                else ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
                 primary_bottleneck="Search tree exhausted or timed out. Complex constraints prevented a full schedule.",
                 additional_pressure=additional_pressure,
                 bottleneck_stats=dict(self.failure_counts),
-                suggestions=["Loosen constraints", "Increase teacher maximum hours", "Check consecutive periods required"]
+                suggestions=[
+                    "Loosen constraints",
+                    "Increase teacher maximum hours",
+                    "Check consecutive periods required",
+                ],
             )
             return False, sched, msg, self.stats, diag
 
@@ -639,26 +853,24 @@ class TimetableEngine:
         # Validation phase
         t_val = time.time()
         v_ok, v_msg = self._validate_timetable(sched, state)
-        self.stats["optimization_time"] = time.time() - t_start - self.stats["feasibility_time"]
+        self.stats["validation_time"] = time.time() - t_val
         self.stats["total_time"] = time.time() - t_start
         self.stats["total_sessions"] = len(units)
 
         c_gaps, t_gaps = self._calculate_exact_gaps(state)
         self.stats["class_internal_gaps"] = c_gaps
         self.stats["teacher_internal_gaps"] = t_gaps
-        self.stats["gap_penalty"] = self._calculate_global_score(state)[0] # legacy compatibility
+        self.stats["gap_penalty"] = self._calculate_global_score(state)[0]  # legacy compatibility
 
         if not v_ok:
             diag = GenerationDiagnostics(
                 status="FAILED",
                 reason_code=ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
-                primary_bottleneck=f"Validation failed: {v_msg}"
+                primary_bottleneck=f"Validation failed: {v_msg}",
             )
             return False, sched, f"Validation failed: {v_msg}", self.stats, diag
 
         diag = GenerationDiagnostics(
-            status="SUCCESS",
-            reason_code="SUCCESS",
-            primary_bottleneck=None
+            status="SUCCESS", reason_code="SUCCESS", primary_bottleneck=None
         )
         return True, sched, "Timetable generated successfully.", self.stats, diag

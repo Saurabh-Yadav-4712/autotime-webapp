@@ -1,0 +1,7 @@
+target-version = "py311"
+line-length = 100
+
+[lint]
+# Keep CI focused on errors that can change runtime behaviour. Broader style
+# adoption can happen incrementally without obscuring correctness failures.
+select = ["E9", "F63", "F7", "F82"]

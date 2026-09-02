@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+
 @dataclass
 class GenerationDiagnostics:
     status: str
@@ -31,8 +32,9 @@ class GenerationDiagnostics:
             "suggestions": self.suggestions,
             "additional_pressure": self.additional_pressure,
             "bottleneck_stats": self.bottleneck_stats,
-            "statistics": self.statistics
+            "statistics": self.statistics,
         }
+
 
 class ReasonCodes:
     INSUFFICIENT_TEACHER_CAPACITY = "INSUFFICIENT_TEACHER_CAPACITY"

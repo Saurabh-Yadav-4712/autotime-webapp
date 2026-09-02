@@ -1,8 +1,9 @@
 from utils.scheduler.engine import TimetableEngine
 from utils.scheduler.core import GlobalState, SessionOccurrence, TimeSlot
 
+
 def test_shared_teacher_multi_course():
-    slots = [TimeSlot("Mon", i, f"{9+i:02d}:00", f"{10+i:02d}:00") for i in range(5)]
+    slots = [TimeSlot("Mon", i, f"{9 + i:02d}:00", f"{10 + i:02d}:00") for i in range(5)]
     days = ["Mon"]
     state = GlobalState()
     state.teacher_max_hours = {"T1": 10, "T2": 10}
@@ -30,8 +31,10 @@ def test_shared_teacher_multi_course():
     t1_slots = [u.assigned_slot.start_time for u in sched if u.teacher_id == "T1"]
     assert len(t1_slots) == len(set(t1_slots)), "Teacher T1 has overlapping sessions!"
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_shared_teacher_multi_course()
+
 
 def test_swap_over_move_local_minimum():
     """
@@ -43,7 +46,7 @@ def test_swap_over_move_local_minimum():
     A simple move of U2 to slot 1 fails because the teacher is busy with U3.
     A swap of U2 and U3 allows U2 into slot 1 and U3 into slot 2, closing the gap for Class A.
     """
-    slots = [TimeSlot("Mon", i, f"{9+i:02d}:00", f"{10+i:02d}:00") for i in range(3)]
+    slots = [TimeSlot("Mon", i, f"{9 + i:02d}:00", f"{10 + i:02d}:00") for i in range(3)]
     engine = TimetableEngine(time_slots=slots, days=["Mon"])
     state = GlobalState()
     state.teacher_max_hours = {"T1": 10, "T2": 10}
@@ -86,11 +89,14 @@ def test_swap_over_move_local_minimum():
     # Verify hard constraints
     v_ok, v_msg = engine._validate_timetable(units, state)
     assert v_ok, f"Validation failed after swap: {v_msg}"
-    assert u1.assigned_slot.idx == 1 or u2.assigned_slot.idx == 1, "Either U1 or U2 should have moved to slot 1 to close the gap"
+    assert u1.assigned_slot.idx == 1 or u2.assigned_slot.idx == 1, (
+        "Either U1 or U2 should have moved to slot 1 to close the gap"
+    )
+
 
 def test_swap_rollback_safety():
     """Verify that a rejected swap leaves the state exactly as it was."""
-    slots = [TimeSlot("Mon", i, f"{9+i:02d}:00", f"{10+i:02d}:00") for i in range(2)]
+    slots = [TimeSlot("Mon", i, f"{9 + i:02d}:00", f"{10 + i:02d}:00") for i in range(2)]
     engine = TimetableEngine(time_slots=slots, days=["Mon"])
     state = GlobalState()
 
@@ -119,9 +125,10 @@ def test_swap_rollback_safety():
     assert 1 not in state.teacher_busy["T1"]["Mon"]
     assert 0 not in state.teacher_busy["T2"]["Mon"]
 
+
 def test_common_subject_swap():
     """Test swapping a duration-1 common subject ensures all classes move together."""
-    slots = [TimeSlot("Mon", i, f"{9+i:02d}:00", f"{10+i:02d}:00") for i in range(3)]
+    slots = [TimeSlot("Mon", i, f"{9 + i:02d}:00", f"{10 + i:02d}:00") for i in range(3)]
     engine = TimetableEngine(time_slots=slots, days=["Mon"])
     state = GlobalState()
 

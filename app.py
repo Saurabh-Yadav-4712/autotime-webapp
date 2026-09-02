@@ -1,60 +1,91 @@
 import os
-from flask import Flask
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
+from flask import Flask, jsonify
+
 from models import db
 from routes.blueprint import main_bp
-from datetime import timezone
-from zoneinfo import ZoneInfo
+from utils.security import configure_security
 
 import routes.auth
 import routes.admin
 import routes.student
 import routes.teacher
 
+
+def _environment_flag(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def create_app(test_config=None):
-    # Configure Flask to find templates and static files in the root directory
-    app = Flask(__name__, 
-                template_folder='templates',
-                static_folder='static')
-                
-    app.secret_key = os.environ.get('SECRET_KEY')
-    if not app.secret_key:
-        raise ValueError('No SECRET_KEY set for Flask application')
+    app = Flask(__name__, template_folder="templates", static_folder="static")
+
+    secret_key = (test_config or {}).get("SECRET_KEY") or os.environ.get("SECRET_KEY")
+    if not secret_key:
+        raise ValueError("No SECRET_KEY set for Flask application")
+
+    app.config.update(
+        SECRET_KEY=secret_key,
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_recycle": 300},
+        MAX_CONTENT_LENGTH=5 * 1024 * 1024,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=_environment_flag(
+            "SESSION_COOKIE_SECURE", default=_environment_flag("VERCEL")
+        ),
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+    )
 
     if test_config is None:
         db_url = os.environ.get("DATABASE_URL", "sqlite:///autotime.db")
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
-        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+        app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+        app.config["AUTO_CREATE_SCHEMA"] = _environment_flag(
+            "AUTO_CREATE_SCHEMA", default=db_url.startswith("sqlite:")
+        )
     else:
         app.config.update(test_config)
 
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
     db.init_app(app)
+    configure_security(app)
 
-    with app.app_context():
-        import models
-        db.create_all()
-        
+    if app.config.get("AUTO_CREATE_SCHEMA", False):
+        with app.app_context():
+            db.create_all()
 
-
-    # Register all routes via the shared blueprint
     app.register_blueprint(main_bp)
 
-    @app.template_filter('ist_datetime')
+    @app.get("/healthz")
+    def health_check():
+        return jsonify(status="ok")
+
+    @app.errorhandler(413)
+    def request_too_large(_error):
+        return "Uploaded file is too large. Maximum size is 5 MB.", 413
+
+    @app.context_processor
+    def inject_template_globals():
+        return {"current_year": datetime.now(ZoneInfo("Asia/Kolkata")).year}
+
+    @app.template_filter("ist_datetime")
     def format_ist_datetime(value):
         if value is None:
             return ""
-        # If naive, assume UTC
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
-        # Convert to Asia/Kolkata
         ist_time = value.astimezone(ZoneInfo("Asia/Kolkata"))
         return ist_time.strftime("%d %b %Y, %I:%M %p")
 
     return app
 
+
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=_environment_flag("FLASK_DEBUG"))
