@@ -23,12 +23,29 @@ from routes.blueprint import main_bp
 def teacher_portal():
     inst_code = request.args.get("inst_code")
     teacher_id = request.args.get("teacher_id")
+    selected_date_str = request.args.get("date")
+
+    from utils.helpers import ScheduleConfig, get_local_date
+    if selected_date_str:
+        try:
+            selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            selected_date = get_local_date()
+    else:
+        selected_date = get_local_date()
 
     schedule = {}
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    time_slots = []
-    lunch_after = 2
     teacher_name = ""
+
+    if inst_code:
+        schedule_config = ScheduleConfig(inst_code)
+        days = schedule_config.working_days
+        time_slots = schedule_config.get_dynamic_time_slots()
+        lunch_after = schedule_config.lunch_after
+    else:
+        days = []
+        time_slots = []
+        lunch_after = 2
 
     if inst_code and teacher_id:
         teacher = Teacher.query.filter_by(institute_code=inst_code, teacher_id=teacher_id).first()
@@ -37,28 +54,30 @@ def teacher_portal():
             return redirect(url_for("main.teacher_portal"))
 
         teacher_name = teacher.name
-        time_slots = get_dynamic_time_slots(inst_code)
-        settings = Settings.query.filter_by(institute_code=inst_code).all()
-        s = {st.key: st.value for st in settings}
-        lunch_after = int(s.get("lunch_after_lecture", 2))
 
-        entries = Timetable.query.filter_by(
-            institute_code=inst_code, teacher_name=teacher_name
-        ).all()
+        from utils.timetable_adapter import get_live_week_timetable
+
+        live_week = get_live_week_timetable(inst_code, reference_date=selected_date, filters={"teacher_name": teacher_name})
+        days = live_week["working_days"]
+        day_dates = live_week["day_dates"]
+
         schedule = {day: {} for day in days}
-        for entry in entries:
+        for entry in live_week["records"]:
             if entry.day_name in schedule:
                 schedule[entry.day_name][entry.start_time] = entry
+    else:
+        day_dates = {}
 
     return render_template(
         "teacher/teacher_dash.html",
         schedule=schedule,
         days=days,
+        day_dates=day_dates,
         time_slots=time_slots,
         lunch_after=lunch_after,
         t_name=teacher_name,
-        selected_date=None,
-        today_str=datetime.now().strftime("%a"),
+        selected_date=selected_date,
+        today_str=get_local_date().strftime("%a"),
     )
 
 
@@ -169,28 +188,29 @@ def teacher_dash():
     t_name = session["teacher_name"]
 
     selected_date_str = request.args.get("date")
-    selected_date = None
+    from utils.helpers import ScheduleConfig, get_local_date
     if selected_date_str:
         try:
             selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            selected_date = get_local_date()
+    else:
+        selected_date = get_local_date()
 
     # Get dynamic time slots & settings
-    time_slots = get_dynamic_time_slots(inst_code)
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    settings = Settings.query.filter_by(institute_code=inst_code).all()
-    s = {st.key: st.value for st in settings}
-    lunch_after = int(s.get("lunch_after_lecture", 2))
+    schedule_config = ScheduleConfig(inst_code)
+    time_slots = schedule_config.get_dynamic_time_slots()
+    lunch_after = schedule_config.lunch_after
 
     # 1. Fetch this specific teacher's schedule
+    from utils.timetable_adapter import get_live_week_timetable
+
+    live_week = get_live_week_timetable(inst_code, reference_date=selected_date, filters={"teacher_name": t_name})
+    days = live_week["working_days"]
+    day_dates = live_week["day_dates"]
+
     schedule = {day: {} for day in days}
-    from utils.timetable_adapter import get_effective_timetable
-
-    all_entries = get_effective_timetable(inst_code, {}, selected_date)
-    entries = [e for e in all_entries if e.teacher_name == t_name]
-
-    for entry in entries:
+    for entry in live_week["records"]:
         schedule[entry.day_name][entry.start_time] = entry
 
     time_slots = trim_time_slots(schedule, time_slots, lunch_after)
@@ -198,7 +218,7 @@ def teacher_dash():
     # 2. Fetch all courses for the Read-Only Viewer
     courses = Course.query.filter_by(institute_code=inst_code).all()
 
-    today_str = datetime.now().strftime("%a")
+    today_str = get_local_date().strftime("%a")
 
     inst = Institute.query.filter_by(institute_code=inst_code).first()
     inst_name = inst.name if inst else "Institute"
@@ -209,6 +229,7 @@ def teacher_dash():
         selected_date=selected_date_str,
         courses=courses,
         days=days,
+        day_dates=day_dates,
         time_slots=time_slots,
         lunch_after=lunch_after,
         t_name=t_name,
@@ -223,34 +244,34 @@ def teacher_view_class():
     inst_code = session["institute_code"]
     class_id = request.args.get("class_id")
     selected_date_str = request.args.get("date")
-    selected_date = None
+    from utils.helpers import ScheduleConfig, get_local_date
     if selected_date_str:
         try:
             selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            selected_date = get_local_date()
+    else:
+        selected_date = get_local_date()
 
     if not class_id:
         # Render the class selector page instead of redirecting
         courses = Course.query.filter_by(institute_code=inst_code).all()
         return render_template("teacher/course_viewer.html", courses=courses, title="Course Viewer")
 
-    schedule = {}
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    time_slots = get_dynamic_time_slots(inst_code)
+    schedule_config = ScheduleConfig(inst_code)
+    time_slots = schedule_config.get_dynamic_time_slots()
+    lunch_after = schedule_config.lunch_after
 
-    settings = Settings.query.filter_by(institute_code=inst_code).all()
-    s = {st.key: st.value for st in settings}
-    lunch_after = int(s.get("lunch_after_lecture", 2))
+    from utils.timetable_adapter import get_live_week_timetable
 
-    from utils.timetable_adapter import get_effective_timetable
+    live_week = get_live_week_timetable(inst_code, reference_date=selected_date, filters={"class_id": class_id})
+    days = live_week["working_days"]
+    day_dates = live_week["day_dates"]
 
-    entries = get_effective_timetable(inst_code, {"class_id": class_id}, selected_date)
-    for day in days:
-        schedule[day] = {}
-        for entry in entries:
-            if entry.day_name == day:
-                schedule[day][entry.start_time] = entry
+    schedule = {day: {} for day in days}
+    for entry in live_week["records"]:
+        if entry.day_name in schedule:
+            schedule[entry.day_name][entry.start_time] = entry
 
     time_slots = trim_time_slots(schedule, time_slots, lunch_after)
 
@@ -261,6 +282,7 @@ def teacher_view_class():
         selected_date=selected_date_str,
         days_data=days_data,
         days=days,
+        day_dates=day_dates,
         time_slots=time_slots,
         lunch_after=lunch_after,
         inst_code=inst_code,
@@ -369,6 +391,7 @@ def teacher_cancel_leave(leave_id):
 
 @main_bp.route("/api/get_classes/<inst_code>")
 def get_classes(inst_code):
+    inst_code = inst_code.upper()
     courses = Course.query.filter_by(institute_code=inst_code).all()
     grouped_classes = {}
     for c in courses:
@@ -395,4 +418,23 @@ def teacher_notifications():
         .order_by(Notification.created_at.desc())
         .all()
     )
+
+    # Mark as read
+    unread = [n for n in notifs if not n.is_read]
+    if unread:
+        for n in unread:
+            n.is_read = True
+        db.session.commit()
+
     return render_template("teacher/notifications.html", notifications=notifs)
+
+
+@main_bp.route("/clear_teacher_notifications", methods=["POST"])
+@login_required_teacher
+def clear_teacher_notifications():
+    inst_code = session["institute_code"]
+    t_id = session["teacher_id"]
+    Notification.query.filter_by(institute_code=inst_code, user_type="teacher", user_id=t_id).delete()
+    db.session.commit()
+    flash("All notifications cleared.", "success")
+    return redirect(url_for("main.teacher_notifications"))

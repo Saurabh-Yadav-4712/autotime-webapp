@@ -10,9 +10,49 @@ import secrets
 import time
 from flask import current_app, session
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
 from models import Settings
 
+def get_local_now() -> datetime:
+    tz = zoneinfo.ZoneInfo("Asia/Kolkata")
+    return datetime.now(tz)
+
+def get_local_date() -> date:
+    return get_local_now().date()
+
+class ScheduleConfig:
+    def __init__(self, inst_code: str):
+        settings = Settings.query.filter_by(institute_code=inst_code).all()
+        s = {st.key: st.value for st in settings}
+        self.working_days = [d.strip() for d in s.get("working_days", "Mon,Tue,Wed,Thu,Fri,Sat").split(",") if d.strip()]
+        if not self.working_days:
+            self.working_days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+        self.total_lectures = int(s.get("total_lectures", 4))
+        self.start_time_str = s.get("start_time", "08:00")
+        self.lec_duration = int(s.get("lecture_duration", 45))
+        self.break_duration = int(s.get("break_time", 30))
+        self.lunch_after = int(s.get("lunch_after_lecture", 2))
+        self.weeks_per_semester = int(s.get("weeks_per_semester", 15))
+
+    def get_dynamic_time_slots(self):
+        time_slots = []
+        current_time = datetime.strptime(self.start_time_str, "%H:%M")
+
+        for i in range(1, self.total_lectures + 1):
+            end_time = current_time + timedelta(minutes=self.lec_duration)
+            start_str = current_time.strftime("%I:%M %p")
+            end_str = end_time.strftime("%I:%M %p")
+            time_slots.append((start_str, end_str))
+
+            current_time = end_time
+            if i == self.lunch_after:
+                current_time = current_time + timedelta(minutes=self.break_duration)
+        return time_slots
 
 logger = logging.getLogger(__name__)
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
@@ -129,37 +169,7 @@ def send_otp_email(to_email, otp, context="Authentication"):
 
 
 def get_dynamic_time_slots(inst_code):
-    # Get settings from DB
-    settings = Settings.query.filter_by(institute_code=inst_code).all()
-    s = {st.key: st.value for st in settings}
-
-    # Defaults keep a new institute usable before settings are customized.
-    total_lectures = int(s.get("total_lectures", 4))
-    start_time_str = s.get("start_time", "08:00")
-    lec_duration = int(s.get("lecture_duration", 45))
-    break_duration = int(s.get("break_time", 30))
-    lunch_after = int(s.get("lunch_after_lecture", 2))
-
-    time_slots = []
-    # Convert string to datetime object for calculation
-    current_time = datetime.strptime(start_time_str, "%H:%M")
-
-    for i in range(1, total_lectures + 1):
-        end_time = current_time + timedelta(minutes=lec_duration)
-
-        # Format time to "08:00 AM" style
-        start_str = current_time.strftime("%I:%M %p")
-        end_str = end_time.strftime("%I:%M %p")
-
-        time_slots.append((start_str, end_str))
-
-        current_time = end_time
-
-        # Add Lunch Break duration after the specified lecture
-        if i == lunch_after:
-            current_time = current_time + timedelta(minutes=break_duration)
-
-    return time_slots
+    return ScheduleConfig(inst_code).get_dynamic_time_slots()
 
 
 def trim_time_slots(schedule, time_slots, lunch_after):

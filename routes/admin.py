@@ -205,6 +205,7 @@ def bulk_import(manage_type):
                     if not class_id:
                         raise ValueError("class_id missing")
                     c = Course(
+                        institute_id=session.get("admin_id"),
                         institute_code=inst_code,
                         class_id=class_id,
                         department=dept,
@@ -222,6 +223,7 @@ def bulk_import(manage_type):
                     if not tid or not name:
                         raise ValueError("teacher_id or name missing")
                     t = Teacher(
+                        institute_id=session.get("admin_id"),
                         institute_code=inst_code,
                         teacher_id=tid,
                         name=name,
@@ -244,19 +246,35 @@ def bulk_import(manage_type):
                     sess_len = get_val(row, "session_length", "sessionlength") or 1
 
                     req_hrs = int(req_hrs_raw) if req_hrs_raw else 4
+                    sess_len_int = int(sess_len)
                     if not scode:
                         raise ValueError("subject_code missing")
+                    if req_hrs % sess_len_int != 0:
+                        raise ValueError("required_hours not divisible by session_length")
+
+                    t_db = Teacher.query.filter_by(institute_code=inst_code, teacher_id=tid).first()
+                    t_fk = t_db.id if t_db else None
+
                     s = Subject(
+                        institute_id=session.get("admin_id"),
                         institute_code=inst_code,
                         subject_code=scode,
                         subject_name=sname,
                         class_id=cid,
                         teacher_id=tid,
+                        teacher_id_fk=t_fk,
                         subject_type=stype,
                         required_hours=req_hrs,
                         total_course_hours=int(tot_hrs),
-                        session_length=int(sess_len),
+                        session_length=sess_len_int,
                     )
+
+                    if cid:
+                        c_list = [c.strip() for c in cid.split(",")]
+                        courses_db = Course.query.filter(Course.institute_code == inst_code, Course.class_id.in_(c_list)).all()
+                        for c_obj in courses_db:
+                            s.courses.append(c_obj)
+
                     db.session.add(s)
                 db.session.commit()
                 success_count += 1
@@ -304,6 +322,7 @@ def manage_courses():
             return redirect(url_for("main.manage_courses"))
         db.session.add(
             Course(
+                institute_id=session.get("admin_id"),
                 institute_code=inst_code,
                 class_id=class_id,
                 department=department,
@@ -355,6 +374,7 @@ def manage_teachers():
             return redirect(url_for("main.manage_teachers"))
         db.session.add(
             Teacher(
+                institute_id=session.get("admin_id"),
                 institute_code=inst_code,
                 teacher_id=teacher_id,
                 name=name,
@@ -394,7 +414,8 @@ def manage_subjects():
             flash("One or more selected classes are invalid.", "danger")
             return redirect(url_for("main.manage_subjects"))
         teacher_id = request.form.get("teacher_id", "").strip()
-        if not Teacher.query.filter_by(institute_code=inst_code, teacher_id=teacher_id).first():
+        teacher = Teacher.query.filter_by(institute_code=inst_code, teacher_id=teacher_id).first()
+        if not teacher:
             flash("Selected teacher is invalid.", "danger")
             return redirect(url_for("main.manage_subjects"))
         subject_code = request.form.get("subject_code", "").strip()
@@ -416,19 +437,26 @@ def manage_subjects():
             flash("Required weekly hours must be divisible by the session length.", "danger")
             return redirect(url_for("main.manage_subjects"))
 
-        db.session.add(
-            Subject(
-                institute_code=inst_code,
-                subject_code=subject_code,
-                subject_name=subject_name,
-                class_id=",".join(class_ids),
-                teacher_id=teacher_id,
-                total_course_hours=total_course_hours,
-                required_hours=required_hours,
-                subject_type=request.form["subject_type"],
-                session_length=session_len,
-            )
+        subject = Subject(
+            institute_id=session.get("admin_id"),
+            institute_code=inst_code,
+            subject_code=subject_code,
+            subject_name=subject_name,
+            class_id=",".join(class_ids),
+            teacher_id=teacher_id,
+            teacher_id_fk=teacher.id,
+            total_course_hours=total_course_hours,
+            required_hours=required_hours,
+            subject_type=request.form["subject_type"],
+            session_length=session_len,
         )
+
+        # Populate M2M Course mappings
+        courses_db = Course.query.filter(Course.institute_code == inst_code, Course.class_id.in_(class_ids)).all()
+        for course in courses_db:
+            subject.courses.append(course)
+
+        db.session.add(subject)
         db.session.commit()
         flash("Subject mapped!", "success")
         return redirect(url_for("main.manage_subjects"))
@@ -512,9 +540,10 @@ def edit_subject(id):
         if not class_ids or not set(class_ids).issubset(valid_class_ids):
             flash("Select at least one valid class.", "danger")
             return redirect(url_for("main.edit_subject", id=id))
-        if not Teacher.query.filter_by(
+        teacher_db = Teacher.query.filter_by(
             institute_code=session["institute_code"], teacher_id=teacher_id
-        ).first():
+        ).first()
+        if not teacher_db:
             flash("Selected teacher is invalid.", "danger")
             return redirect(url_for("main.edit_subject", id=id))
         try:
@@ -532,10 +561,17 @@ def edit_subject(id):
         subject.subject_name = request.form.get("subject_name", "").strip()
         subject.class_id = ",".join(class_ids)
         subject.teacher_id = teacher_id
+        subject.teacher_id_fk = teacher_db.id
         subject.total_course_hours = total_course_hours
         subject.required_hours = required_hours
         subject.subject_type = request.form.get("subject_type", "Theory")
         subject.session_length = session_len
+
+        subject.courses = []
+        courses_db = Course.query.filter(Course.institute_code == session["institute_code"], Course.class_id.in_(class_ids)).all()
+        for course in courses_db:
+            subject.courses.append(course)
+
         db.session.commit()
         flash("Subject updated!", "success")
         return redirect(url_for("main.manage_subjects"))
@@ -632,7 +668,30 @@ def api_generate_timetable():
     inst_code = session["institute_code"]
     from utils.timetable_adapter import engine_generate_timetable
 
-    result = engine_generate_timetable(inst_code)
+    try:
+        result = engine_generate_timetable(inst_code)
+    except Exception as e:
+        import traceback
+        from flask import current_app
+        current_app.logger.error("Timetable generation failed with exception: %s\n%s", str(e), traceback.format_exc())
+        result = {
+            "success": False,
+            "status": "FAILED",
+            "message": "An internal server error occurred while generating the timetable. Please check server logs.",
+            "stats": {},
+            "diagnostics": {
+                "status": "FAILED",
+                "reason_code": "INTERNAL_ERROR",
+                "primary_bottleneck": "Internal Error",
+                "affected_courses": [],
+                "affected_subjects": [],
+                "affected_teachers": [],
+                "required_capacity": 0,
+                "available_capacity": 0,
+                "shortage": 0,
+                "suggestions": ["Please review the timetable configuration and try again."]
+            }
+        }
     return jsonify(result)
 
 
@@ -664,39 +723,45 @@ def clear_history():
 @login_required_admin
 def view_timetable():
     inst_code = session["institute_code"]
+    from utils.helpers import ScheduleConfig, get_local_date
 
     courses = Course.query.filter_by(institute_code=inst_code).all()
     teachers = Teacher.query.filter_by(institute_code=inst_code).all()
     selected_class = request.args.get("class_id")
     date_str = request.args.get("date")
-    selected_date = None
+
     if date_str:
         try:
             from datetime import datetime
-
             selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            selected_date = get_local_date()
+    else:
+        selected_date = get_local_date()
 
     schedule = {}
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    time_slots = get_dynamic_time_slots(inst_code)
 
-    settings = Settings.query.filter_by(institute_code=inst_code).all()
-    s = {st.key: st.value for st in settings}
-    lunch_after = int(s.get("lunch_after_lecture", 2))
-    break_duration = int(s.get("break_time", 30))  # Fetch break duration
+    schedule_config = ScheduleConfig(inst_code)
+    days = schedule_config.working_days
+    time_slots = schedule_config.get_dynamic_time_slots()
+    lunch_after = schedule_config.lunch_after
+    break_duration = schedule_config.break_duration
+
+    day_dates = {}
 
     if selected_class:
         if not Course.query.filter_by(institute_code=inst_code, class_id=selected_class).first():
             flash("Selected class was not found.", "warning")
             return redirect(url_for("main.view_timetable"))
-        from utils.timetable_adapter import get_effective_timetable
+        from utils.timetable_adapter import get_live_week_timetable
 
         filters = {"class_id": selected_class}
-        entries = get_effective_timetable(inst_code, filters, target_date=selected_date)
+        live_week = get_live_week_timetable(inst_code, reference_date=selected_date, filters=filters)
+        days = live_week["working_days"]
+        day_dates = live_week["day_dates"]
+
         schedule = {day: {} for day in days}
-        for entry in entries:
+        for entry in live_week["records"]:
             if entry.day_name in schedule:
                 schedule[entry.day_name][entry.start_time] = entry
         time_slots = trim_time_slots(schedule, time_slots, lunch_after)
@@ -724,6 +789,7 @@ def view_timetable():
         schedule=schedule,
         days_data=days_data,
         days=days,
+        day_dates=day_dates,
         time_slots=time_slots,
         lunch_after=lunch_after,
         break_duration=break_duration,
@@ -743,7 +809,9 @@ def get_slot_data():
 
     if not all([inst_code, day, start_time, class_id]):
         return jsonify({"error": "Missing parameters"}), 400
-    if day not in {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}:
+
+    from utils.helpers import ScheduleConfig
+    if day not in ScheduleConfig(inst_code).working_days:
         return jsonify({"error": "Invalid day"}), 400
     if not Course.query.filter_by(institute_code=inst_code, class_id=class_id).first():
         return jsonify({"error": "Class not found"}), 404
@@ -832,10 +900,11 @@ def edit_timetable_slot():
 
     # Check available days hard constraint
     if teacher:
+        from utils.helpers import ScheduleConfig
         t_days = (
             [d.strip() for d in (teacher.available_days or "").split(",")]
             if teacher.available_days
-            else ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+            else ScheduleConfig(entry.institute_code).working_days
         )
         if entry.day_name not in t_days:
             flash(
@@ -873,7 +942,8 @@ def manual_assign_slot():
     if not all([class_id, day_name, start_time, assign_type]):
         flash("Missing required fields for assignment.", "danger")
         return redirect(url_for("main.view_timetable", class_id=class_id))
-    if day_name not in {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}:
+    from utils.helpers import ScheduleConfig
+    if day_name not in ScheduleConfig(inst_code).working_days:
         flash("Invalid timetable day.", "danger")
         return redirect(url_for("main.view_timetable", class_id=class_id))
     if not Course.query.filter_by(institute_code=inst_code, class_id=class_id).first():
@@ -947,7 +1017,7 @@ def manual_assign_slot():
             t_days = (
                 [d.strip() for d in (t_obj.available_days or "").split(",")]
                 if t_obj.available_days
-                else ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                else ScheduleConfig(inst_code).working_days
             )
             if day_name not in t_days:
                 flash(
@@ -996,16 +1066,18 @@ def export_timetables():
         return redirect(url_for("main.view_timetable"))
 
     # Fetch Settings & Slots
+    from utils.helpers import ScheduleConfig
+    schedule_config = ScheduleConfig(inst_code)
     settings = Settings.query.filter_by(institute_code=inst_code).all()
     s = {st.key: st.value for st in settings}
 
     institute_name = s.get("institute_name", "INSTITUTE TIMETABLE").upper()
-    lunch_after = int(s.get("lunch_after_lecture", 2))
+    lunch_after = schedule_config.lunch_after
 
     # Time slots format: "08:00 AM - 09:00 AM"
-    time_slots = get_dynamic_time_slots(inst_code)
+    time_slots = schedule_config.get_dynamic_time_slots()
     slots = [f"{slot[0]} - {slot[1]}" for slot in time_slots]
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    days = schedule_config.working_days
 
     # Excel Styling Variables
     wb = openpyxl.Workbook()
@@ -1133,6 +1205,11 @@ def college_settings():
             start_time = request.form.get("start_time", "")
             datetime.strptime(start_time, "%H:%M")
             values["start_time"] = start_time
+
+            working_days_list = request.form.getlist("working_days")
+            if not working_days_list:
+                working_days_list = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+            values["working_days"] = ",".join(working_days_list)
         except ValueError as error:
             flash(str(error) or "Invalid institute settings.", "danger")
             return redirect(url_for("main.college_settings"))
@@ -1169,7 +1246,13 @@ def approve_teacher_request(req_id):
     ).first()
     if teacher:
         if req.new_name:
+            old_name = teacher.name
             teacher.name = req.new_name
+            # Cascade name changes to denormalized fields
+            Timetable.query.filter_by(institute_code=req.institute_code, teacher_name=old_name).update({"teacher_name": req.new_name})
+            TeacherLeave.query.filter_by(institute_code=req.institute_code, teacher_name=old_name).update({"teacher_name": req.new_name})
+            # If there's any other model using teacher_name as string, update it here.
+
         if req.new_email:
             email_owner = Teacher.query.filter(
                 Teacher.email == req.new_email,
@@ -1261,7 +1344,25 @@ def admin_notifications():
         .order_by(Notification.created_at.desc())
         .all()
     )
+
+    # Mark as read
+    unread = [n for n in notifs if not n.is_read]
+    if unread:
+        for n in unread:
+            n.is_read = True
+        db.session.commit()
+
     return render_template("admin/notifications.html", notifications=notifs)
+
+
+@main_bp.route("/clear_admin_notifications", methods=["POST"])
+@login_required_admin
+def clear_admin_notifications():
+    inst_code = session["institute_code"]
+    Notification.query.filter_by(institute_code=inst_code, user_type="admin").delete()
+    db.session.commit()
+    flash("All notifications cleared.", "success")
+    return redirect(url_for("main.admin_notifications"))
 
 
 @main_bp.route("/admin/leave_requests")

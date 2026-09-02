@@ -1,11 +1,11 @@
 {% extends 'shared/base.html' %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center align-items-start mb-4 mt-3 pb-3 border-bottom gap-3">
     <div>
         <h2 class="fw-bold text-success mb-1 d-flex align-items-center"><i class="bi bi-person-video3 me-2"></i> Welcome, Prof. {{ t_name }}</h2>
         <small class="text-muted">Teacher Dashboard & Management Portal</small>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
     </div>
 </div>
 
@@ -13,22 +13,24 @@
     <!-- FULL WIDTH MY SCHEDULE GRID -->
     <div class="col-12 mb-4">
         <div class="card border-0 border-top border-success border-4 shadow-sm h-100">
-            <div class="card-header bg-white pt-4 pb-3 d-flex justify-content-between align-items-center border-0">
+            <div class="card-header bg-white pt-4 pb-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center align-items-start border-0 gap-3">
                 <h5 class="fw-bold text-success mb-0 d-flex align-items-center"><i class="bi bi-calendar-week me-2"></i> My Schedule</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <form method="GET" class="d-flex align-items-center mb-0">
-                        <input type="date" class="form-control form-control-sm border-success me-2" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()" style="max-width: 150px;" title="Select a date to view specific proxies and leaves">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <form method="GET" class="d-flex align-items-center mb-0 w-100 w-sm-auto">
+                        <input type="date" class="form-control form-control-sm border-success me-2 flex-grow-1" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()" style="max-width: 150px;" title="Select a date to view specific proxies and leaves">
                         {% if selected_date %}
                         <a href="/teacher_dash" class="btn btn-sm btn-outline-danger me-2"><i class="bi bi-x"></i></a>
                         {% endif %}
                     </form>
-                    <button class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Export</button>
-                    <button class="btn btn-sm btn-success fw-bold px-3" onclick="toggleView('today')">Today</button>
-                    <button class="btn btn-sm btn-outline-success fw-bold px-3" onclick="toggleView('week')">Weekly</button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-danger fw-bold px-3 shadow-sm d-none d-md-block" onclick="exportToPDF()"><i class="bi bi-file-earmark-pdf me-1"></i> Export</button>
+                        <button class="btn btn-sm btn-success fw-bold px-3 d-none d-md-block" onclick="toggleView('today')">Today</button>
+                        <button class="btn btn-sm btn-outline-success fw-bold px-3 d-none d-md-block" onclick="toggleView('week')">Weekly</button>
+                    </div>
                 </div>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive" id="timetable-content">
+                <div class="table-responsive d-none d-md-block" id="timetable-content">
                     <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
                         <thead class="table-light">
                             <tr>
@@ -57,25 +59,36 @@
                         <tbody>
                             {% for day in days %}
                             <tr class="schedule-row" data-day="{{ day }}">
-                                <td class="fw-bold bg-light align-middle fs-5">{{ day }}</td>
-                                
+                                <td class="fw-bold bg-light align-middle">
+                                    <div class="fs-5">{{ day }}</div>
+                                    {% if day_dates and day in day_dates %}
+                                        <div class="small text-muted fw-normal" style="font-size: 0.8rem;">{{ day_dates[day].strftime('%d %b') }}</div>
+                                    {% endif %}
+                                </td>
+
                                 {% set break_printed_row = namespace(value=false) %}
                                 {% for slot in time_slots %}
                                     {% set start_time = slot[0] %}
-                                    
+
                                     {% if loop.index0 == lunch_after and not break_printed_row.value %}
                                         <td class="bg-warning bg-opacity-25 border-warning"></td>
                                         {% set break_printed_row.value = true %}
                                     {% endif %}
-                                    
+
                                     {% if day in schedule and start_time in schedule[day] %}
                                         {% set entry = schedule[day][start_time] %}
-                                        
-                                        {% if entry.is_proxy %}
-                                            <td class="bg-danger bg-opacity-10 border-danger p-3">
-                                                <div class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> PROXY</div>
+
+                                        {% if entry.teacher_name == '__UNCOVERED__' %}
+                                            <td class="bg-danger bg-opacity-25 border-danger p-3">
+                                                <div class="fw-bold text-danger mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> UNASSIGNED PROXY</div>
                                                 <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
                                                 <div class="badge bg-danger mt-2">Class: {{ entry.class_id }}</div>
+                                            </td>
+                                        {% elif entry.is_proxy %}
+                                            <td class="bg-warning bg-opacity-25 border-warning p-3">
+                                                <div class="fw-bold text-dark mb-1"><i class="bi bi-person-fill-exclamation me-1"></i> PROXY</div>
+                                                <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
+                                                <div class="badge bg-warning text-dark mt-2">Class: {{ entry.class_id }}</div>
                                             </td>
                                         {% else %}
                                             <td class="bg-success bg-opacity-10 border-success p-3">
@@ -83,7 +96,7 @@
                                                 <div class="badge bg-success mt-2">Class: {{ entry.class_id }}</div>
                                             </td>
                                         {% endif %}
-                                        
+
                                     {% else %}
                                         <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
                                     {% endif %}
@@ -92,6 +105,145 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                </div>
+
+
+<div class="d-md-none mb-2 px-3 pt-3 text-center toggle-weekly-btn">
+    <button class="btn btn-outline-primary btn-sm fw-bold w-100" type="button" onclick="
+        const table = this.parentElement.previousElementSibling;
+        const mobile = this.parentElement.nextElementSibling;
+        if(table.classList.contains('d-none')) {
+            table.classList.remove('d-none', 'd-md-block');
+            table.classList.add('d-block');
+            mobile.classList.remove('d-block', 'd-md-none');
+            mobile.classList.add('d-none');
+            this.innerHTML = '<i class=\'bi bi-list-task me-1\'></i> View Daily Cards'; if(typeof toggleView === 'function') toggleView('week');
+        } else {
+            table.classList.add('d-none', 'd-md-block');
+            table.classList.remove('d-block');
+            mobile.classList.add('d-block', 'd-md-none');
+            mobile.classList.remove('d-none');
+            this.innerHTML = '<i class=\'bi bi-grid-3x3-gap-fill me-1\'></i> View Full Weekly Timetable';
+        }
+    ">
+        <i class="bi bi-grid-3x3-gap-fill me-1"></i> View Full Weekly Timetable
+    </button>
+</div>
+<!-- Mobile View -->
+                <div class="d-block d-md-none p-3 mobile-timetable" id="mobile-timetable-content">
+                    {% set today_ns = namespace(name=None) %}
+    {% if day_dates %}
+        {% for d, dt in day_dates.items() %}
+            {% set target_date_str = selected_date if selected_date else dt.today().strftime('%Y-%m-%d') %}
+            {% if dt.strftime('%Y-%m-%d') == target_date_str %}
+                {% set today_ns.name = d %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {% set today_name = today_ns.name %}
+                    {% if not today_name and days|length > 0 %}{% set today_name = days[0] %}{% endif %}
+
+                    <div class="mb-4 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-success"><i class="bi bi-calendar2-day me-2"></i>Today's Agenda</h5>
+                        <span class="badge bg-success fs-6">{{ today_name }}</span>
+                    </div>
+
+                    {% set has_lectures = namespace(value=false) %}
+                    {% if today_name in schedule %}
+                        {% set current_prac = namespace(subject="", class_id="", start="", end="", count=0) %}
+
+                        {% for slot in time_slots %}
+                            {% set start_time = slot[0] %}
+                            {% set end_time = slot[1] %}
+
+                            {% if start_time in schedule[today_name] %}
+                                {% set entry = schedule[today_name][start_time] %}
+                                {% set has_lectures.value = true %}
+
+                                {% if entry.is_practical %}
+                                    {% if current_prac.subject == entry.subject_name and current_prac.class_id == entry.class_id %}
+                                        {% set current_prac.end = end_time %}
+                                        {% set current_prac.count = current_prac.count + 1 %}
+                                    {% else %}
+                                        {% if current_prac.count > 0 %}
+                                            <div class="card shadow-sm border-0 mb-3 border-start border-success border-4">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ current_prac.start }} – {{ current_prac.end }}</span>
+                                                        <span class="badge bg-success">Practical</span>
+                                                    </div>
+                                                    <h6 class="fw-bold mb-1">{{ current_prac.subject }} (Prac)</h6>
+                                                    <div class="text-muted small"><i class="bi bi-people me-1"></i>Class: {{ current_prac.class_id }}</div>
+                                                </div>
+                                            </div>
+                                        {% endif %}
+                                        {% set current_prac.subject = entry.subject_name %}
+                                        {% set current_prac.class_id = entry.class_id %}
+                                        {% set current_prac.start = start_time %}
+                                        {% set current_prac.end = end_time %}
+                                        {% set current_prac.count = 1 %}
+                                    {% endif %}
+                                {% else %}
+                                    {% if current_prac.count > 0 %}
+                                        <div class="card shadow-sm border-0 mb-3 border-start border-success border-4">
+                                            <div class="card-body">
+                                                <div class="d-flex justify-content-between mb-2">
+                                                    <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ current_prac.start }} – {{ current_prac.end }}</span>
+                                                    <span class="badge bg-success">Practical</span>
+                                                </div>
+                                                <h6 class="fw-bold mb-1">{{ current_prac.subject }} (Prac)</h6>
+                                                <div class="text-muted small"><i class="bi bi-people me-1"></i>Class: {{ current_prac.class_id }}</div>
+                                            </div>
+                                        </div>
+                                        {% set current_prac.count = 0 %}
+                                    {% endif %}
+
+                                    {% set is_uncovered = (entry.teacher_name == '__UNCOVERED__') %}
+                                    {% set card_border = 'border-danger' if is_uncovered else ('border-warning' if entry.is_proxy else 'border-success') %}
+                                    {% set text_color = 'text-danger' if is_uncovered else ('text-warning' if entry.is_proxy else 'text-success') %}
+
+                                    <div class="card shadow-sm border-0 mb-3 border-start {{ card_border }} border-4">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-2">
+                                                <span class="fw-bold {{ text_color }}"><i class="bi bi-clock me-1"></i>{{ start_time }} – {{ end_time }}</span>
+                                                {% if is_uncovered %}
+                                                    <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Uncovered</span>
+                                                {% elif entry.is_proxy %}
+                                                    <span class="badge bg-warning text-dark">PROXY</span>
+                                                {% endif %}
+                                            </div>
+                                            <h6 class="fw-bold mb-1">{{ entry.subject_name }}</h6>
+
+                                            {% if is_uncovered %}
+                                                <div class="text-danger small fw-bold"><i class="bi bi-person-x me-1"></i>Teacher on Leave (Proxy Not Assigned)</div>
+                                            {% endif %}
+                                            <div class="text-muted small mt-1"><i class="bi bi-people me-1"></i>Class: {{ entry.class_id }}</div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if current_prac.count > 0 %}
+                            <div class="card shadow-sm border-0 mb-3 border-start border-success border-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ current_prac.start }} – {{ current_prac.end }}</span>
+                                        <span class="badge bg-success">Practical</span>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">{{ current_prac.subject }} (Prac)</h6>
+                                    <div class="text-muted small"><i class="bi bi-people me-1"></i>Class: {{ current_prac.class_id }}</div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if not has_lectures.value %}
+                    <div class="text-center p-5 bg-white rounded shadow-sm border">
+                        <i class="bi bi-cup-hot text-muted" style="font-size: 2rem;"></i>
+                        <h6 class="mt-3 text-muted fw-bold">No schedule for today.</h6>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -103,11 +255,11 @@
 <script>
     function exportToPDF() {
         const element = document.getElementById('timetable-content');
-        
+
         // Temporarily show all days for PDF
         const rows = document.querySelectorAll('.schedule-row');
         rows.forEach(row => row.classList.remove('d-none'));
-        
+
         const opt = {
             margin:       0.5,
             filename:     'Teacher_Timetable.pdf',
@@ -133,7 +285,7 @@
 
         const todayStr = "{{ today_str }}";
         const rows = document.querySelectorAll('.schedule-row');
-        
+
         rows.forEach(row => {
             if (view === 'today') {
                 if (row.getAttribute('data-day') === todayStr) {
@@ -146,7 +298,7 @@
             }
         });
     }
-    
+
     window.onload = function() {
         const todayStr = "{{ today_str }}";
         const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

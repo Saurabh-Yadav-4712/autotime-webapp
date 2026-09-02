@@ -26,7 +26,7 @@
         <div class="card border-0 shadow-sm mb-4 d-none" id="generation-progress">
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-4 text-center text-primary">Generation In Progress</h5>
-                
+
                 <div class="d-flex flex-column align-items-center justify-content-center py-4">
                     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -42,7 +42,7 @@
             <div class="card-body p-4 text-center">
                 <i class="bi bi-check-circle-fill text-success display-1 mb-3"></i>
                 <h3 class="fw-bold text-success mb-2">Timetable Generated Successfully</h3>
-                
+
                 <div class="row g-3 mt-4 text-start justify-content-center">
                     <div class="col-md-5">
                         <ul class="list-group list-group-flush bg-transparent">
@@ -58,18 +58,12 @@
                                 <span class="text-muted">Optimization Time</span>
                                 <strong><span id="res-opt-time">0</span>s</strong>
                             </li>
-                            <li class="list-group-item bg-transparent d-flex justify-content-between">
-                                <span class="text-muted">Class Internal Gaps</span>
-                                <strong id="res-class-gap">—</strong>
-                            </li>
-                            <li class="list-group-item bg-transparent d-flex justify-content-between">
-                                <span class="text-muted">Teacher Internal Gaps</span>
-                                <strong id="res-teacher-gap">—</strong>
-                            </li>
+
+
                         </ul>
                     </div>
                 </div>
-                
+
                 <div class="mt-4">
                     <a href="/view_timetable" class="btn btn-primary px-4 fw-bold me-2">View Timetable</a>
                     <a href="/generation_history" class="btn btn-outline-secondary px-4 fw-bold">View History</a>
@@ -84,17 +78,17 @@
                     <i class="bi bi-x-circle-fill text-danger display-1 mb-3"></i>
                     <h3 class="fw-bold text-danger">Timetable Could Not Be Generated</h3>
                 </div>
-                
+
                 <div class="bg-danger bg-opacity-10 p-4 rounded-3 mb-4">
                     <h5 class="fw-bold text-danger mb-2">Primary Cause</h5>
                     <p class="fs-5 mb-0 fw-medium" id="fail-bottleneck"></p>
                 </div>
-                
+
                 <div class="bg-warning bg-opacity-10 p-4 rounded-3 mb-4 d-none" id="fail-pressure-container">
                     <h6 class="fw-bold text-warning-emphasis mb-2"><i class="bi bi-info-circle me-1"></i> Additional Constraint Pressure</h6>
                     <p class="mb-0 text-dark" id="fail-pressure"></p>
                 </div>
-                
+
                 <div class="row g-4 mb-4">
                     <div class="col-md-6">
                         <div class="card border-0 bg-light h-100">
@@ -116,7 +110,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <div class="card border-0 bg-light h-100">
                             <div class="card-body">
@@ -127,7 +121,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="text-center mt-4">
                     <button class="btn btn-outline-danger px-4 fw-bold" onclick="resetUI()">Try Again</button>
                     <a href="/manage_teachers" class="btn btn-outline-secondary px-4 fw-bold ms-2">Manage Capacity</a>
@@ -144,7 +138,7 @@
         document.getElementById('generation-progress').classList.add('d-none');
         document.getElementById('generation-success').classList.add('d-none');
         document.getElementById('generation-failure').classList.add('d-none');
-        
+
         ['loading', 'feasibility', 'search', 'optimize'].forEach(step => {
             document.getElementById(`step-${step}`).classList.replace('text-dark', 'text-muted');
             document.getElementById(`spinner-${step}`).classList.add('d-none');
@@ -155,7 +149,7 @@
     async function startGeneration() {
         document.getElementById('generation-controls').classList.add('d-none');
         document.getElementById('generation-progress').classList.remove('d-none');
-        
+
         try {
             const response = await fetch('/api/generate_timetable', {
                 method: 'POST',
@@ -164,39 +158,39 @@
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             const data = await response.json();
-            
+
             document.getElementById('generation-progress').classList.add('d-none');
-            
+
             if (data.success) {
                 document.getElementById('generation-success').classList.remove('d-none');
-                
+
                 // Populate stats
                 const stats = data.stats || {};
                 document.getElementById('res-sessions').textContent = (stats.total_sessions !== undefined ? stats.total_sessions : '—');
                 document.getElementById('res-gen-time').textContent = (stats.feasibility_time !== undefined ? stats.feasibility_time.toFixed(2) : '—');
                 document.getElementById('res-opt-time').textContent = (stats.optimization_time !== undefined ? stats.optimization_time.toFixed(2) : '—');
-                
-                document.getElementById('res-class-gap').textContent = (stats.class_internal_gaps !== undefined ? stats.class_internal_gaps : '—');
-                document.getElementById('res-teacher-gap').textContent = (stats.teacher_internal_gaps !== undefined ? stats.teacher_internal_gaps : '—');
+
+
+
             } else {
                 document.getElementById('generation-failure').classList.remove('d-none');
-                
+
                 const diag = data.diagnostics || {};
                 document.getElementById('fail-bottleneck').textContent = diag.primary_bottleneck || data.message || "Unknown error";
-                
+
                 if (diag.additional_pressure) {
                     document.getElementById('fail-pressure-container').classList.remove('d-none');
                     document.getElementById('fail-pressure').textContent = diag.additional_pressure;
                 } else {
                     document.getElementById('fail-pressure-container').classList.add('d-none');
                 }
-                
+
                 document.getElementById('fail-req').textContent = diag.required_capacity || 'N/A';
                 document.getElementById('fail-avail').textContent = diag.available_capacity || 'N/A';
                 document.getElementById('fail-shortage').textContent = diag.shortage || 'N/A';
-                
+
                 const suggEl = document.getElementById('fail-suggestions');
                 suggEl.innerHTML = '';
                 if (diag.suggestions && diag.suggestions.length > 0) {
@@ -211,7 +205,7 @@
                     suggEl.appendChild(li);
                 }
             }
-            
+
         } catch (error) {
             console.error('Error generating timetable:', error);
             document.getElementById('generation-progress').classList.add('d-none');

@@ -28,7 +28,7 @@
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='loader.css') }}">
-    
+
     <!-- Password Visibility Toggle Logic -->
     <script>
         if (!window.passwordToggleInitialized) {
@@ -36,10 +36,10 @@
             document.addEventListener('click', function(e) {
                 let btn = e.target.closest('.toggle-password');
                 if (!btn) return;
-                
+
                 let targetId = btn.getAttribute('data-target');
                 let input = document.getElementById(targetId);
-                
+
                 if (input) {
                     if (input.type === 'password') {
                         input.type = 'text';
@@ -56,14 +56,14 @@
     <style>
         /* Sidebar Styling */
         .saas-sidebar {
-            width: 250px; 
+            width: 250px;
             min-height: 100vh;
             transition: all 0.3s ease;
         }
         .saas-sidebar.collapsed, html.sidebar-collapsed .saas-sidebar {
             margin-left: -250px;
         }
-        /* Mobile defaults to collapsed by default through offcanvas behavior, 
+        /* Mobile defaults to collapsed by default through offcanvas behavior,
            so html.sidebar-collapsed only affects desktop */
         .nav-link.sidebar-link {
             color: var(--text-muted) !important;
@@ -85,18 +85,18 @@
         .bg-light-custom {
             background-color: #f8f9fa;
         }
-        
+
         /* Modern Abstract Python/Scheduling Background */
         .auth-bg {
             background-color: var(--bg-color);
-            background-image: 
+            background-image:
                 linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
             background-size: 40px 40px;
             position: relative;
             overflow: hidden;
         }
-        
+
         /* Gradient overlay */
         .auth-bg::before {
             content: '';
@@ -106,7 +106,7 @@
             z-index: 0;
             pointer-events: none;
         }
-        
+
         /* Animated Python-esque glowing nodes simulating a search algorithm */
         .auth-bg::after {
             content: '';
@@ -118,7 +118,7 @@
             z-index: 0;
             pointer-events: none;
         }
-        
+
         .auth-bg::after {
             animation: algoSearch 15s infinite alternate ease-in-out;
         }
@@ -129,7 +129,7 @@
             75% { transform: translate(30vw, 80vh) scale(1.8); }
             100% { transform: translate(60vw, 10vh) scale(1.2); }
         }
-        
+
         .auth-bg > div {
             position: relative;
             z-index: 1;
@@ -138,12 +138,8 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-    <!-- Global Loader -->
-    <div id="global-loader">
-        <div class="loader-spinner"></div>
-        <h5 class="fw-bold text-muted">Processing...</h5>
-    </div>
-    
+
+
     <div class="d-flex flex-grow-1">
         {% if not is_public_page %}
         <!-- SaaS Sidebar (Admin Only) -->
@@ -181,7 +177,7 @@
                         <i class="bi bi-envelope-paper me-2"></i> Leave Requests
                     </a>
                 </li>
-                
+
                 <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Timetable</small></li>
                 <li>
                     <a href="/generate_timetable" class="nav-link sidebar-link {% if 'generate' in request.path %}active{% endif %}">
@@ -198,7 +194,7 @@
                         <i class="bi bi-clock-history me-2"></i> History
                     </a>
                 </li>
-                
+
                 <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">System</small></li>
                 <li>
                     <a href="/college_settings" class="nav-link sidebar-link {% if request.path == '/college_settings' %}active{% endif %}">
@@ -299,10 +295,10 @@
                         <i class="bi bi-layout-sidebar"></i>
                     </button>
                     {% endif %}
-                    
+
                     <a class="navbar-brand fw-bold d-md-none" href="/" data-turbo="false"><i class="bi bi-clock-history me-2"></i>AutoTime</a>
                     <div class="d-none d-md-block"></div> <!-- Spacer -->
-                    
+
                     <div class="d-flex align-items-center gap-2 ms-auto">
                         <div class="theme-switch-wrapper me-2" title="Toggle Theme">
                             <label class="theme-switch" for="globalThemeToggle">
@@ -314,10 +310,15 @@
                             </label>
                         </div>
                         {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
-                        
+
                         {% if session.get('admin_id') %}
                         <a href="/notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
                             <i class="bi bi-bell-fill"></i>
+                            {% if unread_notification_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem; padding: 0.25em 0.4em;">
+                                {{ unread_notification_count if unread_notification_count < 100 else '99+' }}
+                            </span>
+                            {% endif %}
                         </a>
                         <!-- Mobile Drawer Toggle -->
                         <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
@@ -326,18 +327,32 @@
                         {% elif session.get('teacher_id') %}
                         <a href="/teacher_notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
                             <i class="bi bi-bell-fill"></i>
+                            {% if unread_notification_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem; padding: 0.25em 0.4em;">
+                                {{ unread_notification_count if unread_notification_count < 100 else '99+' }}
+                            </span>
+                            {% endif %}
                         </a>
                         <!-- Mobile Drawer Toggle -->
                         <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
                             <i class="bi bi-list"></i>
                         </button>
                         {% elif session.get('student_id') %}
+                        <!-- Notifications for students (if added in future) -->
+                        <a href="#" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                            <i class="bi bi-bell-fill"></i>
+                            {% if unread_notification_count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem; padding: 0.25em 0.4em;">
+                                {{ unread_notification_count if unread_notification_count < 100 else '99+' }}
+                            </span>
+                            {% endif %}
+                        </a>
                         <!-- Mobile Drawer Toggle -->
                         <button class="btn btn-outline-secondary d-md-none ms-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar">
                             <i class="bi bi-list"></i>
                         </button>
                         {% endif %}
-                        
+
                         {% endif %}
                     </div>
                 </div>
@@ -348,7 +363,7 @@
 
             <!-- Main Content Area -->
             <div class="container-fluid px-2 px-md-4 fade-in flex-grow-1 mb-5">
-                
+
                 <!-- Toast Notifications Container -->
                 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1090;">
                     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -369,7 +384,7 @@
                                     {% set toast_class = 'text-bg-info' %}
                                     {% set icon = 'bi-info-circle-fill' %}
                                 {% endif %}
-                                
+
                                 <div class="toast align-items-center {{ toast_class }} border-0 shadow-lg mb-2" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
                                     <div class="d-flex">
                                         <div class="toast-body d-flex align-items-center fw-medium">
@@ -387,7 +402,7 @@
                 {% block content %}
                 <!-- Yahan par dusre pages ka content automatically aayega -->
                 {% endblock %}
-                
+
             </div>
 
             <!-- Global Footer -->
@@ -400,7 +415,7 @@
             </footer>
         </div>
     </div>
-    
+
     {% if not is_public_page %}
     <!-- Mobile Offcanvas Sidebar -->
     {% if session.get('admin_id') %}
@@ -468,23 +483,23 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Global UI Scripts -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        function initSidebarToggle() {
             const toggleBtn = document.getElementById('sidebarToggleBtn');
             const sidebar = document.getElementById('desktopSidebar');
-            if(toggleBtn && sidebar) {
-                // Ensure classList matches the html class initialized early
+            if(toggleBtn && sidebar && !toggleBtn.hasAttribute('data-initialized')) {
+                toggleBtn.setAttribute('data-initialized', 'true');
                 if (document.documentElement.classList.contains('sidebar-collapsed')) {
                     sidebar.classList.add('collapsed');
                 }
                 toggleBtn.addEventListener('click', () => {
                     sidebar.classList.toggle('collapsed');
-                    
+
                     const isCollapsed = sidebar.classList.contains('collapsed');
                     localStorage.setItem('sidebar_collapsed', isCollapsed);
-                    
+
                     if (isCollapsed) {
                         document.documentElement.classList.add('sidebar-collapsed');
                     } else {
@@ -492,7 +507,11 @@
                     }
                 });
             }
-        });
+        }
+
+        document.addEventListener('turbo:load', initSidebarToggle);
+        document.addEventListener('DOMContentLoaded', initSidebarToggle);
+        initSidebarToggle();
     </script>
     <script src="{{ url_for('static', filename='js/main.js') }}" data-turbo-track="reload" data-turbo-eval="false"></script>
     {% block scripts %}{% endblock %}

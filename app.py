@@ -71,7 +71,28 @@ def create_app(test_config=None):
 
     @app.context_processor
     def inject_template_globals():
-        return {"current_year": datetime.now(ZoneInfo("Asia/Kolkata")).year}
+        from flask import session
+        from models import Notification
+        unread_count = 0
+        if "institute_code" in session:
+            inst_code = session["institute_code"]
+            if "admin_id" in session:
+                unread_count = Notification.query.filter_by(
+                    institute_code=inst_code, user_type="admin", is_read=False
+                ).count()
+            elif "teacher_id" in session:
+                unread_count = Notification.query.filter_by(
+                    institute_code=inst_code, user_type="teacher", user_id=session["teacher_id"], is_read=False
+                ).count()
+            elif "student_id" in session:
+                # Assuming students might get notifications in the future, currently we don't have student notifications
+                # But to prevent error we set it to 0
+                unread_count = 0
+
+        return {
+            "current_year": datetime.now(ZoneInfo("Asia/Kolkata")).year,
+            "unread_notification_count": unread_count
+        }
 
     @app.template_filter("ist_datetime")
     def format_ist_datetime(value):

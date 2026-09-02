@@ -95,3 +95,9 @@ class GlobalState:
             self.teacher_hours[teacher_id] = max(
                 0, self.teacher_hours.get(teacher_id, 0) - duration
             )
+
+@dataclass
+class SchedulerConfig:
+    generation_timeout_seconds: float = 3.0
+    optimization_timeout_seconds: float = 1.0
+    optimization_max_iterations: int = 2

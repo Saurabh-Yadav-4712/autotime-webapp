@@ -45,6 +45,21 @@
     background-color: var(--surface);
     color: var(--text-muted);
 }
+
+[data-bs-theme="dark"] .btn-outline-primary {
+    color: #818cf8;
+    border-color: #818cf8;
+}
+[data-bs-theme="dark"] .btn-outline-primary:hover {
+    background-color: #818cf8;
+    color: #0f172a;
+}
+
+[data-bs-theme="dark"] .nav-pills .nav-link.active {
+    background-color: var(--bg-color) !important;
+    color: #818cf8 !important;
+}
+
 .text-main { color: var(--text-main); }
 .bg-main { background-color: var(--bg-color); }
 .bg-surface { background-color: var(--surface); }
@@ -164,32 +179,30 @@ h1, h2, h3, h4, h5, h6 {
     z-index: 10;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .sched-cell.animate-fill {
-        animation: scheduleFill 4s infinite alternate ease-in-out;
-    }
-    
-    .sched-cell:nth-child(2n) {
-        animation-delay: 0.5s;
-    }
-    
-    .sched-cell:nth-child(3n) {
-        animation-delay: 1s;
-    }
-    
-    .sched-cell:nth-child(5n) {
-        animation-delay: 1.5s;
-    }
+.sched-cell.animate-fill {
+    animation: scheduleFill 4s infinite alternate ease-in-out;
+}
 
-    .path-line {
-        stroke-dasharray: 1000;
-        stroke-dashoffset: 1000;
-        animation: pythonFlow 4s infinite alternate ease-in-out;
-    }
+.sched-cell:nth-child(2n) {
+    animation-delay: 0.5s;
+}
 
-    .floating-clock {
-        animation: softFloat 3s infinite alternate ease-in-out;
-    }
+.sched-cell:nth-child(3n) {
+    animation-delay: 1s;
+}
+
+.sched-cell:nth-child(5n) {
+    animation-delay: 1.5s;
+}
+
+.path-line {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: pythonFlow 4s infinite alternate ease-in-out;
+}
+
+.floating-clock {
+    animation: softFloat 3s infinite alternate ease-in-out;
 }
 
 @keyframes scheduleFill {
@@ -422,3 +435,20 @@ h1, h2, h3, h4, h5, h6 {
         max-height: none;
     }
 }
+
+/* Mobile sidebar width fix */
+.offcanvas.offcanvas-start {
+    --bs-offcanvas-width: 280px;
+    max-width: 85vw;
+}
+
+/* Fix TomSelect dropdown overflow on mobile */
+@media (max-width: 768px) {
+    .ts-dropdown {
+        width: 100% !important;
+        max-width: 90vw !important;
+        left: 5% !important;
+        box-sizing: border-box;
+    }
+}
+

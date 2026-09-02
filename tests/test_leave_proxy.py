@@ -188,7 +188,7 @@ def test_available_days_constraints(app, client):
         units[0].assigned_slot = time_slots[0]
 
         teacher_available_days = {"T1": {"Mon", "Tue"}}
-        is_valid, errors = TimetableValidator.audit(units, time_slots, teacher_available_days)
+        is_valid, errors = TimetableValidator.audit(units, time_slots, ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], teacher_available_days, {"T1": 40}, 2)
         assert not is_valid
         assert "Hard Constraint Violation" in errors[0]
         assert "is not available" in errors[0]
@@ -197,7 +197,7 @@ def test_available_days_constraints(app, client):
         units[0].duration = 2
         units[0].is_practical = True
         time_slots.append(TimeSlot(day="Sat", idx=1, start_time="10:00", end_time="11:00"))
-        is_valid, errors = TimetableValidator.audit(units, time_slots, teacher_available_days)
+        is_valid, errors = TimetableValidator.audit(units, time_slots, ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], teacher_available_days, {"T1": 40}, 2)
         assert not is_valid
 
 

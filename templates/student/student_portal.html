@@ -2,9 +2,9 @@
 {% block content %}
 {% from "components/timetable.html" import render_timetable %}
 {% if teacher_view %}
-<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center align-items-start mb-4 mt-3 pb-3 border-bottom gap-3">
     <h2 class="fw-bold text-primary mb-0 d-flex align-items-center"><i class="bi bi-building me-2"></i> Class Viewer: {{ class_id }}</h2>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex flex-wrap align-items-center gap-2">
         <form method="GET" class="d-flex align-items-center mb-0">
             <input type="hidden" name="class_id" value="{{ class_id }}">
             <input type="date" class="form-control form-control-sm border-primary me-2" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()" style="max-width: 150px;" title="Select a date to view specific proxies and leaves">
@@ -12,13 +12,13 @@
             <a href="/teacher_view_class?class_id={{ class_id }}" class="btn btn-sm btn-outline-danger me-2"><i class="bi bi-x"></i></a>
             {% endif %}
         </form>
-        <a href="/teacher_dash" class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+        <a href="/teacher_dash" class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-arrow-left me-1"></i> Back</a>
     </div>
 </div>
 {% else %}
-<div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center align-items-start mb-4 mt-3 pb-3 border-bottom gap-3">
     <h2 class="fw-bold text-primary mb-0 d-flex align-items-center"><i class="bi bi-mortarboard me-2"></i> Student Timetable Portal</h2>
-    <a href="/" class="btn btn-outline-secondary fw-bold"><i class="bi bi-house me-1"></i> Home</a>
+    <a href="/" class="btn btn-outline-secondary fw-bold w-100 w-sm-auto"><i class="bi bi-house me-1"></i> Home</a>
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
@@ -59,7 +59,7 @@
         <h5 class="fw-bold text-center text-primary mb-0"><i class="bi bi-clock-history me-2"></i>Schedule for {{ class_id }}</h5>
     </div>
     <div class="card-body p-0">
-        {{ render_timetable(days_data, time_slots, lunch_after, editable=False, selected_class=class_id, role='teacher' if teacher_view else 'student') }}
+        {{ render_timetable(days_data, time_slots, lunch_after, editable=False, selected_class=class_id, role='teacher' if teacher_view else 'student', day_dates=day_dates) }}
     </div>
 </div>
 {% endif %}

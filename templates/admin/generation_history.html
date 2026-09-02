@@ -67,6 +67,9 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block modals %}
 <!-- Clear History Modal -->
 <div class="modal fade" id="clearHistoryModal" tabindex="-1" aria-labelledby="clearHistoryModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -81,7 +84,7 @@
       <div class="modal-footer border-top-0 bg-light">
         <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">Cancel</button>
         <form action="/clear_history" method="POST" class="m-0">
-            <!-- Reuse existing CSRF token mechanism if project has Flask-WTF or just submit POST -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-danger fw-bold px-4">Clear History</button>
         </form>
       </div>

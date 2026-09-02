@@ -10,7 +10,7 @@
         <div class="card shadow-sm border-0 border-top border-primary border-4">
             <div class="card-body p-4 bg-light-custom">
                 <p class="text-muted mb-4">Configure your daily time slots, breaks, and college timings here. This will be used by the Timetable Engine.</p>
-                
+
                 <form method="POST" action="/college_settings">
                     <div class="row mb-3 g-3">
                         <div class="col-md-6">
@@ -28,7 +28,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row mb-4 g-3">
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Lecture Duration (Mins)</label>
@@ -45,6 +45,19 @@
                         <div class="col-md-3">
                             <label class="form-label fw-bold text-success">Weeks per Semester</label>
                             <input type="number" class="form-control border-success" name="weeks_per_semester" placeholder="e.g. 15" value="{{ settings.get('weeks_per_semester', '15') }}" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Working Days</label>
+                        <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded">
+                            {% set current_days = settings.get('working_days', 'Mon,Tue,Wed,Thu,Fri,Sat').split(',') %}
+                            {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="working_days" value="{{ day }}" id="wd_{{ day }}" {% if day in current_days %}checked{% endif %}>
+                                <label class="form-check-label" for="wd_{{ day }}">{{ day }}</label>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
 

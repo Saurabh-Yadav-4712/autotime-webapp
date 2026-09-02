@@ -24,34 +24,42 @@ def student_portal():
     class_id = request.args.get("class_id")
     selected_date_str = request.args.get("date")
     selected_date = None
+    from utils.helpers import ScheduleConfig, get_local_date
     if selected_date_str:
         try:
             selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            selected_date = get_local_date()
+    else:
+        selected_date = get_local_date()
 
     schedule = {}
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    time_slots = []
-    lunch_after = 2
+    day_dates = {}
+
+    if inst_code:
+        schedule_config = ScheduleConfig(inst_code)
+        days = schedule_config.working_days
+        time_slots = schedule_config.get_dynamic_time_slots()
+        lunch_after = schedule_config.lunch_after
+    else:
+        days = []
+        time_slots = []
+        lunch_after = 2
 
     if inst_code and class_id:
-        # Check if institute exists
         institute = Institute.query.filter_by(institute_code=inst_code).first()
         if not institute:
             flash("Invalid Institute Code!", "danger")
             return redirect(url_for("main.student_portal"))
 
-        time_slots = get_dynamic_time_slots(inst_code)
-        settings = Settings.query.filter_by(institute_code=inst_code).all()
-        s = {st.key: st.value for st in settings}
-        lunch_after = int(s.get("lunch_after_lecture", 2))
+        from utils.timetable_adapter import get_live_week_timetable
 
-        from utils.timetable_adapter import get_effective_timetable
+        live_week = get_live_week_timetable(inst_code, reference_date=selected_date, filters={"class_id": class_id})
+        days = live_week["working_days"]
+        day_dates = live_week["day_dates"]
 
-        entries = get_effective_timetable(inst_code, {"class_id": class_id}, selected_date)
         schedule = {day: {} for day in days}
-        for entry in entries:
+        for entry in live_week["records"]:
             if entry.day_name in schedule:
                 schedule[entry.day_name][entry.start_time] = entry
 
@@ -64,6 +72,7 @@ def student_portal():
         selected_date=selected_date_str,
         days_data=days_data,
         days=days,
+        day_dates=day_dates,
         time_slots=time_slots,
         lunch_after=lunch_after,
         inst_code=inst_code,
@@ -160,29 +169,32 @@ def student_dash():
 
     selected_date_str = request.args.get("date")
     selected_date = None
+    from utils.helpers import ScheduleConfig, get_local_date
     if selected_date_str:
         try:
             selected_date = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
         except ValueError:
-            pass
+            selected_date = get_local_date()
+    else:
+        selected_date = get_local_date()
 
-    time_slots = get_dynamic_time_slots(inst_code)
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    settings = Settings.query.filter_by(institute_code=inst_code).all()
-    s = {st.key: st.value for st in settings}
-    lunch_after = int(s.get("lunch_after_lecture", 2))
+    schedule_config = ScheduleConfig(inst_code)
+    time_slots = schedule_config.get_dynamic_time_slots()
+    lunch_after = schedule_config.lunch_after
+
+    from utils.timetable_adapter import get_live_week_timetable
+
+    live_week = get_live_week_timetable(inst_code, reference_date=selected_date, filters={"class_id": class_id})
+    days = live_week["working_days"]
+    day_dates = live_week["day_dates"]
 
     schedule = {day: {} for day in days}
-    from utils.timetable_adapter import get_effective_timetable
-
-    entries = get_effective_timetable(inst_code, {"class_id": class_id}, selected_date)
-
-    for entry in entries:
+    for entry in live_week["records"]:
         schedule[entry.day_name][entry.start_time] = entry
 
     inst = Institute.query.filter_by(institute_code=inst_code).first()
     inst_name = inst.name if inst else "Institute"
-    today_str = datetime.now().strftime("%a")
+    today_str = get_local_date().strftime("%a")
     time_slots = trim_time_slots(schedule, time_slots, lunch_after)
 
     return render_template(
@@ -190,6 +202,7 @@ def student_dash():
         schedule=schedule,
         selected_date=selected_date_str,
         days=days,
+        day_dates=day_dates,
         time_slots=time_slots,
         lunch_after=lunch_after,
         s_name=s_name,

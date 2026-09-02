@@ -1,7 +1,7 @@
 import copy
 
 from models import Course, GenerationHistory, Institute, Subject, Teacher, Timetable, db
-from utils.helpers import get_dynamic_time_slots
+from utils.helpers import get_dynamic_time_slots, ScheduleConfig
 
 
 def engine_generate_timetable(inst_code):
@@ -33,8 +33,9 @@ def engine_generate_timetable(inst_code):
 
     teacher_dict = {t.teacher_id: t for t in teachers}
     course_dict = {course.class_id: course for course in courses}
-    raw_slots = get_dynamic_time_slots(inst_code)
-    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    schedule_config = ScheduleConfig(inst_code)
+    raw_slots = schedule_config.get_dynamic_time_slots()
+    days = schedule_config.working_days
 
     time_slots = []
     for idx, (st, et) in enumerate(raw_slots):
@@ -86,13 +87,20 @@ def engine_generate_timetable(inst_code):
             )
             units.append(unit)
 
-    engine = TimetableEngine(time_slots=time_slots, days=days)
+    engine = TimetableEngine(time_slots=time_slots, days=days, lunch_after=schedule_config.lunch_after)
     success, scheduled_units, msg, stats, diag = engine.generate(units, state)
 
     if success:
         # Validate
+        valid_classes_set = set(course_dict.keys())
         is_valid, errors = TimetableValidator.audit(
-            scheduled_units, time_slots, state.teacher_available_days
+            units=scheduled_units,
+            time_slots=time_slots,
+            working_days=days,
+            teacher_available_days=state.teacher_available_days,
+            teacher_max_hours=state.teacher_max_hours,
+            lunch_after=schedule_config.lunch_after,
+            valid_classes=valid_classes_set,
         )
         if not is_valid:
             success = False
@@ -186,28 +194,22 @@ def get_effective_timetable(inst_code, filters=None, target_date=None):
     if filters is None:
         filters = {}
 
-    filters = dict(filters)
-    filters["institute_code"] = inst_code
+    pre_merge_filters = {"institute_code": inst_code}
+    if "class_id" in filters:
+        pre_merge_filters["class_id"] = filters["class_id"]
 
     # 1. Fetch master timetable (specific_date is NULL)
-    master_query = Timetable.query.filter_by(**filters, specific_date=None)
-    master_records = master_query.all()
+    master_records = Timetable.query.filter_by(**pre_merge_filters, specific_date=None).all()
 
-    if not target_date:
-        return master_records
+    # 2. Fetch overrides
+    if target_date:
+        override_records = Timetable.query.filter_by(**pre_merge_filters, specific_date=target_date).all()
+    else:
+        override_records = []
 
-    # 2. Fetch specific_date overrides for this target_date
-    override_query = Timetable.query.filter_by(**filters, specific_date=target_date)
-    override_records = override_query.all()
-
-    if not override_records:
-        return master_records
-
-    # 3. Merge. Overrides replace master records with matching class_id, day_name, start_time
+    # 3. Merge
     effective_dict = {}
-
     for r in master_records:
-        # Key by class, day, and time
         key = (r.class_id, r.day_name, r.start_time)
         effective_dict[key] = r
 
@@ -215,11 +217,102 @@ def get_effective_timetable(inst_code, filters=None, target_date=None):
         key = (r.class_id, r.day_name, r.start_time)
         effective_dict[key] = r
 
+    # 4. Post-merge filter by teacher identity to maintain operational accuracy
     final_records = []
+    t_name_filter = filters.get("teacher_name")
+    t_id_filter = filters.get("teacher_id_fk")
+
     for record in effective_dict.values():
         if record.teacher_name == "__UNCOVERED__":
             record = copy.copy(record)
             record.teacher_name = "Teacher on Leave / Proxy Not Assigned"
+
+        if t_name_filter and record.teacher_name != t_name_filter:
+            continue
+        if t_id_filter and record.teacher_id_fk != t_id_filter:
+            continue
+
         final_records.append(record)
 
     return final_records
+
+
+def get_live_week_timetable(inst_code, reference_date=None, filters=None):
+    """
+    Calculates the real current week and returns the effective timetable
+    incorporating day-specific overrides for all configured working days.
+    """
+    from utils.helpers import get_local_date, ScheduleConfig
+    from datetime import timedelta
+
+    if not reference_date:
+        reference_date = get_local_date()
+
+    schedule_config = ScheduleConfig(inst_code)
+    working_days = schedule_config.working_days
+
+    # Python weekday: 0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun
+    day_map = {0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri", 5: "Sat", 6: "Sun"}
+
+    ref_weekday = reference_date.weekday()
+    start_of_week = reference_date - timedelta(days=ref_weekday)
+
+    day_dates = {}
+    for i in range(7):
+        d = start_of_week + timedelta(days=i)
+        day_name = day_map[d.weekday()]
+        if day_name in working_days:
+            day_dates[day_name] = d
+
+    if filters is None:
+        filters = {}
+
+    pre_merge_filters = {"institute_code": inst_code}
+    if "class_id" in filters:
+        pre_merge_filters["class_id"] = filters["class_id"]
+
+    # Bulk fetch master for working days
+    master_records = Timetable.query.filter_by(**pre_merge_filters, specific_date=None).filter(
+        Timetable.day_name.in_(working_days)
+    ).all()
+
+    # Bulk fetch overrides for the calculated dates
+    date_list = list(day_dates.values())
+    override_records = Timetable.query.filter_by(**pre_merge_filters).filter(
+        Timetable.specific_date.in_(date_list)
+    ).all()
+
+    effective_dict = {}
+    for r in master_records:
+        key = (r.class_id, r.day_name, r.start_time)
+        effective_dict[key] = r
+
+    for r in override_records:
+        # Only override if it matches the calculated date for that day
+        if day_dates.get(r.day_name) == r.specific_date:
+            key = (r.class_id, r.day_name, r.start_time)
+            effective_dict[key] = r
+
+    final_records = []
+    t_name_filter = filters.get("teacher_name")
+    t_id_filter = filters.get("teacher_id_fk")
+
+    for record in effective_dict.values():
+        if record.teacher_name == "__UNCOVERED__":
+            record = copy.copy(record)
+            record.teacher_name = "Teacher on Leave / Proxy Not Assigned"
+
+        if t_name_filter and record.teacher_name != t_name_filter:
+            continue
+        if t_id_filter and record.teacher_id_fk != t_id_filter:
+            continue
+
+        final_records.append(record)
+
+    return {
+        "week_start": start_of_week,
+        "week_end": start_of_week + timedelta(days=6),
+        "working_days": working_days,
+        "day_dates": day_dates,
+        "records": final_records
+    }

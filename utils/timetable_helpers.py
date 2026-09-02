@@ -39,8 +39,10 @@ def build_timetable_view_model(schedule, days, time_slots):
 
         for idx, slot in enumerate(time_slots):
             start_time = slot[0]
+            end_time = slot[1]
             slot_model = {
                 "start_time": start_time,
+                "end_time": end_time,
                 "status": "edge_free",
                 "id": None,
                 "subject": "",
@@ -54,6 +56,7 @@ def build_timetable_view_model(schedule, days, time_slots):
                 slot_model["subject"] = entry.subject_name
                 slot_model["teacher"] = entry.teacher_name
                 slot_model["course"] = entry.class_id
+                slot_model["session_group_id"] = getattr(entry, "session_group_id", None)
 
                 if getattr(entry, "is_proxy", False):
                     slot_model["status"] = "proxy"

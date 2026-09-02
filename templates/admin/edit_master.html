@@ -8,7 +8,7 @@
             </div>
             <div class="card-body bg-light-custom">
                 <form method="POST">
-                    
+
                     {% if edit_type == 'course' %}
                         <!-- COURSE FIELDS -->
                         <div class="mb-3"><label class="form-label">Class ID</label><input type="text" class="form-control" name="class_id" value="{{ item.class_id }}" required></div>
@@ -91,13 +91,13 @@
                             <span class="badge bg-secondary" id="calculated_lectures">Suggested: - lectures/week</span>
                         </div>
                         <script>
-                            document.addEventListener("DOMContentLoaded", function() {
+                            (function() {
                                 const totalInput = document.getElementById('total_course_hours');
                                 const sessionInput = document.getElementById('session_length');
                                 const reqInput = document.getElementById('required_hours');
                                 const badge = document.getElementById('calculated_lectures');
                                 const suggestionBox = document.getElementById('suggestion_box');
-                                
+
                                 function updateCalc() {
                                     if(totalInput && sessionInput && badge && totalInput.value) {
                                         suggestionBox.style.display = 'block';
@@ -113,7 +113,7 @@
                                 if(totalInput) totalInput.addEventListener('input', updateCalc);
                                 if(sessionInput) sessionInput.addEventListener('input', updateCalc);
                                 updateCalc();
-                            });
+                            })();
                         </script>
                     {% endif %}
 

@@ -1,5 +1,5 @@
-{% macro render_timetable(days_data, time_slots, lunch_after, editable=false, selected_class=None, role='student') %}
-<div class="table-responsive timetable-container">
+{% macro render_timetable(days_data, time_slots, lunch_after, editable=false, selected_class=None, role='student', day_dates=None) %}
+<div class="table-responsive timetable-container d-none d-md-block">
     <table class="table table-bordered text-center align-middle mb-0" style="table-layout: fixed; min-width: 800px;">
         <caption class="visually-hidden">Timetable Schedule</caption>
         <thead class="table-light">
@@ -24,19 +24,24 @@
         <tbody>
             {% for day_data in days_data %}
             <tr>
-                <th scope="row" class="fw-bold bg-light fs-5 align-middle">{{ day_data.day }}</th>
+                <th scope="row" class="fw-bold bg-light align-middle">
+                    <div class="fs-5">{{ day_data.day }}</div>
+                    {% if day_dates and day_data.day in day_dates %}
+                        <div class="small text-muted fw-normal" style="font-size: 0.8rem;">{{ day_dates[day_data.day].strftime('%d %b') }}</div>
+                    {% endif %}
+                </th>
                 {% set break_printed_row = namespace(value=false) %}
-                
+
                 {% for slot_data in day_data.slots %}
                     {% if loop.index0 == lunch_after and not break_printed_row.value %}
                         <td class="bg-warning bg-opacity-25 border-warning"><span class="visually-hidden">Lunch Break</span></td>
                         {% set break_printed_row.value = true %}
                     {% endif %}
-                    
+
                     {% if slot_data.status == 'occupied' %}
                         <td class="cell-occupied p-3 position-relative shadow-sm" style="background-color: rgba(79, 70, 229, 0.05); border-color: var(--primary);">
                             {% if editable and role == 'admin' %}
-                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1" 
+                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1"
                                     data-bs-toggle="modal" data-bs-target="#editTimetableModal"
                                     onclick="openEditModal('{{ slot_data.id }}', '{{ day_data.day }}', '{{ slot_data.start_time }}', '{{ slot_data.teacher }}', '{{ slot_data.subject }}');"
                                     aria-label="Edit Slot">
@@ -69,7 +74,7 @@
                     {% elif slot_data.status == 'internal_gap' %}
                         <td class="cell-internal-gap p-3 position-relative" style="background-color: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
                             {% if editable and role == 'admin' %}
-                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1" 
+                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1"
                                     data-bs-toggle="modal" data-bs-target="#manualSlotModal"
                                     onclick="openManualSlotModal('{{ day_data.day }}', '{{ slot_data.start_time }}');"
                                     aria-label="Assign Slot">
@@ -83,7 +88,7 @@
                         {# Default to edge free #}
                         <td class="cell-edge-free p-3 text-muted bg-light position-relative" style="border: 1px dashed var(--border);">
                             {% if editable and role == 'admin' %}
-                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1" 
+                            <button type="button" class="btn btn-sm btn-light position-absolute top-0 end-0 m-1 rounded-circle p-1 lh-1"
                                     data-bs-toggle="modal" data-bs-target="#manualSlotModal"
                                     onclick="openManualSlotModal('{{ day_data.day }}', '{{ slot_data.start_time }}');"
                                     aria-label="Assign Slot">
@@ -99,5 +104,162 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<div class="d-md-none mb-2 px-3 pt-3 text-center toggle-weekly-btn">
+    <button class="btn btn-outline-primary btn-sm fw-bold w-100" type="button" onclick="
+        const table = this.parentElement.previousElementSibling;
+        const mobile = this.parentElement.nextElementSibling;
+        if(table.classList.contains('d-none')) {
+            table.classList.remove('d-none', 'd-md-block');
+            table.classList.add('d-block');
+            mobile.classList.remove('d-block', 'd-md-none');
+            mobile.classList.add('d-none');
+            this.innerHTML = '<i class=\'bi bi-list-task me-1\'></i> View Daily Cards'; if(typeof toggleView === 'function') toggleView('week');
+        } else {
+            table.classList.add('d-none', 'd-md-block');
+            table.classList.remove('d-block');
+            mobile.classList.add('d-block', 'd-md-none');
+            mobile.classList.remove('d-none');
+            this.innerHTML = '<i class=\'bi bi-grid-3x3-gap-fill me-1\'></i> View Full Weekly Timetable';
+        }
+    ">
+        <i class="bi bi-grid-3x3-gap-fill me-1"></i> View Full Weekly Timetable
+    </button>
+</div>
+<!-- Mobile Today / Daily Agenda Cards -->
+<div class="d-block d-md-none p-3 mobile-timetable">
+    {% set today_ns = namespace(name=None) %}
+    {% if day_dates %}
+        {% for d, dt in day_dates.items() %}
+            {% set target_date_str = selected_date if selected_date else dt.today().strftime('%Y-%m-%d') %}
+            {% if dt.strftime('%Y-%m-%d') == target_date_str %}
+                {% set today_ns.name = d %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {% set today_name = today_ns.name %}
+
+    {# Fallback if today_name wasn't found or day_dates missing #}
+    {% if not today_name and days_data|length > 0 %}
+        {% set today_name = days_data[0].day %}
+    {% endif %}
+
+    <div class="mb-4 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-calendar2-day me-2"></i>Daily Schedule</h5>
+        <span class="badge bg-primary fs-6">{{ today_name }}</span>
+    </div>
+
+    {% set today_found = namespace(value=false) %}
+    {% set has_lectures = namespace(value=false) %}
+
+    {% for day_data in days_data %}
+        {% if day_data.day == today_name %}
+            {% set today_found.value = true %}
+
+            {# We need to group practicals across continuous slots #}
+            {% set current_prac = namespace(subject="", teacher="", start="", end="", count=0) %}
+
+            {% for slot_data in day_data.slots %}
+                {% if slot_data.status in ['occupied', 'proxy', 'practical'] %}
+                    {% set has_lectures.value = true %}
+
+                    {# If it's a practical, accumulate #}
+                    {% if slot_data.status == 'practical' %}
+                        {% if current_prac.subject == slot_data.subject and current_prac.teacher == slot_data.teacher %}
+                            {% set current_prac.end = slot_data.end_time %}
+                            {% set current_prac.count = current_prac.count + 1 %}
+                        {% else %}
+                            {# Dump previous practical if exists #}
+                            {% if current_prac.count > 0 %}
+                                <div class="card shadow-sm border-0 mb-3 border-start border-success border-4">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ current_prac.start }} – {{ current_prac.end }}</span>
+                                            <span class="badge bg-success">Practical</span>
+                                        </div>
+                                        <h6 class="fw-bold mb-1">{{ current_prac.subject }} (Prac)</h6>
+                                        <div class="text-muted small"><i class="bi bi-person me-1"></i>{{ current_prac.teacher }}</div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {# Start new practical #}
+                            {% set current_prac.subject = slot_data.subject %}
+                            {% set current_prac.teacher = slot_data.teacher %}
+                            {% set current_prac.start = slot_data.start_time %}
+                            {% set current_prac.end = slot_data.end_time %}
+                            {% set current_prac.count = 1 %}
+                        {% endif %}
+                    {% else %}
+                        {# Dump previous practical if exists #}
+                        {% if current_prac.count > 0 %}
+                            <div class="card shadow-sm border-0 mb-3 border-start border-success border-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ current_prac.start }} – {{ current_prac.end }}</span>
+                                        <span class="badge bg-success">Practical</span>
+                                    </div>
+                                    <h6 class="fw-bold mb-1">{{ current_prac.subject }} (Prac)</h6>
+                                    <div class="text-muted small"><i class="bi bi-person me-1"></i>{{ current_prac.teacher }}</div>
+                                </div>
+                            </div>
+                            {% set current_prac.count = 0 %}
+                        {% endif %}
+
+                        {# Render normal/proxy slot #}
+                        {% set is_uncovered = (slot_data.teacher == '__UNCOVERED__') %}
+                        {% set card_border = 'border-danger' if is_uncovered else ('border-warning' if slot_data.status == 'proxy' else 'border-primary') %}
+                        {% set text_color = 'text-danger' if is_uncovered else ('text-warning' if slot_data.status == 'proxy' else 'text-primary') %}
+
+                        <div class="card shadow-sm border-0 mb-3 border-start {{ card_border }} border-4">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold {{ text_color }}"><i class="bi bi-clock me-1"></i>{{ slot_data.start_time }} – {{ slot_data.end_time }}</span>
+                                    {% if is_uncovered %}
+                                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Uncovered</span>
+                                    {% elif slot_data.status == 'proxy' %}
+                                        <span class="badge bg-warning text-dark">PROXY</span>
+                                    {% endif %}
+                                </div>
+                                <h6 class="fw-bold mb-1">{{ slot_data.subject }}</h6>
+
+                                {% if is_uncovered %}
+                                    <div class="text-danger small fw-bold"><i class="bi bi-person-x me-1"></i>Teacher on Leave (Proxy Not Assigned)</div>
+                                {% else %}
+                                    <div class="text-muted small"><i class="bi bi-person me-1"></i>{{ slot_data.teacher }}</div>
+                                {% endif %}
+
+                                {% if role == 'teacher' and slot_data.course %}
+                                    <div class="mt-2"><span class="badge bg-info text-dark">{{ slot_data.course }}</span></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            {# Dump any remaining practical #}
+            {% if current_prac.count > 0 %}
+                <div class="card shadow-sm border-0 mb-3 border-start border-success border-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-bold text-success"><i class="bi bi-clock me-1"></i>{{ current_prac.start }} – {{ current_prac.end }}</span>
+                            <span class="badge bg-success">Practical</span>
+                        </div>
+                        <h6 class="fw-bold mb-1">{{ current_prac.subject }} (Prac)</h6>
+                        <div class="text-muted small"><i class="bi bi-person me-1"></i>{{ current_prac.teacher }}</div>
+                    </div>
+                </div>
+            {% endif %}
+
+        {% endif %}
+    {% endfor %}
+
+    {% if not has_lectures.value %}
+    <div class="text-center p-5 bg-white rounded shadow-sm border">
+        <i class="bi bi-cup-hot text-muted" style="font-size: 2rem;"></i>
+        <h6 class="mt-3 text-muted fw-bold">No lectures scheduled for today.</h6>
+    </div>
+    {% endif %}
 </div>
 {% endmacro %}

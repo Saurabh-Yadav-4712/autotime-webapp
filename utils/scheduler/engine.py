@@ -7,10 +7,11 @@ from utils.scheduler.diagnostics import GenerationDiagnostics, ReasonCodes
 
 
 class TimetableEngine:
-    def __init__(self, time_slots: List[TimeSlot], days: List[str], max_iterations=1000, seed=None):
+    def __init__(self, time_slots: List[TimeSlot], days: List[str], lunch_after: int = 2, max_iterations=1000, seed=None, scheduler_config=None):
         self.time_slots = time_slots
         self.time_slots_by_index = {slot.idx: slot for slot in time_slots}
         self.days = days
+        self.lunch_after = lunch_after
         self.max_iterations = max_iterations
         self.seed = seed
         self.stats = {
@@ -33,9 +34,11 @@ class TimetableEngine:
         self.failure_counts = collections.defaultdict(int)
         self.deepest_failure_unit = None
 
-        self.max_generation_seconds = 3.0
-        self.max_optimization_seconds = 1.0
-        self.max_optimization_iterations = 2
+        from utils.scheduler.core import SchedulerConfig
+        config = scheduler_config or SchedulerConfig()
+        self.max_generation_seconds = config.generation_timeout_seconds
+        self.max_optimization_seconds = config.optimization_timeout_seconds
+        self.max_optimization_iterations = config.optimization_max_iterations
 
         self.start_time = 0.0
 
@@ -53,6 +56,11 @@ class TimetableEngine:
 
             max_start_idx = len(self.time_slots) - unit.duration
             for idx in range(max_start_idx + 1):
+                # Practical continuity check (no crossing lunch)
+                if unit.duration > 1:
+                    if idx < self.lunch_after and (idx + unit.duration) > self.lunch_after:
+                        continue
+
                 if state.is_free(unit.teacher_id, unit.target_classes, day, idx, unit.duration):
                     candidates.append((day, idx))
         return candidates
@@ -784,9 +792,22 @@ class TimetableEngine:
     def _validate_timetable(
         self, units: List[SessionOccurrence], state: GlobalState
     ) -> Tuple[bool, str]:
+        from utils.scheduler.validator import TimetableValidator
+        valid_classes_set = set()
         for u in units:
-            if not u.assigned_slot:
-                return False, f"Missing assignment for {u.subject_name}"
+            valid_classes_set.update(u.target_classes)
+
+        is_valid, errors = TimetableValidator.audit(
+            units=units,
+            time_slots=self.time_slots,
+            working_days=self.days,
+            teacher_available_days=state.teacher_available_days,
+            teacher_max_hours=state.teacher_max_hours,
+            lunch_after=self.lunch_after,
+            valid_classes=valid_classes_set,
+        )
+        if not is_valid:
+            return False, errors[0]
         return True, "Valid"
 
     def generate(
@@ -829,12 +850,11 @@ class TimetableEngine:
                     )
                     additional_pressure = f"{hardest_unit.subject_name} ({t_str}) failed {self.failure_counts[hardest_unit_id]} times during deep search."
 
+            is_timeout = "timed out" in msg
             diag = GenerationDiagnostics(
                 status="FAILED",
-                reason_code=ReasonCodes.SEARCH_TIMEOUT
-                if "timed out" in msg
-                else ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
-                primary_bottleneck="Search tree exhausted or timed out. Complex constraints prevented a full schedule.",
+                reason_code=ReasonCodes.SEARCH_TIMEOUT if is_timeout else ReasonCodes.NO_FEASIBLE_ASSIGNMENT,
+                primary_bottleneck="Scheduling search exceeded its configured time budget." if is_timeout else "No valid timetable could be found under the enforced constraints.",
                 additional_pressure=additional_pressure,
                 bottleneck_stats=dict(self.failure_counts),
                 suggestions=[

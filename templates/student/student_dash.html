@@ -68,10 +68,10 @@
                 <thead class="table-light">
                     <tr>
                         <th class="bg-secondary text-white py-3" style="width: 12%;">Day \ Time</th>
-                        
+
                         {% set break_printed = namespace(value=false) %}
                         {% for slot in time_slots %}
-                            
+
                             {% if loop.index0 == lunch_after and not break_printed.value %}
                                 <th class="bg-warning text-dark py-3" style="width: 80px;">
                                     <div class="fw-bold mb-2" style="letter-spacing: 1px;">BREAK</div>
@@ -83,38 +83,49 @@
                                 </th>
                                 {% set break_printed.value = true %}
                             {% endif %}
-                            
+
                             <th class="py-3">
                                 <div class="text-primary">{{ slot[0] }}</div>
                                 <div class="small text-muted">to</div>
                                 <div class="text-primary">{{ slot[1] }}</div>
                             </th>
-                            
+
                         {% endfor %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for day in days %}
                     <tr>
-                        <td class="fw-bold bg-light fs-5 align-middle">{{ day }}</td>
-                        
+                        <td class="fw-bold bg-light align-middle">
+                            <div class="fs-5">{{ day }}</div>
+                            {% if day_dates and day in day_dates %}
+                                <div class="small text-muted fw-normal" style="font-size: 0.8rem;">{{ day_dates[day].strftime('%d %b') }}</div>
+                            {% endif %}
+                        </td>
+
                         {% set break_printed_row = namespace(value=false) %}
                         {% for slot in time_slots %}
                             {% set start_time = slot[0] %}
-                            
+
                             {% if loop.index0 == lunch_after and not break_printed_row.value %}
                                 <td class="bg-warning bg-opacity-25 border-warning"></td>
                                 {% set break_printed_row.value = true %}
                             {% endif %}
-                            
+
                             {% if day in schedule and start_time in schedule[day] %}
                                 {% set entry = schedule[day][start_time] %}
-                                
-                                {% if entry.is_proxy %}
-                                    <td class="bg-danger bg-opacity-10 border-danger shadow-sm p-3">
-                                        <div class="fw-bold text-danger small mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> NEW TEACHER</div>
+
+                                {% if entry.teacher_name == '__UNCOVERED__' %}
+                                    <td class="bg-danger bg-opacity-25 border-danger shadow-sm p-3">
+                                        <div class="fw-bold text-danger small mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> UNASSIGNED PROXY</div>
                                         <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
-                                        <div class="badge bg-danger mt-2">{{ entry.teacher_name }}</div>
+                                        <div class="badge bg-danger mt-2">UNCOVERED</div>
+                                    </td>
+                                {% elif entry.is_proxy %}
+                                    <td class="bg-warning bg-opacity-25 border-warning shadow-sm p-3">
+                                        <div class="fw-bold text-dark small mb-1"><i class="bi bi-person-fill-exclamation me-1"></i> PROXY</div>
+                                        <div class="fw-bold text-dark fs-6">{{ entry.subject_name }}</div>
+                                        <div class="badge bg-warning text-dark mt-2">{{ entry.teacher_name }}</div>
                                     </td>
                                 {% else %}
                                     <td class="bg-primary bg-opacity-10 border-primary p-3">
@@ -122,11 +133,11 @@
                                         <div class="badge bg-primary mt-2">{{ entry.teacher_name }}</div>
                                     </td>
                                 {% endif %}
-                                
+
                             {% else %}
                                 <td class="text-muted bg-light"><small class="opacity-50">Free</small></td>
                             {% endif %}
-                            
+
                         {% endfor %}
                     </tr>
                     {% endfor %}
