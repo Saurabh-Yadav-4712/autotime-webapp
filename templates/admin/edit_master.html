@@ -70,7 +70,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Assigned Teacher</label>
-                            <select class="form-select" name="teacher_id" required>
+                            <select class="form-select searchable-select" name="teacher_id" required>
                                 <option value="{{ item.teacher_id }}" selected>Current: {{ item.teacher_id }}</option>
                                 {% for teacher in teachers %}<option value="{{ teacher.teacher_id }}">{{ teacher.name }} ({{ teacher.teacher_id }})</option>{% endfor %}
                             </select>

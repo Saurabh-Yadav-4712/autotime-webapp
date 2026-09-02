@@ -75,6 +75,7 @@ class Timetable(db.Model):
     teacher_name = db.Column(db.String(100), nullable=False)
     is_proxy = db.Column(db.Boolean, default=False)
     specific_date = db.Column(db.Date, nullable=True) # Used for Make-Up/Proxy classes assigned to a specific date
+    leave_id = db.Column(db.Integer, db.ForeignKey('teacher_leave.id'), nullable=True) # Traceability to originating leave assigned to a specific date
 
 class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -112,7 +113,8 @@ class TeacherLeave(db.Model):
     institute_code = db.Column(db.String(20), nullable=False)
     teacher_id = db.Column(db.String(20), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(20), default='Approved') # Pending, Approved, Rejected
+    start_time = db.Column(db.String(20), nullable=True) # Used for specific-period leave
+    status = db.Column(db.String(20), default='Pending') # Pending, Approved, Rejected
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)

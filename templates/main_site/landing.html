@@ -2,13 +2,81 @@
 {% set is_public_page = true %}
 {% block content %}
 <!-- Hero Section -->
-<div class="container-fluid auth-bg text-dark py-5 text-center shadow-lg" style="margin-top: -1.5rem; min-height: 500px; display: flex; align-items: center;">
+<div class="container-fluid py-5 border-bottom auth-bg" style="min-height: 600px; display: flex; align-items: center;">
     <div class="container py-5">
-        <h1 class="display-3 fw-bold mb-3 text-primary"><i class="bi bi-clock-history me-3"></i>AutoTime</h1>
-        <p class="lead fw-normal mb-5 fs-4">The Smartest Way to Generate & Manage Timetables for Your Institute</p>
-        <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center align-items-center mt-4">
-            <a href="/login" class="btn btn-primary btn-lg fw-bold px-5 rounded-pill shadow-lg w-100" style="max-width: 250px;"><i class="bi bi-box-arrow-in-right me-2"></i>Log In</a>
-            <a href="/register_institute" class="btn btn-outline-primary btn-lg fw-bold px-5 rounded-pill w-100 bg-white" style="max-width: 250px; border-width: 2px;"><i class="bi bi-building me-2"></i>Register Institute</a>
+        <div class="row align-items-center g-5">
+            <!-- Left Content -->
+            <div class="col-lg-6 text-center text-lg-start">
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill bg-surface text-primary fw-bold mb-4 border shadow-sm">
+                    <i class="bi bi-stars"></i> Intelligent Scheduling Engine
+                </div>
+                <h1 class="display-4 fw-bold mb-4 text-main" style="line-height: 1.2;">
+                    The Smartest Way to Generate & Manage Timetables
+                </h1>
+                <p class="lead fw-normal mb-5 fs-5 text-muted">
+                    AutoTime uses advanced algorithms to build collision-free schedules, manage teacher leaves, and assign proxies instantly.
+                </p>
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center justify-content-lg-start align-items-center">
+                    <a href="/login" class="btn btn-primary btn-lg fw-bold px-5 rounded-pill shadow-sm w-100" style="max-width: 220px;"><i class="bi bi-box-arrow-in-right me-2"></i>Log In</a>
+                    <a href="/register_institute" class="btn btn-outline-primary btn-lg fw-bold px-5 rounded-pill w-100 bg-surface" style="max-width: 260px; border-width: 2px;"><i class="bi bi-building me-2"></i>Register Institute</a>
+                </div>
+            </div>
+
+            <!-- Right Animation -->
+            <div class="col-lg-6 d-none d-md-block">
+                <div class="hero-animation-container">
+                    <!-- The Grid -->
+                    <div class="sched-grid">
+                        <!-- 25 Cells -->
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                        <div class="sched-cell"></div>
+                        <div class="sched-cell animate-fill"></div>
+                    </div>
+
+                    <!-- The Abstract Python Flow -->
+                    <svg class="sched-path" viewBox="0 0 100 100" preserveAspectRatio="none">
+                        <path class="path-line" d="M -10,20 C 30,20 20,80 60,80 C 80,80 90,50 110,50"
+                              fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+
+                    <!-- Decorative Elements -->
+                    <div class="position-absolute floating-clock bg-surface text-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                         style="width: 70px; height: 70px; top: 10%; right: -20px; border: 3px solid var(--border);">
+                        <i class="bi bi-clock-fill fs-2"></i>
+                    </div>
+
+                    <div class="position-absolute bg-surface px-3 py-2 rounded-pill shadow-lg fw-bold text-success border"
+                         style="bottom: 20px; left: -30px; font-size: 0.85rem;">
+                        <i class="bi bi-check-circle-fill me-1"></i> Conflict Free
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -16,7 +84,7 @@
 <!-- Features Section -->
 <div class="container py-5 mt-4">
     <div class="text-center mb-5">
-        <h2 class="fw-bold text-dark">Why Choose AutoTime?</h2>
+        <h2 class="fw-bold text-main">Why Choose AutoTime?</h2>
         <div class="mx-auto bg-primary rounded" style="width: 60px; height: 4px;"></div>
     </div>
     <div class="row g-4">
@@ -48,10 +116,10 @@
 </div>
 
 <!-- How It Works Section -->
-<div class="container-fluid bg-light py-5">
+<div class="container-fluid bg-main py-5" id="features">
     <div class="container">
         <div class="text-center mb-5">
-            <h2 class="fw-bold text-dark">How It Works</h2>
+            <h2 class="fw-bold text-main">How It Works</h2>
             <div class="mx-auto bg-primary rounded" style="width: 60px; height: 4px;"></div>
         </div>
         <div class="row align-items-center g-5">
@@ -79,9 +147,9 @@
                 </div>
             </div>
             <div class="col-lg-6 text-center">
-                <div class="card border-0 shadow-lg p-3 bg-white rounded-4">
+                <div class="card border-0 shadow-lg p-3 bg-surface rounded-4">
                     <i class="bi bi-calendar3 display-1 text-primary my-5"></i>
-                    <h3 class="fw-bold text-dark mb-4">Ready to automate?</h3>
+                    <h3 class="fw-bold text-main mb-4">Ready to automate?</h3>
                     <a href="/login" class="btn btn-primary btn-lg fw-bold rounded-pill mb-4 w-75 mx-auto shadow"><i class="bi bi-rocket-takeoff me-2"></i> Get Started Now</a>
                 </div>
             </div>

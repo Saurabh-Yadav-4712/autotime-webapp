@@ -8,6 +8,11 @@
             <div class="ms-2 me-auto">
                 <div class="fw-bold">System Alert</div>
                 {{ notif.message }}
+                {% if 'requested leave' in notif.message %}
+                <div class="mt-2">
+                    <a href="/admin/leave_requests" class="btn btn-sm btn-outline-primary">View Requests</a>
+                </div>
+                {% endif %}
             </div>
             <span class="badge bg-primary rounded-pill">{{ notif.created_at.strftime('%d %b %H:%M') }}</span>
         </div>

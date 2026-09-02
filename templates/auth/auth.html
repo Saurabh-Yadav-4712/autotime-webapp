@@ -1,114 +1,174 @@
 {% extends 'shared/base.html' %}
 {% set is_public_page = true %}
 {% block content %}
-<div class="auth-bg d-flex align-items-center justify-content-center w-100" style="min-height: calc(100vh - 80px); padding: 1rem; border-radius: 0.5rem; margin-top: -1.5rem; margin-left: -1.5rem; margin-right: -1.5rem; width: calc(100% + 3rem) !important;">
-    <div class="card p-4 p-md-5 border-0 w-100 mx-auto" style="max-width: 500px; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); border-radius: 1.2rem;">
-        <div class="text-center mb-4">
-            <h2 class="fw-bold text-primary mb-1"><i class="bi bi-clock-history me-2"></i>AutoTime</h2>
-            <p class="text-muted small">Smart Timetable Management System</p>
-        </div>
+<div class="container-fluid py-5 border-bottom d-flex align-items-center auth-bg" style="min-height: calc(100vh - 70px); margin-top: -1.5rem; margin-left: -1.5rem; margin-right: -1.5rem; width: calc(100% + 3rem) !important;">
+    <div class="container py-4">
+        <div class="row align-items-center g-5 justify-content-center">
 
-        <ul class="nav nav-pills nav-fill flex-nowrap mb-4 p-1 rounded-3" id="authTabs" role="tablist" style="overflow-x: auto; white-space: nowrap; background: rgba(255,255,255,0.6);">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active rounded-3" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button" role="tab">Admin</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-3" id="teacher-tab" data-bs-toggle="tab" data-bs-target="#teacher" type="button" role="tab">Teacher</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link rounded-3" id="student-tab" data-bs-toggle="tab" data-bs-target="#student" type="button" role="tab">Student</button>
-            </li>
-        </ul>
+            <!-- Left Side: Animation (hidden on mobile) -->
+            <div class="col-lg-6 d-none d-lg-block">
+                <div class="pe-4">
+                    <h3 class="fw-bold mb-4 text-main">Welcome back to AutoTime</h3>
+                    <p class="text-muted mb-5">Access your dashboard to manage your timetable, handle proxy requests, and view your schedule.</p>
+                    <div class="hero-animation-container">
+                        <!-- The Grid -->
+                        <div class="sched-grid">
+                            <!-- 25 Cells -->
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
 
-        <div class="tab-content" id="authTabsContent">
-            
-            <!-- ADMIN TAB -->
-            <div class="tab-pane fade show active" id="admin" role="tabpanel">
-                <h5 class="fw-bold text-center mb-4 text-muted">Admin Portal</h5>
-                <form action="/login_admin" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-person"></i></span>
-                            <input type="text" name="username" class="form-control" required>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                            <div class="sched-cell"></div>
+                            <div class="sched-cell animate-fill"></div>
+                        </div>
+
+                        <!-- The Abstract Python Flow -->
+                        <svg class="sched-path" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <path class="path-line" d="M -10,20 C 30,20 20,80 60,80 C 80,80 90,50 110,50"
+                                  fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" />
+                        </svg>
+
+                        <!-- Decorative Elements -->
+                        <div class="position-absolute floating-clock bg-surface text-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center"
+                             style="width: 60px; height: 60px; top: -15px; right: -15px; border: 3px solid var(--border);">
+                            <i class="bi bi-clock-fill fs-2"></i>
                         </div>
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label">Password</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                            <input type="password" name="password" id="adminPwd" class="form-control border-end-0" required>
-                            <span class="input-group-text bg-white toggle-password border-start-0" data-target="adminPwd">
-                                <i class="bi bi-eye"></i>
-                            </span>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Login as Admin</button>
-                </form>
-                <div class="text-center">
-                    <p class="small text-muted mb-0">New Institute? <a href="/register_institute" class="text-primary text-decoration-none fw-bold">Register Here</a></p>
                 </div>
             </div>
 
-            <!-- TEACHER TAB -->
-            <div class="tab-pane fade" id="teacher" role="tabpanel">
-                <h5 class="fw-bold text-center mb-4 text-muted">Teacher Portal</h5>
-                <form action="/login_teacher" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" name="email" class="form-control" required>
+            <!-- Right Side: Login Card -->
+            <div class="col-lg-5 col-md-8 col-sm-10">
+                <div class="card p-4 p-md-5 w-100 shadow-lg border-0 rounded-4 bg-surface" style="backdrop-filter: blur(10px); background-color: var(--surface);">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold text-primary mb-1"><i class="bi bi-clock-history me-2"></i>AutoTime</h2>
+                        <p class="text-muted small">Smart Timetable Management System</p>
+                    </div>
+
+                    <ul class="nav nav-pills nav-fill flex-nowrap mb-4 p-1 rounded-3 bg-light" id="authTabs" role="tablist" style="overflow-x: auto; white-space: nowrap;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-3 fw-bold" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin" type="button" role="tab">Admin</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-3 fw-bold" id="teacher-tab" data-bs-toggle="tab" data-bs-target="#teacher" type="button" role="tab">Teacher</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-3 fw-bold" id="student-tab" data-bs-toggle="tab" data-bs-target="#student" type="button" role="tab">Student</button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="authTabsContent">
+
+                        <!-- ADMIN TAB -->
+                        <div class="tab-pane fade show active" id="admin" role="tabpanel">
+                            <form action="/login_admin" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Username</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                        <input type="text" name="username" class="form-control border-start-0 ps-0 bg-light" required>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Password</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
+                                        <input type="password" name="password" id="adminPwd" class="form-control border-start-0 border-end-0 px-0 bg-light" required>
+                                        <span class="input-group-text bg-light toggle-password border-start-0" data-target="adminPwd" style="cursor: pointer;">
+                                            <i class="bi bi-eye text-muted"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 mb-3 py-2 fw-bold shadow-sm">Login as Admin</button>
+                            </form>
+                            <div class="text-center">
+                                <p class="small text-muted mb-0">New Institute? <a href="/register_institute" class="text-primary text-decoration-none fw-bold">Register Here</a></p>
+                            </div>
+                        </div>
+
+                        <!-- TEACHER TAB -->
+                        <div class="tab-pane fade" id="teacher" role="tabpanel">
+                            <form action="/login_teacher" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Email Address</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                        <input type="email" name="email" class="form-control border-start-0 ps-0 bg-light" required>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Password</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
+                                        <input type="password" name="password" id="teacherPwd" class="form-control border-start-0 border-end-0 px-0 bg-light" required>
+                                        <span class="input-group-text bg-light toggle-password border-start-0" data-target="teacherPwd" style="cursor: pointer;">
+                                            <i class="bi bi-eye text-muted"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 mb-3 py-2 fw-bold shadow-sm">Login as Teacher</button>
+                            </form>
+                            <div class="text-center">
+                                <p class="small text-muted mb-0">First time logging in? <a href="/activate_teacher" class="text-success text-decoration-none fw-bold">Activate Account</a></p>
+                            </div>
+                        </div>
+
+                        <!-- STUDENT TAB -->
+                        <div class="tab-pane fade" id="student" role="tabpanel">
+                            <form action="/login_student" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Email Address</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                                        <input type="email" name="email" class="form-control border-start-0 ps-0 bg-light" required>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">Password</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
+                                        <input type="password" name="password" id="studentPwd" class="form-control border-start-0 border-end-0 px-0 bg-light" required>
+                                        <span class="input-group-text bg-light toggle-password border-start-0" data-target="studentPwd" style="cursor: pointer;">
+                                            <i class="bi bi-eye text-muted"></i>
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 mb-3 py-2 fw-bold shadow-sm">Login as Student</button>
+                            </form>
+                            <div class="text-center">
+                                <p class="small text-muted mb-0">New Student? <a href="/register_student" class="text-primary text-decoration-none fw-bold">Register Here</a></p>
+                            </div>
                         </div>
                     </div>
-                    <div class="mb-4">
-                        <label class="form-label">Password</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                            <input type="password" name="password" id="teacherPwd" class="form-control border-end-0" required>
-                            <span class="input-group-text bg-white toggle-password border-start-0" data-target="teacherPwd">
-                                <i class="bi bi-eye"></i>
-                            </span>
-                        </div>
+
+                    <div class="text-center mt-4 border-top pt-4">
+                        <a href="/forgot_password" class="text-muted text-decoration-none small"><i class="bi bi-key me-1"></i>Forgot Password?</a>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Login as Teacher</button>
-                </form>
-                <div class="text-center">
-                    <p class="small text-muted mb-0">First time logging in? <a href="/activate_teacher" class="text-success text-decoration-none fw-bold">Activate Account</a></p>
                 </div>
             </div>
-
-            <!-- STUDENT TAB -->
-            <div class="tab-pane fade" id="student" role="tabpanel">
-                <h5 class="fw-bold text-center mb-4 text-muted">Student Portal</h5>
-                <form action="/login_student" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label">Email Address</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" name="email" class="form-control" required>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label class="form-label">Password</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-                            <input type="password" name="password" id="studentPwd" class="form-control border-end-0" required>
-                            <span class="input-group-text bg-white toggle-password border-start-0" data-target="studentPwd">
-                                <i class="bi bi-eye"></i>
-                            </span>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 mb-3 py-2">Login as Student</button>
-                </form>
-                <div class="text-center">
-                    <p class="small text-muted mb-0">New Student? <a href="/register_student" class="text-primary text-decoration-none fw-bold">Register Here</a></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="text-center mt-4 border-top pt-4">
-            <a href="/forgot_password" class="text-muted text-decoration-none small"><i class="bi bi-key me-1"></i>Forgot Password?</a>
         </div>
     </div>
 </div>

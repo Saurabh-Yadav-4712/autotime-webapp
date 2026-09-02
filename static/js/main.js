@@ -1,24 +1,42 @@
 // Global Theme Toggle Logic (Event Delegation for Turbo safety)
 document.addEventListener('change', function(e) {
-    if (e.target && e.target.id === 'globalThemeToggle') {
+    if (e.target && e.target.classList.contains('theme-toggle-input')) {
         const newTheme = e.target.checked ? 'dark' : 'light';
         document.documentElement.setAttribute('data-bs-theme', newTheme);
         localStorage.setItem('autotime_theme', newTheme);
+
+        document.querySelectorAll('.theme-toggle-input').forEach(input => {
+            if (input !== e.target) input.checked = e.target.checked;
+        });
     }
 });
 
 function syncThemeToggle() {
     const savedTheme = localStorage.getItem('autotime_theme') || 'light';
     document.documentElement.setAttribute('data-bs-theme', savedTheme);
-    
-    const toggleInput = document.getElementById('globalThemeToggle');
-    if (toggleInput) {
+
+    document.querySelectorAll('.theme-toggle-input').forEach(toggleInput => {
         toggleInput.checked = (savedTheme === 'dark');
-    }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', syncThemeToggle);
 document.addEventListener('turbo:load', syncThemeToggle);
+
+function initSearchableSelects() {
+    if (typeof TomSelect !== 'undefined') {
+        document.querySelectorAll('.searchable-select').forEach(el => {
+            if (!el.tomselect) {
+                new TomSelect(el, {
+                    create: false,
+                    sortField: {field: "text", direction: "asc"}
+                });
+            }
+        });
+    }
+}
+document.addEventListener('DOMContentLoaded', initSearchableSelects);
+document.addEventListener('turbo:load', initSearchableSelects);
 
 // Global Loader Logic
 window.addEventListener('turbo:before-visit', () => {
@@ -34,11 +52,11 @@ window.addEventListener('turbo:load', () => {
 // Button Inline Loader Logic
 if (!window.loaderInitialized) {
     window.loaderInitialized = true;
-    
+
     document.addEventListener('submit', function(e) {
         const form = e.target;
         let submitter = e.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
-        
+
         if (submitter && !submitter.hasAttribute('data-loading')) {
             if (submitter.tagName.toLowerCase() === 'button') {
                 const width = submitter.offsetWidth;
@@ -56,7 +74,7 @@ if (!window.loaderInitialized) {
             submitter.setAttribute('data-loading', 'true');
         }
     });
-    
+
     document.addEventListener('turbo:submit-end', function(e) {
         document.querySelectorAll('[data-loading="true"]').forEach(btn => {
             if (btn.tagName.toLowerCase() === 'button' && btn.hasAttribute('data-original-html')) {
@@ -67,7 +85,7 @@ if (!window.loaderInitialized) {
             btn.classList.remove('disabled');
             btn.disabled = false;
             btn.removeAttribute('data-loading');
-            btn.style.width = ''; 
+            btn.style.width = '';
         });
     });
 }

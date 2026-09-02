@@ -22,6 +22,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Turbo for SPA -->
     <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='loader.css') }}">
     
@@ -84,7 +86,7 @@
         
         /* Modern Abstract Python/Scheduling Background */
         .auth-bg {
-            background-color: #f8fafc;
+            background-color: var(--bg-color);
             background-image: 
                 linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
@@ -115,17 +117,15 @@
             pointer-events: none;
         }
         
-        @media (prefers-reduced-motion: no-preference) {
-            .auth-bg::after {
-                animation: algoSearch 15s infinite alternate ease-in-out;
-            }
-            @keyframes algoSearch {
-                0% { transform: translate(10vw, 10vh) scale(1); }
-                25% { transform: translate(50vw, 20vh) scale(1.5); }
-                50% { transform: translate(80vw, 60vh) scale(1); }
-                75% { transform: translate(30vw, 80vh) scale(1.8); }
-                100% { transform: translate(60vw, 10vh) scale(1.2); }
-            }
+        .auth-bg::after {
+            animation: algoSearch 15s infinite alternate ease-in-out;
+        }
+        @keyframes algoSearch {
+            0% { transform: translate(10vw, 10vh) scale(1); }
+            25% { transform: translate(50vw, 20vh) scale(1.5); }
+            50% { transform: translate(80vw, 60vh) scale(1); }
+            75% { transform: translate(30vw, 80vh) scale(1.8); }
+            100% { transform: translate(60vw, 10vh) scale(1.2); }
         }
         
         .auth-bg > div {
@@ -172,6 +172,11 @@
                 <li>
                     <a href="/manage_teachers" class="nav-link sidebar-link {% if 'teacher' in request.path %}active{% endif %}">
                         <i class="bi bi-person-badge me-2"></i> Teachers
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/leave_requests" class="nav-link sidebar-link {% if 'leave' in request.path %}active{% endif %}">
+                        <i class="bi bi-envelope-paper me-2"></i> Leave Requests
                     </a>
                 </li>
                 
@@ -296,7 +301,7 @@
                     <div class="d-flex align-items-center gap-2 ms-auto">
                         <div class="theme-switch-wrapper me-2" title="Toggle Theme">
                             <label class="theme-switch" for="globalThemeToggle">
-                                <input type="checkbox" id="globalThemeToggle" />
+                                <input type="checkbox" id="globalThemeToggle" class="theme-toggle-input" />
                                 <div class="theme-slider">
                                     <i class="bi bi-sun-fill"></i>
                                     <i class="bi bi-moon-stars-fill"></i>
@@ -332,6 +337,8 @@
                     </div>
                 </div>
             </nav>
+            {% else %}
+            {% include 'components/public_navbar.html' %}
             {% endif %}
 
             <!-- Main Content Area -->
@@ -404,6 +411,7 @@
             <li><a href="/manage_courses" class="nav-link sidebar-link"><i class="bi bi-journal-bookmark me-2"></i> Classes</a></li>
             <li><a href="/manage_subjects" class="nav-link sidebar-link"><i class="bi bi-book me-2"></i> Subjects</a></li>
             <li><a href="/manage_teachers" class="nav-link sidebar-link"><i class="bi bi-person-badge me-2"></i> Teachers</a></li>
+            <li><a href="/admin/leave_requests" class="nav-link sidebar-link"><i class="bi bi-envelope-paper me-2"></i> Leave Requests</a></li>
             <li class="nav-item mt-2"><small class="text-uppercase fw-bold px-3" style="color: #adb5bd; font-size: 0.75rem;">Timetable</small></li>
             <li><a href="/generate_timetable" class="nav-link sidebar-link"><i class="bi bi-magic me-2"></i> Generate</a></li>
             <li><a href="/view_timetable" class="nav-link sidebar-link"><i class="bi bi-calendar-grid-31 me-2"></i> View</a></li>

@@ -409,7 +409,16 @@ def view_timetable():
     inst_code = session['institute_code']
     
     courses = Course.query.filter_by(institute_code=inst_code).all()
+    teachers = Teacher.query.filter_by(institute_code=inst_code).all()
     selected_class = request.args.get('class_id')
+    date_str = request.args.get('date')
+    selected_date = None
+    if date_str:
+        try:
+            from datetime import datetime
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass
     
     schedule = {}
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -421,7 +430,9 @@ def view_timetable():
     break_duration = int(s.get('break_time', 30)) # Fetch break duration
     
     if selected_class:
-        entries = Timetable.query.filter_by(institute_code=inst_code, class_id=selected_class).all()
+        from utils.timetable_adapter import get_effective_timetable
+        filters = {'class_id': selected_class}
+        entries = get_effective_timetable(inst_code, filters, target_date=selected_date)
         for day in days:
             schedule[day] = {}
             for entry in entries:
@@ -440,7 +451,7 @@ def view_timetable():
         subjects = []
     
     days_data = build_timetable_view_model(schedule, days, time_slots)
-    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, schedule=schedule, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
+    return render_template('shared/view_timetable.html', courses=courses, selected_class=selected_class, selected_date=date_str, schedule=schedule, days_data=days_data, days=days, time_slots=time_slots, lunch_after=lunch_after, break_duration=break_duration, inst_name=inst_name, teachers=teachers, subjects=subjects)
 
 @main_bp.route('/api/get_slot_data', methods=['GET'])
 @login_required_admin
@@ -514,13 +525,25 @@ def edit_timetable_slot():
             flash(f'Cannot assign {new_teacher}. They are already teaching Class {clash.class_id} at this time!', 'danger')
             return redirect(url_for('main.view_timetable', class_id=entry.class_id))
             
+    # Check available days hard constraint
+    t_obj = Teacher.query.filter_by(institute_code=entry.institute_code, name=new_teacher).first()
+    if t_obj:
+        t_days = [d.strip() for d in (t_obj.available_days or "").split(',')] if t_obj.available_days else ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        if entry.day_name not in t_days:
+            flash(f'Cannot assign {new_teacher}. They are not available on {entry.day_name}.', 'danger')
+            return redirect(url_for('main.view_timetable', class_id=entry.class_id))
+    
     # Update entry
     entry.subject_name = new_subject
     entry.teacher_name = new_teacher
-    # Clear proxy flag if any
-    if hasattr(entry, 'is_proxy') and entry.is_proxy:
-        entry.is_proxy = False
-        entry.original_teacher = None
+    
+    # If the entry was already a date-specific proxy override (leave_id is not null),
+    # we preserve is_proxy=True and leave_id so it cleans up properly.
+    # Otherwise, it's a permanent override.
+    if getattr(entry, 'specific_date', None) is None:
+        if hasattr(entry, 'is_proxy'):
+            entry.is_proxy = False
+            entry.original_teacher = None
         
     db.session.commit()
     flash('Timetable slot updated successfully!', 'success')
@@ -573,6 +596,14 @@ def manual_assign_slot():
         if clash:
             flash(f'Cannot assign {teacher_name}. They are already assigned to Class {clash.class_id} at this time!', 'danger')
             return redirect(url_for('main.view_timetable', class_id=class_id))
+            
+        # Check available days hard constraint
+        t_obj = Teacher.query.filter_by(institute_code=inst_code, name=teacher_name).first()
+        if t_obj:
+            t_days = [d.strip() for d in (t_obj.available_days or "").split(',')] if t_obj.available_days else ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            if day_name not in t_days:
+                flash(f'Cannot assign {teacher_name}. They are not available on {day_name}.', 'danger')
+                return redirect(url_for('main.view_timetable', class_id=class_id))
             
     elif assign_type == 'event':
         subject_name = request.form.get('event_name')
@@ -759,8 +790,6 @@ def reject_teacher_request(req_id):
     return redirect(url_for('main.admin_dash'))
 from models import AcademicCalendar, Notification
 from datetime import datetime
-from utils.timetable_adapter import auto_allocate_proxy
-
 @main_bp.route('/manage_calendar', methods=['GET', 'POST'])
 @login_required_admin
 def manage_calendar():
@@ -784,9 +813,7 @@ def manage_calendar():
             db.session.add(new_event)
             db.session.commit()
             
-            # Auto-Allocate Proxies for missing lectures caused by this event
-            if is_holiday:
-                auto_allocate_proxy(inst_code, event_date)
+            # Holidays don't need proxies, they cancel classes.
             
             flash('Event added successfully! Proxy Engine ran for affected lectures.', 'success')
         except Exception as e:
@@ -803,6 +830,58 @@ def manage_calendar():
 @login_required_admin
 def admin_notifications():
     inst_code = session['institute_code']
-    
     notifs = Notification.query.filter_by(institute_code=inst_code, user_type='admin').order_by(Notification.created_at.desc()).all()
     return render_template('admin/notifications.html', notifications=notifs)
+
+@main_bp.route('/admin/leave_requests')
+@login_required_admin
+def leave_requests():
+    inst_code = session['institute_code']
+    pending = TeacherLeave.query.filter_by(institute_code=inst_code, status='Pending').order_by(TeacherLeave.date).all()
+    history = TeacherLeave.query.filter(TeacherLeave.institute_code == inst_code, TeacherLeave.status != 'Pending').order_by(TeacherLeave.date.desc()).limit(30).all()
+    
+    pending_leaves = []
+    for l in pending:
+        t = Teacher.query.filter_by(institute_code=inst_code, teacher_id=l.teacher_id).first()
+        if t: pending_leaves.append((l, t))
+        
+    history_leaves = []
+    for l in history:
+        t = Teacher.query.filter_by(institute_code=inst_code, teacher_id=l.teacher_id).first()
+        if t: history_leaves.append((l, t))
+        
+    return render_template('admin/leave_requests.html', pending_leaves=pending_leaves, history_leaves=history_leaves)
+
+@main_bp.route('/admin/approve_leave/<int:leave_id>', methods=['POST'])
+@login_required_admin
+def approve_leave(leave_id):
+    from utils.leave_service import approve_leave as service_approve_leave
+    success, msg = service_approve_leave(leave_id)
+    if success:
+        flash(msg, 'success')
+    else:
+        flash(msg, 'danger')
+    return redirect(url_for('main.leave_requests'))
+
+@main_bp.route('/admin/reject_leave/<int:leave_id>', methods=['POST'])
+@login_required_admin
+def reject_leave(leave_id):
+    leave = TeacherLeave.query.get_or_404(leave_id)
+    if leave.status != 'Pending':
+        flash('Only pending leaves can be rejected.', 'warning')
+        return redirect(url_for('main.leave_requests'))
+    leave.status = 'Rejected'
+    db.session.commit()
+    flash('Leave request rejected.', 'success')
+    return redirect(url_for('main.leave_requests'))
+
+@main_bp.route('/admin/revoke_leave/<int:leave_id>', methods=['POST'])
+@login_required_admin
+def revoke_leave(leave_id):
+    from utils.leave_service import cancel_leave
+    success, msg = cancel_leave(leave_id, actor_name='Admin')
+    if success:
+        flash(msg, 'success')
+    else:
+        flash(msg, 'danger')
+    return redirect(url_for('main.leave_requests'))

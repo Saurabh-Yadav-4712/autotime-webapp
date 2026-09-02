@@ -17,13 +17,8 @@
                     <p class="text-muted mb-4">Our Auto-Proxy system will automatically assign your lectures to free teachers based on workload and availability.</p>
                     <form action="/apply_leave" method="POST">
                         <div class="mb-4">
-                            <label class="form-label fw-bold">Select Day</label>
-                            <select name="leave_day" class="form-select form-select-lg bg-white shadow-sm" required>
-                                <option value="" selected disabled>Select Day...</option>
-                                {% for day in days %}
-                                    <option value="{{ day }}">{{ day }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label fw-bold">Select Date</label>
+                            <input type="date" name="leave_date" id="leave_date" class="form-control form-control-lg bg-white shadow-sm" required min="{{ today_date }}">
                         </div>
                         <div class="mb-4">
                             <label class="form-label fw-bold">Specific Slot <span class="text-muted fw-normal">(Optional)</span></label>
@@ -35,7 +30,7 @@
                             </select>
                             <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i> Selecting "All Day" will arrange proxies for all your classes on that day.</div>
                         </div>
-                        <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm" onclick="return confirm('Are you sure you want to apply for leave? Auto-Proxy will modify the live timetable immediately.');">
+                        <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm" onclick="return confirm('Are you sure you want to apply for leave? Your request will be sent to the Admin for approval.');">
                             <i class="bi bi-send-fill me-2"></i> Submit Leave Request
                         </button>
                     </form>

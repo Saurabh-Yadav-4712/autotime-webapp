@@ -31,14 +31,22 @@ class GlobalState:
     # Workload tracking
     teacher_hours: Dict[str, int] = field(default_factory=dict) # teacher_id -> hours
     teacher_max_hours: Dict[str, int] = field(default_factory=dict)
+    teacher_available_days: Dict[str, Set[str]] = field(default_factory=dict) # teacher_id -> set of allowed day_names
     
     # Future scaling
     # room_busy: Dict[str, Dict[str, Set[int]]] = field(default_factory=dict)
     
     def is_free(self, teacher_id: str, classes: List[str], day: str, slot_idx: int, duration: int) -> bool:
-        if teacher_id and teacher_id in self.teacher_max_hours:
-            if self.teacher_hours.get(teacher_id, 0) + duration > self.teacher_max_hours[teacher_id]:
-                return False
+        if teacher_id:
+            # Check weekly maximum workload
+            if teacher_id in self.teacher_max_hours:
+                if self.teacher_hours.get(teacher_id, 0) + duration > self.teacher_max_hours[teacher_id]:
+                    return False
+            
+            # Check hard availability constraint for this specific day
+            if teacher_id in self.teacher_available_days:
+                if day not in self.teacher_available_days[teacher_id]:
+                    return False
                 
         for i in range(duration):
             curr_idx = slot_idx + i

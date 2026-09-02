@@ -4,7 +4,16 @@
 {% if teacher_view %}
 <div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
     <h2 class="fw-bold text-primary mb-0 d-flex align-items-center"><i class="bi bi-building me-2"></i> Class Viewer: {{ class_id }}</h2>
-    <a href="/teacher_dash" class="btn btn-outline-secondary fw-bold"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+    <div class="d-flex align-items-center gap-2">
+        <form method="GET" class="d-flex align-items-center mb-0">
+            <input type="hidden" name="class_id" value="{{ class_id }}">
+            <input type="date" class="form-control form-control-sm border-primary me-2" name="date" value="{{ selected_date or '' }}" onchange="this.form.submit()" style="max-width: 150px;" title="Select a date to view specific proxies and leaves">
+            {% if selected_date %}
+            <a href="/teacher_view_class?class_id={{ class_id }}" class="btn btn-sm btn-outline-danger me-2"><i class="bi bi-x"></i></a>
+            {% endif %}
+        </form>
+        <a href="/teacher_dash" class="btn btn-sm btn-outline-secondary fw-bold"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+    </div>
 </div>
 {% else %}
 <div class="d-flex justify-content-between align-items-center mb-4 mt-3 pb-3 border-bottom">
@@ -15,22 +24,29 @@
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-4 bg-light-custom">
         <form method="GET" action="/student_portal" class="row g-3 align-items-end">
-            <div class="col-md-5">
+            <div class="col-md-4">
                 <label class="form-label fw-bold small">Institute Code</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-building"></i></span>
                     <input type="text" name="inst_code" class="form-control" placeholder="e.g. INS-12345" value="{{ inst_code or '' }}" required>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label fw-bold small">Your Class ID</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-journal-bookmark"></i></span>
                     <input type="text" name="class_id" class="form-control" placeholder="e.g. FYCS-A" value="{{ class_id or '' }}" required>
                 </div>
             </div>
-            <div class="col-md-3 mt-3 mt-md-0">
-                <button type="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-search me-1"></i> View Schedule</button>
+            <div class="col-md-3">
+                <label class="form-label fw-bold small">Date (Optional)</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-calendar"></i></span>
+                    <input type="date" name="date" class="form-control" value="{{ selected_date or '' }}" title="Select a date to view specific proxies and leaves">
+                </div>
+            </div>
+            <div class="col-md-2 mt-3 mt-md-0">
+                <button type="submit" class="btn btn-primary w-100 fw-bold py-2"><i class="bi bi-search"></i> View</button>
             </div>
         </form>
     </div>
