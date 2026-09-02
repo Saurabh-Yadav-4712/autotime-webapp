@@ -28,7 +28,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.close()
 
 
-from migrations.phase5_relational_schema import run_migration
+from migrations.relational_schema_migration import run_migration
 
 
 def seed_db():

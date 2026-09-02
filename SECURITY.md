@@ -1,44 +1,18 @@
-# Security policy
+# Security Policy
 
-## Reporting a vulnerability
+## Reporting a Vulnerability
 
-Do not open a public issue for a suspected vulnerability. Report it privately to
-the project owner with the affected route, reproduction steps, expected impact,
-and any relevant logs with credentials and personal data removed.
+If you discover a security vulnerability in this project, please report it directly to the repository owner rather than opening a public issue.
 
-## Implemented controls
+## Implemented Security Controls
 
-- Unsafe browser requests require a session-bound CSRF token.
-- Successful authentication rotates and minimizes session state.
-- Session cookies are HTTP-only, SameSite=Lax, and secure in production.
-- Passwords use Werkzeug's adaptive password hashing; OTPs are stored as keyed
-  digests and have expiry and attempt limits.
-- Tenant-owned records are selected by both identifier and institute code.
-- Uploads are size- and type-limited and parsing errors do not expose internals.
-- Security headers deny framing, MIME sniffing, unnecessary browser features,
-  and insecure transport downgrade on HTTPS.
-- Destructive actions use POST rather than mutation-capable GET routes.
-- Pinned dependencies are audited in CI and updated by Dependabot.
+This project implements the following security mechanisms to protect user data and maintain application integrity:
 
-## Production boundaries
-
-The application is substantially hardened, but deployment security also depends
-on its environment. Before exposing it publicly:
-
-- Add IP/account rate limiting for login, registration, OTP, and password-reset
-  endpoints at the reverse proxy or edge.
-- Move OTP and pending-registration state to a server-side, expiring store when
-  deploying across multiple processes or regions.
-- Configure centralized structured logs, error monitoring, uptime checks, and
-  alerts without recording passwords, OTPs, or SMTP credentials.
-- Use a restricted database role, encrypted connections, automated backups, and
-  regular restore tests. Supabase Row Level Security protects its public APIs;
-  it is not a substitute for authorization in an application using a direct
-  privileged database connection.
-- Replace or self-host third-party browser assets if the deployment requires a
-  strict Content Security Policy and supply-chain isolation.
-- Run concurrency, load, accessibility, and disaster-recovery testing with a
-  production-sized anonymized dataset.
-
-Supported releases receive dependency and security fixes through the repository's
-CI and dependency-update workflow.
+- **Password Hashing:** Passwords are securely hashed using Werkzeug's security utilities before being stored in the database.
+- **OTP Protection:** One-Time Passwords (OTPs) have strict expiration times and attempt limits to prevent brute-force attacks.
+- **CSRF Protection:** All state-changing forms and requests require a valid, session-bound CSRF token.
+- **Secure Sessions:** User sessions are managed securely. Session cookies are HTTP-only and configured appropriately for production.
+- **Institute-Level Authorization:** Institute-owned records are scoped using the logged-in user's institute_code during protected queries and modifications. Records are queried and modified using the logged-in user's institute_code to prevent unauthorized cross-tenant access.
+- **Secret Management:** Sensitive configuration details (like database URIs, secret keys, and SMTP credentials) are managed using environment variables and never hardcoded in the repository.
+- **Safe Route Methods:** Destructive actions (like deleting records or modifying timetables) enforce HTTP POST requests rather than GET.
+- **Error Handling:** Generic error messages are displayed to users, preventing internal application stack traces or database structures from leaking to the frontend.

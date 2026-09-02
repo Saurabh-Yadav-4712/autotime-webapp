@@ -1,93 +1,79 @@
-<div align="center">
-  <img src="static/favicon.svg" alt="AutoTime logo" width="88" height="88">
+# AutoTime
 
-  # AutoTime
+Smart Timetable Generator and Management System
 
-  **Secure, constraint-aware academic timetable management for institutes.**
+AutoTime is a Flask-based web application designed to help colleges automatically create and manage timetables while avoiding teacher and class conflicts.
 
-  [![Live App](https://img.shields.io/badge/Live_App-Vercel-000000?logo=vercel)](https://autotime-webapp.vercel.app)
-  [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-  [![Flask](https://img.shields.io/badge/Flask-3.1-000000?logo=flask)](https://flask.palletsprojects.com/)
-  [![CI](https://github.com/Saurabh-Yadav-4712/autotime-webapp/actions/workflows/ci.yml/badge.svg)](https://github.com/Saurabh-Yadav-4712/autotime-webapp/actions/workflows/ci.yml)
+Live Application: [AutoTime on Vercel](https://autotime-webapp.vercel.app/)
+![CI Status](https://github.com/Saurabh-Yadav-4712/autotime-webapp/actions/workflows/ci.yml/badge.svg)
 
-  [Open live application](https://autotime-webapp.vercel.app) ·
-  [Engineering audit](docs/engineering-audit.md) ·
-  [Security policy](SECURITY.md)
-</div>
+## About the Project
 
-## Overview
+Manual timetable creation takes significant time and often results in clashes, uneven schedules, teacher availability problems, and difficulties handling unexpected leave. AutoTime helps automate these scheduling tasks while allowing administrators to fully manage and edit the timetable.
 
-AutoTime is a multi-tenant web application that helps educational institutes
-create, manage, and publish conflict-free academic timetables. It combines an
-automated scheduling engine with manual controls, teacher availability, academic
-calendars, leave management, proxy allocation, and dedicated portals for every
-role.
+## Main Features
 
-| Role | Main capabilities |
-| --- | --- |
-| Administrator | Configure institute timings, courses, subjects, teachers and calendars; generate/edit timetables; approve leave; export schedules |
-| Teacher | Activate an invited account, view personal schedules, request/cancel leave, track notifications and syllabus progress |
-| Student | Register against an institute/class and view the effective timetable, including date-specific proxy changes |
+### Admin
+- Manage institute settings
+- Manage courses, classes, subjects, and teachers
+- Generate timetable
+- Edit and view timetable
+- Approve teacher leave
+- Automatic proxy assignment
+- Timetable history
+- Excel/PDF export
 
-## Key features
+### Teacher
+- Account activation and login
+- Personal timetable
+- Live Current Week timetable
+- Leave request and cancellation
+- View proxy lectures
+- Notifications
 
-- Constraint-aware timetable generation with collision and availability checks
-- Multi-period practical sessions and shared-class subject support
-- Manual timetable slot editing with server-side conflict validation
-- Automatic proxy-teacher allocation for approved leave
-- Role-based authentication with email OTP verification and password recovery
-- Institute-level tenant isolation for records and mutations
-- Academic calendar, notifications, generation history, and Excel export
-- Responsive light/dark interface with Turbo-powered navigation
-- PostgreSQL production support and SQLite-based local development
+### Student
+- Registration and login
+- Class timetable
+- Current-week timetable
+- Updated proxy teacher information
 
-## Architecture
+## Timetable Generation
 
-```text
-Browser / Turbo UI
-        │
-        ▼
-Flask routes ── authentication, authorization, validation, CSRF
-        │
-        ├── Scheduler engine ── feasibility, scoring, diagnostics
-        ├── Leave service ───── proxy allocation and notifications
-        └── SQLAlchemy ORM ──── tenant-scoped persistence
-                                │
-                                ▼
-                         PostgreSQL / SQLite
-```
+The automated scheduling engine constructs the timetable by matching available teachers and subjects to class time slots without overlaps. It handles practical blocks, consecutive lectures, and shared subjects. The system checks teacher availability, workload limits, and required course hours while generating the timetable. It performs validation before saving and attempts to optimize the timetable to reduce unnecessary timetable gaps and improve schedule quality.
 
-The repository is organized by responsibility:
+## Leave and Proxy Management
 
-```text
-routes/       HTTP endpoints for admin, teacher, student and authentication flows
-utils/        Security, scheduling, timetable, email and leave-domain services
-templates/    Server-rendered Jinja templates and reusable components
-static/       Styles, JavaScript and visual assets
-models.py     SQLAlchemy models, constraints and indexes
-migrations/   Explicit migrations for existing databases
-tests/        Security, tenant-isolation, scheduler and regression tests
-```
+When a teacher requests leave, the system manages the absence as follows:
+Teacher requests leave -> Admin approves -> System finds an available eligible proxy teacher -> Current timetable displays proxy -> Master weekly timetable remains unchanged -> Cancelling or revoking the leave automatically restores the normal teacher.
 
-## Technology stack
+## Technology Used
 
-- **Backend:** Python, Flask, Flask-SQLAlchemy, Werkzeug
-- **Database:** PostgreSQL in production; SQLite for development and tests
-- **Frontend:** Jinja, HTML5, Bootstrap, vanilla JavaScript, Hotwired Turbo
-- **Documents:** openpyxl for Excel exports/imports
-- **Delivery:** Vercel with GitHub integration
-- **Quality:** Pytest, Ruff, pip-audit, GitHub Actions, Dependabot
+| Component | Technology |
+|---|---|
+| **Backend** | Python, Flask |
+| **Database** | PostgreSQL / Supabase, SQLAlchemy |
+| **Frontend** | HTML, CSS, Bootstrap, JavaScript, Jinja2 |
+| **Email** | SMTP |
+| **Excel** | openpyxl |
+| **Testing** | Pytest |
+| **Deployment** | Vercel |
+| **Version Control** | Git and GitHub |
 
-## Local development
+## Project Structure
 
-### Prerequisites
+- `routes/` - Handles web traffic, URLs, and page requests
+- `utils/` - Core logic, scheduling adapter, and helpers
+- `utils/scheduler/` - The scheduling engine algorithm
+- `templates/` - HTML layout and Jinja2 frontend components
+- `static/` - CSS styles and JavaScript files
+- `models.py` - Database tables and SQLAlchemy setup
+- `migrations/` - Database schema change history
+- `tests/` - Automated unit and integration tests
+- `app.py` - The main application entry point
+- `requirements.txt` - Required Python packages
+- `vercel.json` - Deployment configuration for Vercel
 
-- Python 3.11 or newer
-- Git
-- PostgreSQL for a production-like setup, or SQLite for quick local development
-- SMTP credentials when testing OTP email delivery
-
-### Installation
+## How to Run Locally
 
 ```bash
 git clone https://github.com/Saurabh-Yadav-4712/autotime-webapp.git
@@ -95,112 +81,49 @@ cd autotime-webapp
 python -m venv .venv
 ```
 
-Activate the environment:
-
+Windows:
 ```powershell
-# Windows PowerShell
 .venv\Scripts\Activate.ps1
 ```
 
+macOS/Linux:
 ```bash
-# macOS/Linux
 source .venv/bin/activate
 ```
 
-Install dependencies:
-
+Then:
 ```bash
-python -m pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
-Generate a secret key and configure the environment using `.env.example` as the
-reference. Never commit real credentials.
+Copy/use `.env.example` as a reference and configure the required environment variables. Never place real credentials in the repository.
 
+Then run:
 ```bash
-python -c "import secrets; print(secrets.token_urlsafe(64))"
-```
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `SECRET_KEY` | Yes | Signs sessions and security tokens; use a long random value |
-| `DATABASE_URL` | Production | PostgreSQL connection URL; SQLite is the local default |
-| `SMTP_EMAIL` | OTP email | Sender account used for verification emails |
-| `SMTP_PASSWORD` | OTP email | Application-specific SMTP credential |
-| `SESSION_COOKIE_SECURE` | Production | Keep `true` so cookies are sent only over HTTPS |
-| `AUTO_CREATE_SCHEMA` | Local only | Set `true` only when creating a new local SQLite database |
-| `FLASK_DEBUG` | No | Keep `false` outside local development |
-
-Run a new local SQLite instance:
-
-```powershell
-$env:SECRET_KEY = "your-generated-secret"
-$env:AUTO_CREATE_SCHEMA = "true"
 python app.py
 ```
 
-Open `http://127.0.0.1:5000`.
+## Testing
 
-## Quality checks
+Automated tests cover important scheduler logic, proxy allocation, security, Live Week behavior, and UI rendering.
 
-The following checks match the GitHub Actions workflow:
-
+For developers who want to run the tests locally:
 ```bash
-python -m compileall -q app.py models.py routes utils migrations
-python -m ruff check .
+pip install -r requirements-dev.txt
 python -m pytest
-python -m pip_audit -r requirements.txt
 ```
-
-The current suite covers authentication, CSRF, cross-tenant authorization,
-leave/proxy transactions, database migration integrity, scheduler regressions,
-gap semantics, weekly balance, and UI rendering.
-
-## Database migrations
-
-`db.create_all()` is used only for a new local database. Production should keep
-`AUTO_CREATE_SCHEMA=false` and apply schema changes as a controlled release
-step.
-
-For an existing deployment:
-
-1. Back up the production database and verify that the backup can be restored.
-2. Test the migration against a staging copy.
-3. Set the production environment variables.
-4. Run the migrations in `migrations/` in order, ending with:
-
-   ```bash
-   python migrations/production_hardening.py
-   ```
-
-The hardening migration checks duplicate legacy identifiers before adding
-tenant uniqueness guarantees and performance indexes. It aborts without applying
-changes when conflicting data is detected.
+GitHub Actions also runs these tests automatically on every push.
 
 ## Deployment
 
-The repository is connected to Vercel. A push to `main` triggers the production
-deployment at [autotime-webapp.vercel.app](https://autotime-webapp.vercel.app).
-
-Before deployment, confirm that Vercel contains `SECRET_KEY`, `DATABASE_URL`,
-`SMTP_EMAIL`, and `SMTP_PASSWORD`. Keep `SESSION_COOKIE_SECURE=true`,
-`AUTO_CREATE_SCHEMA=false`, and `FLASK_DEBUG=false`.
+The application is deployed on Vercel and uses a cloud PostgreSQL database.
+Live Link: [https://autotime-webapp.vercel.app/](https://autotime-webapp.vercel.app/)
 
 ## Security
 
-AutoTime enforces CSRF protection, secure session cookies, password hashing,
-keyed OTP digests with expiry and attempt limits, tenant-scoped authorization,
-safe upload limits, security headers, and POST-only destructive operations.
+AutoTime includes standard web security controls such as hashed passwords, OTP expiry, CSRF protection, secure sessions, and institute-scoped authorization. Sensitive configuration such as secret keys and credentials is loaded through environment variables. For more details, see [SECURITY.md](SECURITY.md).
 
-Deployment-level controls such as rate limiting, monitoring, restricted database
-credentials, backups, and incident response remain the operator's responsibility.
-Read [SECURITY.md](SECURITY.md) before exposing the service publicly.
+## Author
 
-## Documentation
-
-- [Engineering audit and remaining production work](docs/engineering-audit.md)
-- [Security policy and deployment boundaries](SECURITY.md)
-- [Environment variable template](.env.example)
-
-## License
-
-Proprietary. All rights reserved.
+Saurabh Yadav
+B.Sc. Computer Science
