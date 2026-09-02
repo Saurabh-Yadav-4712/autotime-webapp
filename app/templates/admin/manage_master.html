@@ -1,0 +1,315 @@
+{% extends 'shared/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+    <h2 class="fw-bold text-main mb-0 d-flex align-items-center">
+        {% if manage_type == 'course' %}<i class="bi bi-book text-primary me-2"></i> Manage Courses
+        {% elif manage_type == 'teacher' %}<i class="bi bi-person-video3 text-primary me-2"></i> Manage Teachers
+        {% elif manage_type == 'subject' %}<i class="bi bi-journals text-primary me-2"></i> Manage Subjects{% endif %}
+    </h2>
+    <a href="/admin_dash" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Dashboard</a>
+</div>
+
+<div class="row g-4">
+    <!-- ENTRY FORM (LEFT SIDE) -->
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header text-white fw-bold {% if manage_type == 'course' %}bg-primary{% elif manage_type == 'teacher' %}bg-success{% else %}bg-info{% endif %} d-flex align-items-center py-3">
+                <i class="bi bi-plus-circle me-2"></i> Add New {% if manage_type == 'course' %}Course{% elif manage_type == 'teacher' %}Teacher{% else %}Subject{% endif %}
+            </div>
+            <div class="card-body bg-light-custom">
+                <form method="POST">
+                    
+                    <!-- COURSE FORM -->
+                    {% if manage_type == 'course' %}
+                    <div class="mb-3"><label class="form-label">Class ID</label><input type="text" class="form-control" name="class_id" placeholder="e.g. FYCS-A" required></div>
+                    <div class="mb-3"><label class="form-label">Department</label><input type="text" class="form-control" name="department" placeholder="e.g. CS" required></div>
+                    <div class="row g-2">
+                        <div class="col-6 mb-3"><label class="form-label">Semester</label><input type="number" class="form-control" name="semester" min="1" required></div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Division</label>
+                            <select class="form-select" name="division" required>
+                                <option value="" selected disabled>Select...</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="G">G</option>
+                                <option value="H">H</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2 me-1"></i> Add Course</button>
+
+                    <!-- TEACHER FORM -->
+                    {% elif manage_type == 'teacher' %}
+                    <div class="row g-2">
+                        <div class="col-6 mb-3"><label class="form-label">Teacher ID</label><input type="text" class="form-control" name="teacher_id" required></div>
+                        <div class="col-6 mb-3"><label class="form-label">Max Hrs/Week</label><input type="number" class="form-control" name="max_hours" min="1" max="60" required></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Full Name</label><input type="text" class="form-control" name="name" required></div>
+                    <div class="mb-3"><label class="form-label">Email</label><input type="email" class="form-control" name="email" required></div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input class="form-control" list="deptOpts" name="departments" required>
+                        <datalist id="deptOpts">{% for d in depts %}<option value="{{ d }}">{% endfor %}</datalist>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Available Days</label>
+                        <div class="d-flex flex-wrap gap-2 p-2 bg-white border rounded">
+                            {% for day in ['Mon','Tue','Wed','Thu','Fri','Sat'] %}
+                            <div class="form-check form-check-inline m-0">
+                                <input class="form-check-input" type="checkbox" name="days" value="{{ day }}" id="day_{{ day }}" checked>
+                                <label class="form-check-label small" for="day_{{ day }}">{{ day }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100"><i class="bi bi-check2 me-1"></i> Add Teacher</button>
+
+                    <!-- SUBJECT FORM -->
+                    {% elif manage_type == 'subject' %}
+                    <div class="row g-2">
+                        <div class="col-4 mb-3"><label class="form-label">Code</label><input type="text" class="form-control" name="subject_code" required></div>
+                        <div class="col-8 mb-3"><label class="form-label">Subject Name</label><input type="text" class="form-control" name="subject_name" required></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assign Class <span class="text-muted small">(Ctrl for multiple)</span></label>
+                        <select class="form-select" name="class_id" multiple size="3" required>
+                            {% for c in courses %}<option value="{{ c.class_id }}">{{ c.class_id }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assign Teacher</label>
+                        <select class="form-select" name="teacher_id" required>
+                            <option value="" selected disabled>Select Teacher...</option>
+                            {% for t in teachers %}<option value="{{ t.teacher_id }}">{{ t.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Type</label>
+                            <select class="form-select" name="subject_type">
+                                <option value="Theory">Theory</option><option value="Practical">Practical</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mb-3"><label class="form-label">Total Hrs</label><input type="number" class="form-control" name="total_course_hours" id="total_course_hours" min="1" value="50" required></div>
+                        <div class="col-4 mb-3"><label class="form-label">Session</label><input type="number" class="form-control" name="session_length" id="session_length" min="1" value="1" required></div>
+                    </div>
+                    <div class="mb-3 text-end">
+                        <span class="badge bg-secondary" id="calculated_lectures">Calculated: 4 lectures/week</span>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Based on 15 weeks/semester</small>
+                    </div>
+                    <button type="submit" class="btn btn-info text-white w-100"><i class="bi bi-check2 me-1"></i> Add Subject</button>
+                    
+                    <script>
+                        document.addEventListener("DOMContentLoaded", function() {
+                            const totalInput = document.getElementById('total_course_hours');
+                            const sessionInput = document.getElementById('session_length');
+                            const badge = document.getElementById('calculated_lectures');
+                            
+                            function updateCalc() {
+                                if(totalInput && sessionInput && badge) {
+                                    let total = parseInt(totalInput.value) || 0;
+                                    let session = parseInt(sessionInput.value) || 1;
+                                    let weeks = 15; // default
+                                    let reqHours = Math.ceil(total / (weeks * session));
+                                    badge.innerText = "Calculated: " + reqHours + " lectures/week";
+                                }
+                            }
+                            if(totalInput) totalInput.addEventListener('input', updateCalc);
+                            if(sessionInput) sessionInput.addEventListener('input', updateCalc);
+                            updateCalc();
+                        });
+                    </script>
+                    {% endif %}
+                </form>
+
+                <hr class="my-4 text-muted">
+
+                <!-- BATCH UPLOAD SECTION -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-cloud-upload me-1"></i> Batch Data Upload</h6>
+                </div>
+                
+                <form action="/bulk_import/{{ manage_type }}" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label small">Upload CSV or Excel File</label>
+                        <input class="form-control form-control-sm" type="file" name="file" accept=".csv, .xlsx" required>
+                    </div>
+                    <div class="small text-muted mb-3" style="font-size: 0.8rem;">
+                        {% if manage_type == 'course' %}
+                        <strong>Required:</strong> class_id, department, semester, division
+                        {% elif manage_type == 'teacher' %}
+                        <strong>Required:</strong> teacher_id, name, email, departments, max_hours, available_days
+                        {% elif manage_type == 'subject' %}
+                        <strong>Required:</strong> subject_code, subject_name, class_id, teacher_id, subject_type, required_hours, total_course_hours, session_length
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-outline-dark btn-sm w-100 fw-bold"><i class="bi bi-file-earmark-spreadsheet me-1"></i> Upload Dataset</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+
+    <!-- DATA TABLE (RIGHT SIDE) -->
+    <div class="col-md-8">
+        <form id="bulkDeleteForm" action="/bulk_delete/{{ manage_type }}" method="POST" onsubmit="return confirm('Are you sure you want to delete the selected items?');">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center py-3 gap-2">
+                    <h5 class="mb-0 fw-bold text-dark">Existing Records</h5>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        {% if manage_type == 'course' or manage_type == 'subject' %}
+                        <select id="tableFilter" class="form-select form-select-sm" style="max-width: 200px;">
+                            <option value="ALL">All Records</option>
+                            {% set filter_opts = [] %}
+                            {% for item in items %}
+                                {% if manage_type == 'course' and item.department not in filter_opts %}
+                                    {% set _ = filter_opts.append(item.department) %}
+                                {% elif manage_type == 'subject' and item.class_id not in filter_opts %}
+                                    {% set _ = filter_opts.append(item.class_id) %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for opt in filter_opts|sort %}
+                                <option value="{{ opt }}">{{ opt }}</option>
+                            {% endfor %}
+                        </select>
+                        {% endif %}
+                        
+                        <button type="submit" class="btn btn-sm btn-danger text-nowrap" id="bulkDeleteBtn" disabled>
+                            <i class="bi bi-trash-fill me-1"></i> Delete Selected
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4" style="width: 40px;">
+                                        <input class="form-check-input" type="checkbox" id="selectAll">
+                                    </th>
+                                    {% if manage_type == 'course' %}
+                                    <th>Class ID</th><th>Dept</th><th>Sem</th><th>Div</th>
+                                    {% elif manage_type == 'teacher' %}
+                                    <th>ID</th><th>Name & Email</th><th>Dept</th><th>Days</th>
+                                    {% elif manage_type == 'subject' %}
+                                    <th>Code</th><th>Subject</th><th>Classes</th><th>Teacher</th><th>Total Hrs</th>
+                                    {% endif %}
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr class="data-row" data-filter="{% if manage_type == 'course' %}{{ item.department }}{% elif manage_type == 'subject' %}{{ item.class_id }}{% endif %}">
+                                <td class="ps-4">
+                                    <input class="form-check-input item-checkbox" type="checkbox" name="selected_ids" value="{{ item.id }}">
+                                </td>
+                                {% if manage_type == 'course' %}
+                                <td class="fw-bold">{{ item.class_id }}</td><td>{{ item.department }}</td><td>{{ item.semester }}</td><td><span class="badge bg-secondary">{{ item.division }}</span></td>
+                                {% elif manage_type == 'teacher' %}
+                                <td class="fw-bold">{{ item.teacher_id }}</td>
+                                <td><div class="fw-semibold">{{ item.name }}</div><small class="text-muted">{{ item.email }}</small></td>
+                                <td><span class="badge bg-light text-dark border">{{ item.departments }}</span></td>
+                                <td><small class="text-muted">{{ item.available_days }}</small></td>
+                                {% elif manage_type == 'subject' %}
+                                <td class="fw-bold">{{ item.subject_code }}</td>
+                                <td><div class="fw-semibold">{{ item.subject_name }}</div><span class="badge bg-light text-dark border">{{ item.subject_type }}</span></td>
+                                <td><small class="text-muted">{{ item.class_id }}</small></td>
+                                <td>{{ item.teacher_id }}</td>
+                                <td>{{ item.total_course_hours }}</td>
+                                {% endif %}
+                                
+                                <td class="text-nowrap text-end pe-4">
+                                    <a href="/edit_{{ manage_type }}/{{ item.id }}" class="btn btn-sm btn-outline-primary me-1" title="Edit"><i class="bi bi-pencil"></i></a>
+                                    <a href="/delete/{{ manage_type }}/{{ item.id }}" class="btn btn-sm btn-outline-danger" data-turbo="false" onclick="return confirm('Confirm Delete?');" title="Delete"><i class="bi bi-trash"></i></a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not items %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    No records found. Add one using the form.
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        </form>
+        
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.item-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+        function updateBtnState() {
+            const anyChecked = Array.from(checkboxes).some(cb => cb.checked);
+            bulkDeleteBtn.disabled = !anyChecked;
+        }
+
+        if(selectAll) {
+            selectAll.addEventListener('change', function() {
+                const isChecked = this.checked;
+                checkboxes.forEach(cb => {
+                    const row = cb.closest('tr');
+                    if(row.style.display !== 'none') {
+                        cb.checked = isChecked;
+                    }
+                });
+                updateBtnState();
+            });
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                if(!this.checked) selectAll.checked = false;
+                
+                // only check visible rows for selectAll logic
+                const visibleCheckboxes = Array.from(checkboxes).filter(c => c.closest('tr').style.display !== 'none');
+                if(visibleCheckboxes.length > 0 && visibleCheckboxes.every(c => c.checked)) selectAll.checked = true;
+                
+                updateBtnState();
+            });
+        });
+        
+        const filterDropdown = document.getElementById('tableFilter');
+        if(filterDropdown) {
+            filterDropdown.addEventListener('change', function() {
+                const val = this.value;
+                document.querySelectorAll('.data-row').forEach(row => {
+                    if(val === 'ALL') {
+                        row.style.display = '';
+                    } else {
+                        const rowFilterData = row.getAttribute('data-filter') || '';
+                        if(rowFilterData.includes(val)) {
+                            row.style.display = '';
+                        } else {
+                            row.style.display = 'none';
+                            // uncheck hidden rows
+                            const cb = row.querySelector('.item-checkbox');
+                            if(cb && cb.checked) {
+                                cb.checked = false;
+                            }
+                        }
+                    }
+                });
+                updateBtnState();
+                if(selectAll) selectAll.checked = false;
+            });
+        }
+    });
+</script>
+{% endblock %}

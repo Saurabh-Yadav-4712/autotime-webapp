@@ -94,6 +94,49 @@
     </div>
 </div>
 
+
+<!-- Teacher Update Requests -->
+{% if pending_requests %}
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-header bg-warning bg-opacity-25 border-0 pt-3 pb-2">
+        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-person-fill-exclamation me-2 text-warning"></i>Pending Teacher Update Requests</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Teacher ID</th>
+                        <th>Requested Name</th>
+                        <th>Requested Email</th>
+                        <th>Date</th>
+                        <th class="pe-4 text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in pending_requests %}
+                    <tr>
+                        <td class="ps-4 fw-medium">{{ req.teacher_id }}</td>
+                        <td>{% if req.new_name %}<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle me-2">New Name</span>{{ req.new_name }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                        <td>{% if req.new_email %}<span class="badge bg-info bg-opacity-10 text-info border border-info-subtle me-2">New Email</span>{{ req.new_email }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                        <td class="text-muted small">{{ req.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td class="pe-4 text-end">
+                            <form action="/admin/requests/approve/{{ req.id }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-success rounded-pill shadow-sm"><i class="bi bi-check-lg"></i></button>
+                            </form>
+                            <form action="/admin/requests/reject/{{ req.id }}" method="POST" class="d-inline ms-1">
+                                <button type="submit" class="btn btn-sm btn-danger rounded-pill shadow-sm"><i class="bi bi-x-lg"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Management Action Cards -->
 <div class="row g-3 mb-4">
     <div class="col-md-4">
@@ -167,7 +210,7 @@
 </div>
 {% endif %}
 
-{% if syllabus_tracking %}
+{% if syllabus_tracking_grouped %}
 <!-- Syllabus Tracking Analytics -->
 <div class="card border-0 mb-4 p-4 shadow-sm">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
@@ -175,42 +218,49 @@
         <span class="badge bg-success bg-opacity-25 text-success border border-success fs-6">Semester Target: {{ weeks_per_semester }} Weeks</span>
     </div>
     <p class="text-muted small mb-3">Tracking required weeks based on Total Course Hours vs Weekly Scheduled Hours.</p>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>Subject</th>
-                    <th>Teacher</th>
-                    <th>Total Course Hrs</th>
-                    <th>Scheduled Hrs/Week</th>
-                    <th>Est. Completion</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for s in syllabus_tracking %}
-                <tr>
-                    <td class="fw-bold">{{ s.name }} <small class="text-muted">({{ s.code }})</small></td>
-                    <td>{{ s.teacher }}</td>
-                    <td class="fw-bold text-primary">{{ s.total_hrs }}</td>
-                    <td class="fw-bold">{{ s.weekly_hrs }}</td>
-                    <td>
-                        <span class="fw-bold text-success">{{ s.weeks_needed }} Weeks</span>
-                    </td>
-                    <td>
-                        {% if s.weeks_needed > weeks_per_semester %}
-                            <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">Requires More Hours</span>
-                        {% elif s.weeks_needed == weeks_per_semester %}
-                            <span class="badge bg-success bg-opacity-25 text-success border border-success">On Track</span>
-                        {% else %}
-                            <span class="badge bg-info bg-opacity-25 text-info border border-info">Completes Early</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    
+    {% for dept, subjects in syllabus_tracking_grouped.items() %}
+    <div class="mb-4">
+        <h6 class="fw-bold text-dark bg-light p-2 rounded border-start border-4 border-success">{{ dept }} Department</h6>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Subject</th>
+                        <th>Teacher</th>
+                        <th>Total Course Hrs</th>
+                        <th>Scheduled Hrs/Week</th>
+                        <th>Est. Completion</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects %}
+                    <tr>
+                        <td class="fw-bold">{{ s.name }} <small class="text-muted">({{ s.code }})</small></td>
+                        <td>{{ s.teacher }}</td>
+                        <td class="fw-bold text-primary">{{ s.total_hrs }}</td>
+                        <td class="fw-bold">{{ s.weekly_hrs }}</td>
+                        <td>
+                            <span class="fw-bold text-success">{{ s.weeks_needed }} Weeks</span>
+                        </td>
+                        <td>
+                            {% if s.weeks_needed > weeks_per_semester %}
+                                <span class="badge bg-danger bg-opacity-25 text-danger border border-danger">Requires More Hours</span>
+                            {% elif s.weeks_needed == weeks_per_semester %}
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success">On Track</span>
+                            {% else %}
+                                <span class="badge bg-info bg-opacity-25 text-info border border-info">Completes Early</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+    {% endfor %}
+
 </div>
 {% endif %}
 
