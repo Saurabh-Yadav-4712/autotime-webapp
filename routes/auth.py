@@ -1,22 +1,13 @@
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import db
-from app.models import *
-from app.utils import *
-import json
-import random
-import os
-import io
-import csv
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from io import BytesIO
+from models import db
+from models import *
+from utils.helpers import *
 from datetime import datetime, timedelta
-import string
 
-from app.routes import main_bp
-from app.utils import get_dynamic_time_slots, trim_time_slots, get_val
+from routes.blueprint import main_bp
+from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/')
 def home():
@@ -29,11 +20,14 @@ def login_page():
 @main_bp.route('/register_institute', methods=['GET', 'POST'])
 def register_institute():
     if request.method == 'POST':
-        username = request.form['username'].strip()
-        email = request.form['email'].strip()
-        college_name = request.form['college_name'].strip()
-        password = request.form['password']
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        college_name = request.form.get('college_name', '').strip()
+        password = request.form.get('password', '')
 
+        if not username or not email or not college_name or not password:
+            flash('All fields are required!', 'danger')
+            return redirect(url_for('main.register_institute'))
         if Institute.query.filter_by(admin_username=username).first():
             flash('Username already exists.', 'danger')
             return redirect(url_for('main.register_institute'))
@@ -117,8 +111,17 @@ def login_admin():
     if request.method == 'GET':
         return redirect(url_for('main.login_page'))
         
-    admin = Institute.query.filter_by(admin_username=request.form['username']).first()
-    if admin and check_password_hash(admin.admin_password, request.form['password']):
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+
+    if not username or not password:
+        flash('Username and password are required!', 'danger')
+        return redirect(url_for('main.login_page'))
+        
+    admin = Institute.query.filter_by(admin_username=username).first()
+    if admin and check_password_hash(admin.admin_password, password):
+        session.pop('teacher_id', None)
+        session.pop('student_id', None)
         session['admin_id'] = admin.id
         session['institute_code'] = admin.institute_code
         flash(f'Welcome back, {admin.name}!', 'success')
@@ -201,11 +204,36 @@ def update_profile():
         current_email = user.email
 
     if user:
-        user.name = new_name
-        db.session.commit()
+        if role == 'teacher':
+            if new_name != user.name or new_email != current_email:
+                # Create a TeacherUpdateRequest instead of direct update
+                req = TeacherUpdateRequest(
+                    institute_code=user.institute_code,
+                    teacher_id=user.teacher_id,
+                    new_name=new_name if new_name != user.name else None,
+                    new_email=new_email if new_email != current_email else None
+                )
+                db.session.add(req)
+                
+                # Notify admin
+                notif = Notification(
+                    institute_code=user.institute_code,
+                    user_type='admin',
+                    message=f"Teacher {user.name} requested a profile update."
+                )
+                db.session.add(notif)
+                db.session.commit()
+                flash('Profile update request sent to admin for approval.', 'success')
+                return redirect(url_for('main.settings'))
+            else:
+                flash('No changes made.', 'info')
+                return redirect(url_for('main.settings'))
+        else:
+            user.name = new_name
+            db.session.commit()
 
-    # If email changed, trigger OTP flow
-    if new_email != current_email:
+    # If email changed (for Admin/Student), trigger OTP flow
+    if new_email != current_email and role != 'teacher':
         # Check uniqueness across models
         if Institute.query.filter_by(admin_email=new_email).first() or \
            Teacher.query.filter_by(email=new_email).first() or \

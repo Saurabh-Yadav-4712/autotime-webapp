@@ -40,7 +40,8 @@ class Subject(db.Model):
     class_id = db.Column(db.String(100), nullable=False)
     teacher_id = db.Column(db.String(20), nullable=False)
     total_course_hours = db.Column(db.Integer, nullable=False, default=50)
-    required_hours = db.Column(db.Integer, nullable=False)
+    required_hours = db.Column(db.Integer, nullable=False) # Weekly
+    completed_hours = db.Column(db.Integer, nullable=False, default=0) # Syllabus tracker
     subject_type = db.Column(db.String(50), default='Theory')
     session_length = db.Column(db.Integer, default=1)
     preferred_days = db.Column(db.String(100), default="")
@@ -55,6 +56,8 @@ class Timetable(db.Model):
     subject_name = db.Column(db.String(100), nullable=False)
     teacher_name = db.Column(db.String(100), nullable=False)
     is_proxy = db.Column(db.Boolean, default=False)
+    specific_date = db.Column(db.Date, nullable=True) # Used for Make-Up/Proxy classes assigned to a specific date
+
 class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     institute_code = db.Column(db.String(20), nullable=False)
@@ -69,8 +72,6 @@ class Student(db.Model):
     password = db.Column(db.String(255), nullable=False)
     class_id = db.Column(db.String(50), nullable=False)
 
-
-
 class TeacherUpdateRequest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     institute_code = db.Column(db.String(20), nullable=False)
@@ -78,5 +79,29 @@ class TeacherUpdateRequest(db.Model):
     new_name = db.Column(db.String(100), nullable=True)
     new_email = db.Column(db.String(100), nullable=True)
     status = db.Column(db.String(20), default='Pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class AcademicCalendar(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    institute_code = db.Column(db.String(20), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    event_name = db.Column(db.String(200), nullable=False)
+    department = db.Column(db.String(50), nullable=True) # All, or specific dept
+    is_holiday = db.Column(db.Boolean, default=True) # If true, regular lectures are hidden
+
+class TeacherLeave(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    institute_code = db.Column(db.String(20), nullable=False)
+    teacher_id = db.Column(db.String(20), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), default='Approved') # Pending, Approved, Rejected
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    institute_code = db.Column(db.String(20), nullable=False)
+    user_type = db.Column(db.String(20), nullable=False) # 'admin' or 'teacher'
+    user_id = db.Column(db.String(50), nullable=True) # teacher_id, or None for admin
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

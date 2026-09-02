@@ -1,22 +1,14 @@
+from utils.decorators import login_required_teacher
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import db
-from app.models import *
-from app.utils import *
-import json
-import random
-import os
-import io
-import csv
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from io import BytesIO
+from models import db
+from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
+from utils.helpers import generate_institute_code, generate_and_store_otp, verify_session_otp, send_otp_email, clear_session_otp, get_dynamic_time_slots, trim_time_slots, get_val
 from datetime import datetime, timedelta
-import string
 
-from app.routes import main_bp
-from app.utils import get_dynamic_time_slots, trim_time_slots, get_val
+from routes.blueprint import main_bp
+from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/teacher_portal')
 def teacher_portal():
@@ -120,7 +112,7 @@ def verify_teacher_otp():
             flash(msg, 'danger')
             return redirect(url_for('main.verify_teacher_otp'))
             
-    return render_template('shared/verify_otp.html', title='Verify Teacher Account', submit_url='/verify_teacher_otp')
+    return render_template('shared/verify_otp.html', title='Verify Teacher Account', submit_url='/verify_teacher_otp', require_password=True)
 
 @main_bp.route('/login_teacher', methods=['GET', 'POST'])
 def login_teacher():
@@ -129,6 +121,8 @@ def login_teacher():
         
     teacher = Teacher.query.filter_by(email=request.form['email']).first()
     if teacher and teacher.password and check_password_hash(teacher.password, request.form['password']):
+        session.pop('admin_id', None)
+        session.pop('student_id', None)
         session['teacher_id'] = teacher.teacher_id
         session['institute_code'] = teacher.institute_code
         session['teacher_name'] = teacher.name
@@ -140,8 +134,8 @@ def login_teacher():
     return redirect(url_for('main.login_page'))
 
 @main_bp.route('/teacher_dash')
+@login_required_teacher
 def teacher_dash():
-    if 'teacher_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     t_name = session['teacher_name']
     
@@ -175,8 +169,8 @@ def teacher_dash():
     return render_template('teacher/teacher_dash.html', schedule=schedule, courses=courses, days=days, time_slots=time_slots, lunch_after=lunch_after, t_name=t_name, today_str=today_str, inst_name=inst_name)
 
 @main_bp.route('/teacher_view_class')
+@login_required_teacher
 def teacher_view_class():
-    if 'teacher_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     class_id = request.args.get('class_id')
     
@@ -309,3 +303,12 @@ def get_classes(inst_code):
     courses = Course.query.filter_by(institute_code=inst_code).all()
     classes = [c.class_id for c in courses]
     return jsonify({'classes': classes})
+from models import Notification
+@main_bp.route('/teacher_notifications')
+@login_required_teacher
+def teacher_notifications():
+    inst_code = session['institute_code']
+    t_id = session['teacher_id']
+    
+    notifs = Notification.query.filter_by(institute_code=inst_code, user_type='teacher', user_id=t_id).order_by(Notification.created_at.desc()).all()
+    return render_template('teacher/notifications.html', notifications=notifs)

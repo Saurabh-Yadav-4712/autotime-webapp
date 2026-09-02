@@ -7,6 +7,7 @@ from flask import session
 import random
 import string
 from datetime import datetime, timedelta
+from models import Settings
 
 def generate_institute_code(prefix="INS"):
     chars = string.ascii_uppercase + string.digits

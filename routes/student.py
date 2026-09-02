@@ -1,22 +1,14 @@
+from utils.decorators import login_required_student
 from flask import current_app
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-from app.models import db
-from app.models import *
-from app.utils import *
-import json
-import random
-import os
-import io
-import csv
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from io import BytesIO
+from models import db
+from models import db, Institute, Course, Subject, Teacher, Timetable, Settings, Student, TeacherUpdateRequest, AcademicCalendar, TeacherLeave, Notification
+from utils.helpers import generate_institute_code, generate_and_store_otp, verify_session_otp, send_otp_email, clear_session_otp, get_dynamic_time_slots, trim_time_slots, get_val
 from datetime import datetime, timedelta
-import string
 
-from app.routes import main_bp
-from app.utils import get_dynamic_time_slots, trim_time_slots, get_val
+from routes.blueprint import main_bp
+from utils.helpers import get_dynamic_time_slots, trim_time_slots, get_val
 
 @main_bp.route('/student_portal')
 def student_portal():
@@ -105,6 +97,8 @@ def login_student():
         
     student = Student.query.filter_by(email=request.form['email']).first()
     if student and check_password_hash(student.password, request.form['password']):
+        session.pop('admin_id', None)
+        session.pop('teacher_id', None)
         session['student_id'] = student.id
         session['institute_code'] = student.institute_code
         session['student_name'] = student.name
@@ -116,8 +110,8 @@ def login_student():
     return redirect(url_for('main.login_page'))
 
 @main_bp.route('/student_dash')
+@login_required_student
 def student_dash():
-    if 'student_id' not in session: return redirect(url_for('main.login_page'))
     inst_code = session['institute_code']
     class_id = session['student_class']
     s_name = session['student_name']
@@ -135,6 +129,8 @@ def student_dash():
         schedule[entry.day_name][entry.start_time] = entry
 
     inst = Institute.query.filter_by(institute_code=inst_code).first()
+    inst_name = inst.name if inst else "Institute"
+    today_str = datetime.now().strftime('%a')
+    time_slots = trim_time_slots(schedule, time_slots, lunch_after)
     
-    flash('Password successfully reset! Please login.', 'success')
-    return redirect(url_for('main.login_page'))
+    return render_template('student/student_dash.html', schedule=schedule, days=days, time_slots=time_slots, lunch_after=lunch_after, s_name=s_name, class_id=class_id, today_str=today_str, inst_name=inst_name)

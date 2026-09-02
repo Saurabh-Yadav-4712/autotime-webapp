@@ -20,6 +20,7 @@
     <!-- Turbo for SPA -->
     <script type="module" src="https://cdn.skypack.dev/@hotwired/turbo"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='loader.css') }}">
     
     <!-- Password Visibility Toggle Logic -->
     <script>
@@ -47,6 +48,12 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 
+    <!-- Global Loader -->
+    <div id="global-loader">
+        <div class="loader-spinner"></div>
+        <h5 class="fw-bold text-muted">Processing...</h5>
+    </div>
+
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm d-print-none">
         <div class="container-fluid px-2 px-md-4">
@@ -62,6 +69,17 @@
                     </label>
                 </div>
                 {% if session.get('admin_id') or session.get('teacher_id') or session.get('student_id') %}
+                
+                {% if session.get('admin_id') %}
+                <a href="/notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                    <i class="bi bi-bell-fill"></i>
+                </a>
+                {% elif session.get('teacher_id') %}
+                <a href="/teacher_notifications" class="btn btn-outline-primary btn-sm rounded-circle shadow-sm position-relative" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Notifications">
+                    <i class="bi bi-bell-fill"></i>
+                </a>
+                {% endif %}
+                
                 <a href="/settings" class="btn btn-outline-secondary btn-sm rounded-circle shadow-sm" style="width: 32px; height: 32px; padding: 0; line-height: 30px;" title="Settings">
                     <i class="bi bi-gear-fill"></i>
                 </a>
@@ -156,6 +174,17 @@
         document.addEventListener('DOMContentLoaded', syncThemeToggle);
         document.addEventListener('turbo:load', syncThemeToggle);
 
+        // Global Loader Logic
+        window.addEventListener('turbo:before-visit', () => {
+            const loader = document.getElementById('global-loader');
+            if (loader) loader.classList.add('active');
+        });
+
+        window.addEventListener('turbo:load', () => {
+            const loader = document.getElementById('global-loader');
+            if (loader) loader.classList.remove('active');
+        });
+
         // Button Inline Loader Logic
         if (!window.loaderInitialized) {
             window.loaderInitialized = true;
@@ -212,5 +241,6 @@
         document.addEventListener('DOMContentLoaded', initToasts);
         document.addEventListener('turbo:load', initToasts);
     </script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

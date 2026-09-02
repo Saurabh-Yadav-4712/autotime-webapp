@@ -76,16 +76,45 @@
                             </select>
                         </div>
                         <div class="row g-2">
-                            <div class="col-4 mb-3">
+                            <div class="col-3 mb-3">
                                 <label class="form-label">Type</label>
                                 <select class="form-select" name="subject_type">
                                     <option value="Theory" {% if item.subject_type == 'Theory' %}selected{% endif %}>Theory</option>
                                     <option value="Practical" {% if item.subject_type == 'Practical' %}selected{% endif %}>Practical</option>
                                 </select>
                             </div>
-                            <div class="col-4 mb-3"><label class="form-label">Total Course Hrs</label><input type="number" class="form-control" name="total_course_hours" value="{{ item.total_course_hours }}" min="1" required></div>
-                            <div class="col-4 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" value="{{ item.session_length }}" min="1" required></div>
+                            <div class="col-3 mb-3"><label class="form-label">Total Hrs (Opt)</label><input type="number" class="form-control" name="total_course_hours" id="total_course_hours" value="{{ item.total_course_hours }}" min="1"></div>
+                            <div class="col-3 mb-3"><label class="form-label">Weekly Lectures</label><input type="number" class="form-control" name="required_hours" id="required_hours" value="{{ item.required_hours }}" min="1" required></div>
+                            <div class="col-3 mb-3"><label class="form-label">Session (Hrs)</label><input type="number" class="form-control" name="session_length" id="session_length" value="{{ item.session_length }}" min="1" required></div>
                         </div>
+                        <div class="mb-3 text-end" id="suggestion_box" style="display: none;">
+                            <span class="badge bg-secondary" id="calculated_lectures">Suggested: - lectures/week</span>
+                        </div>
+                        <script>
+                            document.addEventListener("DOMContentLoaded", function() {
+                                const totalInput = document.getElementById('total_course_hours');
+                                const sessionInput = document.getElementById('session_length');
+                                const reqInput = document.getElementById('required_hours');
+                                const badge = document.getElementById('calculated_lectures');
+                                const suggestionBox = document.getElementById('suggestion_box');
+                                
+                                function updateCalc() {
+                                    if(totalInput && sessionInput && badge && totalInput.value) {
+                                        suggestionBox.style.display = 'block';
+                                        let total = parseInt(totalInput.value) || 0;
+                                        let session = parseInt(sessionInput.value) || 1;
+                                        let weeks = {{ settings.get('weeks_per_semester', '15') if settings else 15 }};
+                                        let reqHours = Math.ceil(total / (weeks * session));
+                                        badge.innerText = "Suggested: " + reqHours + " lectures/week";
+                                    } else if(suggestionBox) {
+                                        suggestionBox.style.display = 'none';
+                                    }
+                                }
+                                if(totalInput) totalInput.addEventListener('input', updateCalc);
+                                if(sessionInput) sessionInput.addEventListener('input', updateCalc);
+                                updateCalc();
+                            });
+                        </script>
                     {% endif %}
 
                     <button type="submit" class="btn btn-warning w-100 fw-bold mt-3"><i class="bi bi-save me-1"></i> Update Details</button>
