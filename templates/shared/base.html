@@ -47,8 +47,6 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 
-    <!-- Loader Removed as requested -->
-
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg custom-navbar mb-4 shadow-sm">
         <div class="container-fluid px-2 px-md-4">
@@ -117,9 +115,6 @@
     
     <!-- Global UI Scripts -->
     <script>
-        // Turbo Drive Configuration
-        Turbo.session.drive = true;
-        
         // Global Theme Toggle Logic (Event Delegation for Turbo safety)
         document.addEventListener('change', function(e) {
             if (e.target && e.target.id === 'globalThemeToggle') {
@@ -141,6 +136,49 @@
         
         document.addEventListener('DOMContentLoaded', syncThemeToggle);
         document.addEventListener('turbo:load', syncThemeToggle);
+
+        // Button Inline Loader Logic
+        if (!window.loaderInitialized) {
+            window.loaderInitialized = true;
+            
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                let submitter = e.submitter || form.querySelector('button[type="submit"], input[type="submit"]');
+                
+                if (submitter && !submitter.hasAttribute('data-loading')) {
+                    if (submitter.tagName.toLowerCase() === 'button') {
+                        const width = submitter.offsetWidth;
+                        submitter.style.width = width + 'px';
+                        submitter.setAttribute('data-original-html', submitter.innerHTML);
+                        submitter.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+                    } else {
+                        submitter.setAttribute('data-original-value', submitter.value || '');
+                        submitter.value = '...';
+                    }
+                    submitter.classList.add('disabled');
+                    // Use setTimeout to ensure the form actually submits before we disable it,
+                    // some browsers ignore the submitter if it's disabled during the submit event
+                    setTimeout(() => {
+                        submitter.disabled = true;
+                    }, 10);
+                    submitter.setAttribute('data-loading', 'true');
+                }
+            });
+            
+            document.addEventListener('turbo:submit-end', function(e) {
+                document.querySelectorAll('[data-loading="true"]').forEach(btn => {
+                    if (btn.tagName.toLowerCase() === 'button' && btn.hasAttribute('data-original-html')) {
+                        btn.innerHTML = btn.getAttribute('data-original-html');
+                    } else if (btn.hasAttribute('data-original-value')) {
+                        btn.value = btn.getAttribute('data-original-value');
+                    }
+                    btn.classList.remove('disabled');
+                    btn.disabled = false;
+                    btn.removeAttribute('data-loading');
+                    btn.style.width = ''; 
+                });
+            });
+        }
     </script>
 </body>
 </html>

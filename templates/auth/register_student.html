@@ -63,7 +63,7 @@
 
 {% block modals %}
 <script>
-document.addEventListener('turbo:load', function() {
+(function() {
     const instCodeInput = document.getElementById('inst_code');
     const classSelect = document.getElementById('class_id');
     const spinner = document.getElementById('inst_code_spinner');
@@ -101,6 +101,6 @@ document.addEventListener('turbo:load', function() {
                 spinner.classList.add('d-none');
             });
     });
-});
+})();
 </script>
 {% endblock %}
