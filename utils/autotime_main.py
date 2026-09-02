@@ -3,78 +3,11 @@ from utils.helpers import get_dynamic_time_slots
 import random
 from datetime import datetime, timedelta
 
-def score_timetable(class_timetable, time_slots):
-    score = 0
-    for c_id, days_data in class_timetable.items():
-        daily_counts = []
-        for day, slots in days_data.items():
-            count = len(slots)
-            daily_counts.append(count)
-            if not slots: continue
-            
-            # Find min and max index
-            indices = [[s[0] for s in time_slots].index(k) for k in slots.keys()]
-            if indices:
-                span = max(indices) - min(indices) + 1
-                gaps = span - len(indices)
-                score -= (gaps * 50) # Extremely heavy penalty for mid-day gaps
-        
-        # Penalize uneven distribution of lectures across days
-        if daily_counts:
-            avg = sum(daily_counts) / len(daily_counts)
-            variance = sum((x - avg) ** 2 for x in daily_counts)
-            score -= variance
-            
-    return score
-
-def compact_day(class_timetable, teacher_timetable, time_slots, days):
-    # Bubble Compaction: Continuously shift lectures and blocks UP into gaps
-    made_changes = True
-    while made_changes:
-        made_changes = False
-        for c_id, days_data in class_timetable.items():
-            for day in days:
-                slots_data = days_data.get(day, {})
-                if not slots_data: continue
-                
-                for i in range(len(time_slots) - 1):
-                    slot1 = time_slots[i]
-                    slot2 = time_slots[i+1]
-                    
-                    if slot1[0] not in slots_data and slot2[0] in slots_data:
-                        # slot1 is gap, slot2 is filled. Try to pull slot2 up to slot1
-                        sub_data = slots_data[slot2[0]]
-                        sub = sub_data[0]
-                        
-                        if ',' in sub.class_id: continue # Do not shift common subjects independently
-                        
-                        # Check if teacher is free at slot1
-                        if slot1[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}):
-                            # Identify the full block
-                            block_slots = []
-                            for j in range(i+1, len(time_slots)):
-                                if time_slots[j][0] in slots_data and slots_data[time_slots[j][0]][0].id == sub.id:
-                                    block_slots.append(time_slots[j])
-                                else:
-                                    break
-                            
-                            # Shift the block up by 1 slot
-                            for j, bs in enumerate(block_slots):
-                                dest_slot = time_slots[i + j]
-                                
-                                del class_timetable[c_id][day][bs[0]]
-                                del teacher_timetable[sub.teacher_id][day][bs[0]]
-                                
-                                class_timetable[c_id][day][dest_slot[0]] = (sub, dest_slot[1])
-                                teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[dest_slot[0]] = (sub, dest_slot[1])
-                                
-                            made_changes = True
-                            break
-                if made_changes: break
-            if made_changes: break
-
 def engine_generate_timetable(inst_code):
-    # Clear master timetable only
+    from models import Timetable, Subject, Teacher, Course, db
+    from utils.helpers import get_dynamic_time_slots
+    import random
+    
     Timetable.query.filter_by(institute_code=inst_code, specific_date=None).delete()
     db.session.commit()
     
@@ -95,24 +28,22 @@ def engine_generate_timetable(inst_code):
             normal_subjects.append(s)
             
     best_timetable = None
-    best_teacher_timetable = None
-    best_score = -99999
+    best_score = -999999
     best_warnings = []
     
     ITERATIONS = 500
     for iteration in range(ITERATIONS):
-        # Shuffle subjects to explore different placement orders, then stable sort
-        import random
         random.shuffle(normal_subjects)
-        normal_subjects.sort(key=lambda x: (-x.session_length, -x.required_hours))
+        normal_subjects = sorted(normal_subjects, key=lambda x: (-x.session_length, -x.required_hours))
         
         random.shuffle(common_subjects)
-        common_subjects.sort(key=lambda x: (-x.session_length, -x.required_hours))
+        common_subjects = sorted(common_subjects, key=lambda x: (-x.session_length, -x.required_hours))
         
         class_timetable = {c.class_id: {day: {} for day in days} for c in courses}
         teacher_timetable = {t.teacher_id: {day: {} for day in days} for t in teachers}
         teacher_hours = {t.teacher_id: 0 for t in teachers}
         warnings = []
+        unscheduled_hours_total = 0
         
         # Allocate Common Subjects
         for sub in common_subjects:
@@ -122,32 +53,58 @@ def engine_generate_timetable(inst_code):
             teacher = teacher_dict.get(sub.teacher_id)
             
             while assigned_hours < sub.required_hours:
-                scheduled_this_round = False
+                best_candidate = None
+                best_c_score = -9999
+                
                 shuffled_days = days.copy()
                 random.shuffle(shuffled_days)
                 
                 for day in shuffled_days:
-                    if assigned_hours >= sub.required_hours: break
                     if teacher and day not in teacher.available_days: continue
                     
                     valid_indices = list(range(len(time_slots) - sub.session_length + 1))
                     for idx in valid_indices:
                         slots_to_check = time_slots[idx : idx + sub.session_length]
-                        classes_free = all(s[0] not in class_timetable.get(c, {}).get(day, {}) for c in target_classes for s in slots_to_check)
+                        classes_free = all(s[0] not in class_timetable[c][day] for c in target_classes for s in slots_to_check)
                         teacher_free = all(s[0] not in teacher_timetable.get(sub.teacher_id, {}).get(day, {}) for s in slots_to_check)
                         hours_ok = teacher_hours.get(sub.teacher_id, 0) + sub.session_length <= teacher.max_hours if teacher else True
                         
                         if classes_free and teacher_free and hours_ok:
-                            for s in slots_to_check:
-                                for c in target_classes:
-                                    class_timetable[c][day][s[0]] = (sub, s[1])
-                                teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[s[0]] = (sub, s[1])
+                            c_score = 0
+                            for c in target_classes:
+                                class_day = class_timetable[c][day]
+                                has_earlier = any(time_slots[i][0] in class_day for i in range(idx))
+                                end_idx = idx + sub.session_length
+                                has_later = any(time_slots[i][0] in class_day for i in range(end_idx, len(time_slots)))
+                                
+                                adj_before = (idx > 0 and time_slots[idx-1][0] in class_day)
+                                adj_after = (end_idx < len(time_slots) and time_slots[end_idx][0] in class_day)
+                                
+                                if adj_before: c_score += 20
+                                if adj_after: c_score += 20
+                                if has_earlier and not adj_before: c_score -= 100
+                                if has_later and not adj_after: c_score -= 100
+                                
+                                already_on_day = any(sub_data[0].id == sub.id for sub_data in class_day.values())
+                                if already_on_day: c_score -= 200
                             
-                            if teacher: teacher_hours[sub.teacher_id] += sub.session_length
-                            assigned_hours += sub.session_length
-                            scheduled_this_round = True
-                            break 
-                if not scheduled_this_round: 
+                            if c_score > best_c_score:
+                                best_c_score = c_score
+                                best_candidate = (day, idx, slots_to_check)
+                                
+                if best_candidate:
+                    day, idx, slots_to_check = best_candidate
+                    for s in slots_to_check:
+                        for c in target_classes:
+                            class_timetable[c][day][s[0]] = (sub, s[1])
+                        teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[s[0]] = (sub, s[1])
+                    
+                    if teacher: teacher_hours[sub.teacher_id] += sub.session_length
+                    assigned_hours += sub.session_length
+                else:
+                    remaining = sub.required_hours - assigned_hours
+                    unscheduled_hours_total += remaining
+                    warnings.append(f"Unscheduled {remaining} hours for {sub.subject_name} (Common: {sub.class_id}).")
                     break 
 
         # Allocate Normal Subjects
@@ -158,12 +115,13 @@ def engine_generate_timetable(inst_code):
             if target_class not in class_timetable: continue
             
             while assigned_hours < sub.required_hours:
-                scheduled_this_round = False
+                best_candidate = None
+                best_c_score = -9999
+                
                 shuffled_days = days.copy()
                 random.shuffle(shuffled_days)
                 
                 for day in shuffled_days:
-                    if assigned_hours >= sub.required_hours: break
                     if sub.preferred_days and day not in sub.preferred_days: continue
                     if teacher and day not in teacher.available_days: continue
                     
@@ -175,36 +133,160 @@ def engine_generate_timetable(inst_code):
                         hours_ok = teacher_hours.get(sub.teacher_id, 0) + sub.session_length <= teacher.max_hours if teacher else True
                         
                         if class_free and teacher_free and hours_ok:
-                            for s in slots_to_check:
-                                class_timetable[target_class][day][s[0]] = (sub, s[1])
-                                teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[s[0]] = (sub, s[1])
+                            class_day = class_timetable[target_class][day]
+                            c_score = 0
                             
-                            if teacher: teacher_hours[sub.teacher_id] += sub.session_length
-                            assigned_hours += sub.session_length
-                            scheduled_this_round = True
-                            break
-                if not scheduled_this_round: 
-                    warnings.append(f"Unscheduled {sub.required_hours - assigned_hours} hours for {sub.subject_name} ({target_class}). Check teacher max hours or class density.")
-                    break
+                            has_earlier = any(time_slots[i][0] in class_day for i in range(idx))
+                            end_idx = idx + sub.session_length
+                            has_later = any(time_slots[i][0] in class_day for i in range(end_idx, len(time_slots)))
+                            
+                            adj_before = (idx > 0 and time_slots[idx-1][0] in class_day)
+                            adj_after = (end_idx < len(time_slots) and time_slots[end_idx][0] in class_day)
+                            
+                            if adj_before: c_score += 20
+                            if adj_after: c_score += 20
+                            if has_earlier and not adj_before: c_score -= 100
+                            if has_later and not adj_after: c_score -= 100
+                                
+                            already_on_day = any(sub_data[0].id == sub.id for sub_data in class_day.values())
+                            if already_on_day: c_score -= 200
+                                
+                            t_day = teacher_timetable.get(sub.teacher_id, {}).get(day, {})
+                            if idx > 0 and time_slots[idx-1][0] in t_day:
+                                c_score += 30
+                                
+                            if len(class_day) > len(time_slots) / 2:
+                                c_score -= 20
+                                
+                            if c_score > best_c_score:
+                                best_c_score = c_score
+                                best_candidate = (day, idx, slots_to_check)
+                
+                if best_candidate:
+                    day, idx, slots_to_check = best_candidate
+                    for s in slots_to_check:
+                        class_timetable[target_class][day][s[0]] = (sub, s[1])
+                        teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[s[0]] = (sub, s[1])
                     
-        # Post-Processing
-        compact_day(class_timetable, teacher_timetable, time_slots, days)
+                    if teacher: teacher_hours[sub.teacher_id] += sub.session_length
+                    assigned_hours += sub.session_length
+                else:
+                    remaining = sub.required_hours - assigned_hours
+                    unscheduled_hours_total += remaining
+                    warnings.append(f"Unscheduled {remaining} hours for {sub.subject_name} ({target_class}).")
+                    break
+        # Safe Local Optimizer (Simulated Annealing/Hill Climbing)
+        def calc_temp_score(ct):
+            s = 0
+            for cid, ddata in ct.items():
+                for d, slts in ddata.items():
+                    if not slts: continue
+                    idx_list = [[ts[0] for ts in time_slots].index(k) for k in slts.keys()]
+                    span = max(idx_list) - min(idx_list) + 1
+                    gaps = span - len(idx_list)
+                    s -= (gaps * 100)
+            return s
+            
+        made_changes = True
+        passes = 0
+        while made_changes and passes < 5:
+            made_changes = False
+            passes += 1
+            for c_id, days_data in class_timetable.items():
+                for day, slots in days_data.items():
+                    if not slots: continue
+                    indices = sorted([[s[0] for s in time_slots].index(k) for k in slots.keys()])
+                    span = max(indices) - min(indices) + 1
+                    if span == len(indices): continue
+                    
+                    for src_idx in indices:
+                        src_time = time_slots[src_idx][0]
+                        sub_data = slots[src_time]
+                        sub = sub_data[0]
+                        
+                        if sub.session_length > 1: continue
+                        
+                        is_common = ',' in sub.class_id
+                        target_classes = [cid.strip() for cid in sub.class_id.split(',')] if is_common else [c_id]
+                        
+                        for dest_idx in range(len(time_slots)):
+                            if dest_idx in indices: continue
+                            dest_time = time_slots[dest_idx][0]
+                            
+                            if dest_time in teacher_timetable.get(sub.teacher_id, {}).get(day, {}): continue
+                            
+                            all_free = True
+                            for tc in target_classes:
+                                if tc not in class_timetable: continue
+                                if dest_time in class_timetable[tc][day]:
+                                    all_free = False
+                                    break
+                            if not all_free: continue
+                                
+                            current_score = calc_temp_score(class_timetable)
+                            
+                            for tc in target_classes:
+                                if tc not in class_timetable: continue
+                                del class_timetable[tc][day][src_time]
+                                class_timetable[tc][day][dest_time] = sub_data
+                                
+                            del teacher_timetable[sub.teacher_id][day][src_time]
+                            teacher_timetable.setdefault(sub.teacher_id, {}).setdefault(day, {})[dest_time] = sub_data
+                            
+                            new_score = calc_temp_score(class_timetable)
+                            
+                            if new_score > current_score:
+                                made_changes = True
+                                break
+                            else:
+                                for tc in target_classes:
+                                    if tc not in class_timetable: continue
+                                    del class_timetable[tc][day][dest_time]
+                                    class_timetable[tc][day][src_time] = sub_data
+                                    
+                                del teacher_timetable[sub.teacher_id][day][dest_time]
+                                teacher_timetable[sub.teacher_id][day][src_time] = sub_data
+                                
+                        if made_changes: break
+                    if made_changes: break
+                if made_changes: break
+
+
         
-        # Scoring
-        score = score_timetable(class_timetable, time_slots)
+        # Scoring Algorithm
+        score = 0
+        score -= unscheduled_hours_total * 5000
+        
+        for c_id, days_data in class_timetable.items():
+            daily_counts = []
+            for day, slots in days_data.items():
+                count = len(slots)
+                daily_counts.append(count)
+                if not slots: continue
+                
+                indices = [[s[0] for s in time_slots].index(k) for k in slots.keys()]
+                if indices:
+                    span = max(indices) - min(indices) + 1
+                    gaps = span - len(indices)
+                    score -= (gaps * 100)
+            
+            if daily_counts:
+                avg = sum(daily_counts) / len(daily_counts)
+                variance = sum((x - avg) ** 2 for x in daily_counts)
+                score -= variance * 2
+                
         if score > best_score:
             best_score = score
             best_timetable = class_timetable
             best_warnings = warnings
             
-    # Save Best Timetable with Block Merging
+    # Save Best Timetable
     if best_timetable is None:
-        return False, ["Generation failed completely. Please check your data."]
+        return False, ["Generation failed completely."]
         
     records_to_add = []
     for c_id, days_data in best_timetable.items():
         for day, slots_data in days_data.items():
-            # Extract slots and sort by index
             slot_keys = sorted(slots_data.keys(), key=lambda x: [s[0] for s in time_slots].index(x))
             
             i = 0
@@ -214,16 +296,14 @@ def engine_generate_timetable(inst_code):
                 sub = sub_data[0]
                 end_time = sub_data[1]
                 
-                # Look ahead for merging blocks of the same subject
                 j = i + 1
                 while j < len(slot_keys):
                     next_time = slot_keys[j]
                     next_sub_data = slots_data[next_time]
-                    # Ensure they are consecutive
                     curr_idx = [s[0] for s in time_slots].index(slot_keys[j-1])
                     next_idx = [s[0] for s in time_slots].index(next_time)
                     if next_sub_data[0].subject_code == sub.subject_code and next_idx == curr_idx + 1:
-                        end_time = next_sub_data[1] # Extend block
+                        end_time = next_sub_data[1]
                         j += 1
                     else:
                         break
@@ -244,11 +324,13 @@ def engine_generate_timetable(inst_code):
                     is_proxy=False
                 )
                 records_to_add.append(new_entry)
-                i = j # Skip merged slots
-
+                i = j
+                
     db.session.bulk_save_objects(records_to_add)
     db.session.commit()
+    
     return True, best_warnings
+
 
 def auto_allocate_proxy(inst_code, target_date):
     day_name = target_date.strftime('%a')
